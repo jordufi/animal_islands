@@ -180,19 +180,38 @@ public static class OriginalMapPlayTest
             var v = new Vector3(rnd.Next(-36, 26), 0f, rnd.Next(-34, 30));
             if (NavAgents.Sample(v + Vector3.up * 2f, 1.5f, out var s)) targets.Add(s);
         }
-        int walks = 0, stuck = 0;
+        // old men: every spawn point and box spot must have a complete NavMesh path from the start with the doors open
+        {
+            var start = GameObject.Find("TestMap/PlayerSpawn").transform.position;
+            var pth = new NavMeshPath();
+            var cut = new List<string>();
+            int total = 0;
+            foreach (var z in ZoneManager.Instance.Zones)
+                foreach (var t in z.SpawnPoints.Concat(z.BoxSpots))
+                {
+                    total++;
+                    if (!NavAgents.Sample(start, 3f, out var sa) || !NavAgents.Sample(t.position, 3f, out var sb)
+                        || !NavMesh.CalculatePath(sa, sb, NavAgents.Filter(0), pth) || pth.status != NavMeshPathStatus.PathComplete)
+                    {
+                        string why = NavAgents.Sample(t.position, 3f, out var sq) ? $"mesh en {sq} (a {Vector3.Distance(sq, t.position):F1} m), ruta {pth.status}" : "sin malla a 3 m";
+                        cut.Add($"{z.name}/{t.name} {t.position} [{why}]");
+                    }
+                }
+            Check(cut.Count == 0, $"old men: {total - cut.Count}/{total} spawn points and box spots reachable on the NavMesh from the start with every door open" + (cut.Count > 0 ? ": " + string.Join(" | ", cut) : ""));
+        }
+        int walks = 0, stuck = 0, noPath = 0;
         var stuckAt = new List<string>();
         for (int i = 0; i < 120; i++)
         {
             var a = targets[rnd.Next(targets.Count)];
             var b = targets[rnd.Next(targets.Count)];
             var result = Walk(player, cc, a, b);
-            if (result == null) continue;
+            if (result == null) { noPath++; continue; }
             walks++;
             if (result.Length > 0) { stuck++; if (stuckAt.Count < 12) stuckAt.Add(result); }
             if (i % 10 == 9) yield return null;
         }
-        Check(stuck == 0, $"random walks (doors open): {walks} NavMesh paths walked with the CharacterController, {stuck} blocked" + (stuckAt.Count > 0 ? ": " + string.Join(" | ", stuckAt) : ""));
+        Check(stuck == 0, $"random walks (doors open): {walks} NavMesh paths walked with the CharacterController ({noPath} pairs without a path), {stuck} blocked" + (stuckAt.Count > 0 ? ": " + string.Join(" | ", stuckAt) : ""));
 
         // ---------------------------------------------------------- 3. pictures: graveyard rocks, a tree trunk
         Teleport(player, new Vector3(-8f, 0f, -21f), 0f);

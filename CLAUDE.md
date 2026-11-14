@@ -306,6 +306,13 @@ Camping→Templo 5000 (also opens Lago) · Faro↔Lago 1500 · Lago→Mercadillo
     like the island's (`M_Wood`, `M_Canvas`, `M_Rock`...) to the shared textured .mat files; `IZ_*Paint` slots are
     recoloured per instance (`Repaint`). `PlaceInRect` fits any model to a cell rectangle (auto 0/90° turn).
   - Unity null: never use `??` / `?.` on UnityEngine.Object.
+- **Editing scripts through Python heredocs:** an unquoted heredoc (`<<EOF`) or `'\n'` inside the Python text turns C#
+  `"
+"` into a real newline and breaks compilation (happened 4 times: "Newline in constant" in `Logs/Editor.log`).
+  Use `<<'EOF'` or the Edit tool, and after every edit check the compile really happened (`Assembly-CSharp(-Editor).dll`
+  newer than the script and no `error CS` at the end of `Logs/Editor.log`; or a RunCommand that references the new symbol)
+  **before** starting a play test, otherwise `EnterPlaymode` is refused ("All compiler errors have to be fixed") and the
+  test stays "running" forever with an empty log. Also run `SetupAll` and the play test in **separate** RunCommands.
 - Keep gameplay numbers in `Assets/Data` ScriptableObjects, not hard-coded.
 - Verify changes by playing (scripted play tests) before reporting them as done; report test results honestly.
 - Keep this file updated after each step.
@@ -319,6 +326,31 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 **Windows export (2026-10-11):** first build OK (`Builds/AnimalIsland_2026-10-11_1353.zip`, 83 MB); the exported
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
+
+## Status (2026-11-14) — PHASE 0 (plan in `Docs/PLAN_PRODUCCION.md`, ideas in `Docs/POSIBLES_MEJORAS.md`)
+Design review by Fable (read-only) → plan by phases for Sonnet/Opus. **Phase 0 done on the Original map + run log:**
+- **RunLog** now writes map, players, per round: duration, intermission (`pausa`), old-man health, damage taken, falls;
+  a per-weapon table (shots / hits / kills) and an events list (CAÍDO / MUERTO / CAÍDA with round, time, x/z).
+- **Original map** (`TestMapSetup.BuildGameScene` + `OriginalMap*.cs`; the layout is code, re-run `SetupAll`):
+  - Door flanks: `OriginalMapBorders.Flanks/DecorateFlanks` put a fence (the door's own posts + cloth) beside every
+    door where the invisible zone border used to run into nothing (the "missing fence" next to the Escalera VIP).
+  - `OriginalMapEntrances` (new): free-standing green WC cabins = `SpawnEntrance` Cabina at each spawn point (25 of 30).
+    Spawn points / box spots that stood in the sea (y < 0.12) are moved to dry land first (17 spawns, both box spots).
+    Cabins that would straddle a zone border (a player could stand on the roof across it) are turned or dropped
+    (`PruneAcrossBorders`); `ToPlain` = spawn point stays without cabin. **Still without cabin (design them by hand,
+    e.g. crypt doors): Cementerio/Spawn0-3, Muelle/Spawn0.**
+  - NavMesh of Original now also bakes the **Prop layer** (trunks etc.), stays at radius 0.35 / climb 0.28, and
+    cuts two slanted rock lips (`SinMalla_CliffBlock_A_11/_A_02`) at the stair tops (the player capsule was stopped there
+    although the mesh crossed). `FixIslands` moves / un-cabins any spawn or box spot not reachable from the start,
+    and the bake repeats (max 3). Door obstacles are added **last** (`obstacle: false` in the build, then `AddDoorObstacle`).
+  - Pause-menu map for Original (`MapInfo` + `Assets/Maps/Original/Original_Map.png`, rendered by `RenderOriginalPreviewCore`).
+- **Verified 2026-11-14:** `OriginalMapPlayTest` OK (70 border jumps 0 across; new check **36/36 spawn points and box spots
+  reachable on the NavMesh from the start with every door open**; 114 walks, 0 blocked), `MapSelectorPlayTest.RunOriginal`
+  OK (0 errors), `BasePlayTest` OK on Isla del Faro with the new run log.
+- **Known / open:** `OriginalMapBorders.Compute` still reports 1 conflict (Jungla touches Campamento at (-15.8,-0.8) without a
+  door); players cannot cross it (0 across in the test) but the cause is unexplained. Original still has the invisible zone
+  borders (rocks / fences only where exposed). Cementerio keeps few cabins. Not touched: Isla del Faro, balance, online
+  (RunLog changes are local only), `CoopPlayTest`, `IslaZombiePlayTest`, `FeedbackPlayTest`, `OnlinePlayTest` not re-run.
 
 ## Status (2026-10-12) — ONLINE CO-OP DONE (Phase 3), tested host + real client through Unity Relay
 The user asked for "the easiest way to play with friends each at home without own servers" and then to build it.

@@ -158,6 +158,13 @@ public static class TestMapSetup
     public static void RenderOriginalPreview()
     {
         EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
+        RenderOriginalPreviewCore();
+    }
+
+    // Top-down picture of the open scene (labels of the zones, doors' own labels hidden); also feeds the pause-menu
+    // map (MapInfo) when the scene has one.
+    static void RenderOriginalPreviewCore()
+    {
         var terrain = Object.FindObjectsByType<Renderer>().Where(r => r.name.StartsWith("Terrain")).ToArray();
         if (terrain.Length == 0) { Debug.LogError("[Maps] no Terrain renderers in " + GameScenePath); return; }
         var b = terrain[0].bounds;
@@ -170,6 +177,8 @@ public static class TestMapSetup
             PreviewLabel(temp, new Vector3(c.x, b.max.y + 5f, c.y), zd.name.ToUpperInvariant(), size * 0.035f, Color.white);
         }
         PreviewLabel(temp, new Vector3(18.2f, b.max.y + 5f, 24.6f + size * 0.06f), "SALIDA", size * 0.04f, new Color(0.4f, 1f, 0.4f));
+        var hidden = Object.FindObjectsByType<WorldLabel>().Where(l => l.gameObject.activeSelf).Select(l => l.gameObject).ToList();
+        foreach (var h in hidden) h.SetActive(false);
         var cam = new GameObject("PreviewCam").AddComponent<Camera>();
         cam.transform.SetParent(temp, false);
         cam.orthographic = true;
@@ -192,9 +201,19 @@ public static class TestMapSetup
         Object.DestroyImmediate(tex);
         rt.Release();
         Object.DestroyImmediate(temp.gameObject);
+        foreach (var h in hidden) if (h != null) h.SetActive(true);
         AssetDatabase.ImportAsset(OriginalPreviewPath, ImportAssetOptions.ForceUpdate);
         var imp = AssetImporter.GetAtPath(OriginalPreviewPath) as TextureImporter;
         if (imp != null) { imp.wrapMode = TextureWrapMode.Clamp; imp.textureCompression = TextureImporterCompression.Uncompressed; imp.SaveAndReimport(); }
+        var info = Object.FindAnyObjectByType<MapInfo>();
+        if (info != null)
+        {
+            var so = new SerializedObject(info);
+            so.FindProperty("mapTexture").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
+            so.FindProperty("worldMin").vector2Value = new Vector2(b.center.x - size, b.center.z - size);
+            so.FindProperty("worldMax").vector2Value = new Vector2(b.center.x + size, b.center.z + size);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
         Debug.Log("[Maps] rendered " + OriginalPreviewPath);
     }
 
@@ -806,6 +825,10 @@ public static class TestMapSetup
             zones[zd.id] = zone;
         }
 
+        // spawn entrances: a visible cabin at every spawn point (before the borders / NavMesh: it is solid)
+        int cabins = OriginalMapEntrances.Build(Child(map, "Entradas", Vector3.zero).transform, ZoneDefs.Select(z => zones[z.id]));
+        Debug.Log("[TestMap] " + OriginalMapEntrances.LastReport);
+
         // walls
         var wallsRoot = Child(map, "Walls", Vector3.zero).transform;
         var rock = Model("Assets/BeachIsland/Models/CliffBlock_A.fbx");
@@ -834,7 +857,7 @@ public static class TestMapSetup
                     break;
                 }
             var door = BuildDoor(doorsRoot, "Door_" + dd.a + "_" + dd.b, dd.name, new[] { zones[dd.a], zones[dd.b] }, doorPos, doorRot, dd.cost,
-                doorWidth, pole, dd.b == "Muelle" ? Mat("Towel_Boss", new Color(0.6f, 0.1f, 0.5f)) : towel[i % towel.Length]);
+                doorWidth, pole, dd.b == "Muelle" ? Mat("Towel_Boss", new Color(0.6f, 0.1f, 0.5f)) : towel[i % towel.Length], obstacle: false);
             // as tall as the walls: nobody jumps over a closed door (the Frog's super jump reaches ~5 m)
             var box = door.GetComponentInChildren<BoxCollider>();
             box.center = new Vector3(0f, (OriginalMapBorders.WallTop + OriginalMapBorders.WallBottom) / 2f - door.transform.position.y, 0f);
@@ -873,21 +896,48 @@ public static class TestMapSetup
         var spawn = Child(map, "PlayerSpawn", Ground(new Vector2(12, -13)), 0f);
 
         BuildSystems(systems.gameObject, data, spawn.transform, zones["Muelle"], bossSpawn.transform, enemyPrefab, bossPrefab);
+        systems.gameObject.AddComponent<MapInfo>();   // pause-menu map (filled in after the NavMesh bake)
 
         // sealed zones: invisible walls along every border (and around the island, a little into the sea),
         // rocks where a border crosses open ground
-        var borders = OriginalMapBorders.Compute(ZoneDefs.Select(z => zones[z.id]).ToArray(), doors.ToArray());
+        var zoneArr = ZoneDefs.Select(z => zones[z.id]).ToArray();
+        var borders = OriginalMapBorders.Compute(zoneArr, doors.ToArray());
+        if (OriginalMapEntrances.PruneAcrossBorders(borders, zoneArr) > 0)
+        {
+            Physics.SyncTransforms();
+            borders = OriginalMapBorders.Compute(zoneArr, doors.ToArray());   // the removed cabins no longer count as obstacles
+            Debug.Log("[TestMap] " + OriginalMapEntrances.LastReport);
+        }
         OriginalMapBorders.Build(Child(wallsRoot, "Bordes", Vector3.zero).transform, borders);
         var exposed = OriginalMapBorders.Exposed(borders, doors.ToArray(), 1.6f);
         var rocks = new[] { "CliffBlock_A", "CliffBlock_B", "CliffBlock_C" }.Select(n => Model("Assets/BeachIsland/Models/" + n + ".fbx")).Where(m => m != null).ToArray();
         int placed = OriginalMapBorders.Decorate(Child(wallsRoot, "RocasBorde", Vector3.zero).transform, exposed, rocks);
+        var flanks = OriginalMapBorders.Flanks(borders, doors.ToArray(), 1.0f);
+        int fences = OriginalMapBorders.DecorateFlanks(Child(wallsRoot, "VallasPuerta", Vector3.zero).transform, flanks, 1.0f);
         OriginalMapBorders.Preview(borders, "Renders/Original_borders.png", exposed);
         var lidRoot = Child(wallsRoot, "Tapas", Vector3.zero).transform;
         int lids = OriginalMapAudit.FillTraps(lidRoot, 1.3f, 3.5f) + OriginalMapAudit.FillTraps(lidRoot, 5.3f, 6f);   // normal jump, Frog
         OriginalMapBorders.LastReport = borders.report + $"{placed} rocas en tramos abiertos, {lids} tapas en huecos sin salida\n";
         Debug.Log(OriginalMapBorders.LastReport);
 
-        BakeNavMesh(zones, spawn.transform.position);
+        // bake; a cabin can plug a narrow lane and cut a pocket off: remove the cabins near any point left isolated
+        // and bake again (at most 3 times)
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            var isolated = BakeNavMesh(zones, spawn.transform.position);
+            if (isolated.Count == 0) break;
+            int gone = OriginalMapEntrances.RemoveNear(isolated, 5f);
+            Debug.Log($"[TestMap] bake {attempt + 1}: {isolated.Count} puntos aislados, {gone} casetas quitadas cerca");
+            // FixIslands may also have dropped cabins: always bake again (3 attempts at most)
+            Physics.SyncTransforms();
+        }
+        // the carving door obstacles go in last: they would cut the NavMesh in every path check above
+        foreach (var d in doors)
+        {
+            var bx = d.GetComponentInChildren<BoxCollider>();
+            AddDoorObstacle(bx.gameObject, bx.size.x);
+        }
+        RenderOriginalPreviewCore();
     }
 
     // A paid barrier (posts + cloth) that opens `connects` when bought. The barrier carves the NavMesh while closed.
@@ -1115,11 +1165,17 @@ public static class TestMapSetup
     }
 
     // ------------------------------------------------------------------ navigation
-    static void BakeNavMesh(Dictionary<string, Zone> zones, Vector3 start)
+    // baked a little fatter than the old men (0.35) so paths keep clear of rock edges at stair tops: the player
+    // capsule (0.3) was stopped by slanted rock faces the 0.35 mesh ran right along
+    const float OriginalBakeRadius = 0.35f;
+
+    static List<Vector3> BakeNavMesh(Dictionary<string, Zone> zones, Vector3 start)
     {
+        var oldNav = GameObject.Find("TestMap/Navigation");
+        if (oldNav != null) Object.DestroyImmediate(oldNav);
         var navSettings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/NavMeshAreas.asset")[0]);
         var agent0 = navSettings.FindProperty("m_Settings").GetArrayElementAtIndex(0);
-        agent0.FindPropertyRelative("agentRadius").floatValue = 0.35f;
+        agent0.FindPropertyRelative("agentRadius").floatValue = OriginalBakeRadius;
         agent0.FindPropertyRelative("agentHeight").floatValue = 1.4f;
         // this map is baked with the player's step (0.3): the old men only walk where the player can walk (with
         // 0.45 their paths cut over rock edges / temple steps the player has to jump). Isla del Faro keeps 0.45
@@ -1138,13 +1194,29 @@ public static class TestMapSetup
         sea.center = new Vector3(-6f, -5.05f, -3f);
         sea.size = new Vector3(120f, 10f, 120f);
         sea.area = 1;
+        // two slanted rock lips (0.2 m high) at the top of the Cinta de obra and Escalera del jardinero stairs: the mesh
+        // crosses them (climb 0.28) but the player capsule is stopped by their face, so they are cut out of the mesh
+        foreach (var t in Object.FindObjectsByType<Transform>())
+            if (t.name == "CliffBlock_A_11" || t.name == "CliffBlock_A_02")
+            {
+                var cols = t.GetComponentsInChildren<Collider>();
+                if (cols.Length == 0) continue;
+                var bb = cols[0].bounds;
+                foreach (var c in cols) bb.Encapsulate(c.bounds);
+                var cut = new GameObject("SinMalla_" + t.name);
+                cut.transform.SetParent(go.transform, false);
+                cut.transform.position = bb.center;
+                var vol = cut.AddComponent<NavMeshModifierVolume>();
+                vol.size = bb.size + new Vector3(0.2f, 0.6f, 0.2f);
+                vol.area = 1;
+            }
         var surface = go.AddComponent<NavMeshSurface>();
         surface.agentTypeID = 0;
         surface.collectObjects = CollectObjects.All;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
 
         // 1) bake WITH the doors to check that every zone is sealed off
-        surface.layerMask = (1 << 0) | (1 << WallLayer) | (1 << DoorLayer);
+        surface.layerMask = (1 << 0) | (1 << WallLayer) | (1 << DoorLayer) | (1 << PropLayer);
         surface.BuildNavMesh();
         var report = new List<string>();
         var path = new NavMeshPath();
@@ -1161,7 +1233,7 @@ public static class TestMapSetup
         Debug.Log("[TestMap] Zone isolation check:\n" + string.Join("\n", report));
 
         // 2) final bake WITHOUT doors (they block at runtime with carving NavMeshObstacles)
-        surface.layerMask = (1 << 0) | (1 << WallLayer);
+        surface.layerMask = (1 << 0) | (1 << WallLayer) | (1 << PropLayer);
         surface.BuildNavMesh();
         const string dataPath = "Assets/Scenes/BeachIsland_NavMesh.asset";
         AssetDatabase.DeleteAsset(dataPath);
@@ -1169,6 +1241,7 @@ public static class TestMapSetup
         surface.navMeshData = AssetDatabase.LoadAssetAtPath<NavMeshData>(dataPath);
         EditorUtility.SetDirty(surface);
         agent0.FindPropertyRelative("agentClimb").floatValue = 0.45f;
+        agent0.FindPropertyRelative("agentRadius").floatValue = 0.35f;
         navSettings.ApplyModifiedProperties();
 
         // snap spawn points / box spots to the NavMesh, report the ones in the void
@@ -1180,6 +1253,48 @@ public static class TestMapSetup
                 else bad.Add(z.name + "/" + t.name);
             }
         if (bad.Count > 0) Debug.LogWarning("[TestMap] Points without NavMesh: " + string.Join(", ", bad));
+        return FixIslands(zones, start);
+    }
+
+    // A spawn point / box spot on a NavMesh pocket cut off from the start (props or a cabin plug a lane) would trap the
+    // old man spawned there (or hide the box): move it to the nearest point that can be reached from the start. A
+    // cabin spawn that cannot be saved is removed with its cabin. Returns where the trouble was (to remove cabins
+    // around it and bake again).
+    static List<Vector3> FixIslands(Dictionary<string, Zone> zones, Vector3 start)
+    {
+        var trouble = new List<Vector3>();
+        var path = new NavMeshPath();
+        NavMesh.SamplePosition(start, out var s0, 3f, NavMesh.AllAreas);
+        bool Reach(Vector3 b) => NavMesh.CalculatePath(s0.position, b, NavMesh.AllAreas, path) && path.status == NavMeshPathStatus.PathComplete;
+        var report = new List<string>();
+        foreach (var z in zones.Values)
+            foreach (var p in z.SpawnPoints.Concat(z.BoxSpots).ToList())
+            {
+                if (Reach(p.position)) continue;
+                trouble.Add(p.position);
+                bool moved = false;
+                if (p.GetComponent<SpawnEntrance>() == null)
+                    for (float rad = 1f; rad <= 10f && !moved; rad += 1f)
+                        for (int a = 0; a < 360 && !moved; a += 20)
+                        {
+                            var c = p.position + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * rad;
+                            if (NavMesh.SamplePosition(c, out var q, 0.8f, NavMesh.AllAreas) && Reach(q.position))
+                            {
+                                report.Add($"{z.name}/{p.name} estaba aislado en {p.position}, movido a {q.position}");
+                                p.position = q.position;
+                                moved = true;
+                            }
+                        }
+                if (moved) continue;
+                if (p.GetComponent<SpawnEntrance>() != null)
+                {
+                    report.Add($"{z.name}/{p.name} AISLADO en {p.position}: se le quita la caseta (el punto sigue)");
+                    OriginalMapEntrances.ToPlain(p);
+                }
+                else report.Add($"{z.name}/{p.name} AISLADO en {p.position} y sin sitio al que moverlo");
+            }
+        Debug.Log("[TestMap] Puntos aislados en la malla:\n" + (report.Count == 0 ? "ninguno" : string.Join("\n", report)));
+        return trouble;
     }
 
     // ------------------------------------------------------------------ menu scene

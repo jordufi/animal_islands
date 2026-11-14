@@ -288,6 +288,65 @@ public static class OriginalMapBorders
         return spots;
     }
 
+    // A border wall continues past the end of a door: until now that stretch (about 1.6 m beside every door) had
+    // nothing to see, so the player ran into an invisible wall right next to the door. The flank is a fence with
+    // the door's own posts and cloth, every `spacing` m, from the door's end up to FlankLength m beside it.
+    public const float FlankLength = 4f;
+    public struct Flank { public Vector3 pos; public Vector2 dir; public ZoneDoor door; }
+
+    public static List<Flank> Flanks(Result r, ZoneDoor[] doors, float spacing)
+    {
+        var g = r.g;
+        var res = new List<Flank>();
+        bool Open(Vector2 p)
+        {
+            int x = Mathf.FloorToInt((p.x - g.x0) / Cell), z = Mathf.FloorToInt((p.y - g.z0) / Cell);
+            return x >= 0 && z >= 0 && x < g.nx && z < g.nz && r.open[z * g.nx + x];
+        }
+        foreach (var (a, b) in r.segments)
+        {
+            Vector2 dir = (b - a).normalized, nrm = new Vector2(-dir.y, dir.x);
+            int n = Mathf.Max(1, Mathf.RoundToInt((b - a).magnitude / spacing));
+            for (int i = 0; i < n; i++)
+            {
+                var p = Vector2.Lerp(a, b, (i + 0.5f) / n);
+                if (!Open(p + nrm * Cell * 0.5f) || !Open(p - nrm * Cell * 0.5f)) continue;
+                foreach (var door in doors)
+                {
+                    var box = door.GetComponentInChildren<BoxCollider>(true);
+                    float w = box != null ? box.size.x : 4.6f;
+                    var lp = door.transform.InverseTransformPoint(new Vector3(p.x, door.transform.position.y, p.y));
+                    float off = Mathf.Abs(lp.x) - w / 2f;
+                    if (off > -0.2f && off <= FlankLength && Mathf.Abs(lp.z) <= 2f)
+                    {
+                        res.Add(new Flank { pos = new Vector3(p.x, 0f, p.y), dir = dir, door = door });
+                        break;
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    public static int DecorateFlanks(Transform parent, List<Flank> flanks, float spacing)
+    {
+        int groundMask = ReachGraph.Mask & ~((1 << TestMapSetup.WallLayer) | (1 << TestMapSetup.DoorLayer));
+        int i = 0;
+        foreach (var f in flanks)
+        {
+            var barrier = f.door.GetComponentInChildren<BoxCollider>(true).transform;
+            Material pole = barrier.GetChild(0).GetComponent<Renderer>().sharedMaterial, cloth = barrier.GetChild(2).GetComponent<Renderer>().sharedMaterial;
+            float y = Physics.Raycast(f.pos + Vector3.up * 40f, Vector3.down, out var h, 80f, groundMask, QueryTriggerInteraction.Ignore) ? h.point.y : 0f;
+            var go = new GameObject("VallaPuerta" + (i++)).transform;
+            go.SetParent(parent, false);
+            go.position = new Vector3(f.pos.x, y, f.pos.z);
+            go.rotation = Quaternion.LookRotation(new Vector3(f.dir.x, 0f, f.dir.y));
+            TestMapSetup.Prim(PrimitiveType.Cylinder, go, new Vector3(0, 0.8f, 0), new Vector3(0.12f, 0.8f, 0.12f), pole);
+            TestMapSetup.Prim(PrimitiveType.Cube, go, new Vector3(0, 1.0f, spacing / 2f), new Vector3(0.05f, 1.0f, spacing), cloth);
+        }
+        return i;
+    }
+
     // Rocks (with collision) on the exposed border points.
     public static int Decorate(Transform parent, List<Vector3> spots, GameObject[] rocks)
     {
