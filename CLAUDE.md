@@ -6,8 +6,8 @@ The user talks to Claude mostly in **Spanish** (sometimes English): answer in th
 In-game text is in Spanish. The user wants big multi-step work done in one go and verified by play tests.
 **Git/GitHub (since 2026-11-14):** repo https://github.com/jordufi/animal_islands (branch `main`, local repo in the
 project root, `.gitignore` for Unity: Library, Temp, Builds, Logs, UserSettings, Renders, *.zip, csproj/sln). ~1355
-files / ~21 MB, no Git LFS (nothing >40 MB). First commit `84e9104`; the first push got HTTP 403 (stale Windows
-credential, the user must sign in again), so check `git status` / `git log origin/main` before assuming it is pushed.
+files / ~21 MB, no Git LFS (nothing >40 MB). First commit `84e9104`, README + CLAUDE.md `e7c1f41`; pushed OK
+(the first push got HTTP 403 from a stale Windows credential; fixed by the user signing in again, so push works now).
 Commit / push **only when the user asks**; end commit messages with the Co-Authored-By line from the system
 reminder. Use `git` from Git Bash / PowerShell; never run `du` over the whole project (Library is 3.3 GB, very slow).
 Before large risky edits it is still fine to copy the touched files to the session scratchpad. `README.md` has the
