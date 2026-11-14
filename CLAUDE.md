@@ -4,7 +4,14 @@ Co-op-ready (currently single-player) third-person **Zombies-style round surviva
 animal characters and an ironic / shitpost tone (think Black Ops Zombies × Borderlands humour).
 The user talks to Claude mostly in **Spanish** (sometimes English): answer in the language they write in.
 In-game text is in Spanish. The user wants big multi-step work done in one go and verified by play tests.
-**No git** (the user declined it): before large edits copy the touched files to the session scratchpad.
+**Git/GitHub (since 2026-11-14):** repo https://github.com/jordufi/animal_islands (branch `main`, local repo in the
+project root, `.gitignore` for Unity: Library, Temp, Builds, Logs, UserSettings, Renders, *.zip, csproj/sln). ~1355
+files / ~21 MB, no Git LFS (nothing >40 MB). First commit `84e9104`; the first push got HTTP 403 (stale Windows
+credential, the user must sign in again), so check `git status` / `git log origin/main` before assuming it is pushed.
+Commit / push **only when the user asks**; end commit messages with the Co-Authored-By line from the system
+reminder. Use `git` from Git Bash / PowerShell; never run `du` over the whole project (Library is 3.3 GB, very slow).
+Before large risky edits it is still fine to copy the touched files to the session scratchpad. `README.md` has the
+public summary (Spanish): keep it in sync with big changes.
 
 ## The game (decided design — don't re-ask)
 - **Premise:** a beach resort island taken over by hostile retirees ("jubilados"). You play resort animals.
