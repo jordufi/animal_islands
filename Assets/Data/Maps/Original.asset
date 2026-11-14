@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3f37819aa57ee14fa84a896d4feb406, type: 3}
+  m_Name: Original
+  m_EditorClassIdentifier: Assembly-CSharp::MapData
+  id: original
+  displayName: Original
+  sceneName: BeachIsland
+  description: "La primera isla: peque\xF1a, r\xE1pida y muy ca\xF3tica."
+  preview: {fileID: 2800000, guid: 5dfd8fa3db71d6645a5f6d1279cf3cd4, type: 3}

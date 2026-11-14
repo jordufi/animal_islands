@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 927c0aad43367ef4b825d97817987295, type: 3}
+  m_Name: LentosPeta
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: lentospeta
+  displayName: Lentos-peta
+  upgradedName: "Lentos-peta Expr\xE9s"
+  model: {fileID: 919132149155446097, guid: af4b76c832a887d4a8e021258539f926, type: 3}
+  damage: 45
+  headshotMultiplier: 1.5
+  pellets: 8
+  penetration: 1
+  range: 22
+  falloffStart: 5
+  minDamageFactor: 0.3
+  fireInterval: 1.35
+  automatic: 0
+  hipSpread: 7
+  aimSpread: 4.5
+  aimFieldOfView: 52
+  magazineSize: 5
+  maxReserve: 30
+  reloadTime: 4
+  reloadOneByOne: 1
+  reloadStartTime: 0.5
+  shellLoadTime: 0.75
+  boxWeight: 0
+  wallCost: 500
+  wallAmmoCost: 250
+  upgradeDamageMultiplier: 2
+  upgradeMagazineMultiplier: 1.5
+  recoil: 4.5
+  tracerColor: {r: 0.9, g: 0.6, b: 0.35, a: 1}

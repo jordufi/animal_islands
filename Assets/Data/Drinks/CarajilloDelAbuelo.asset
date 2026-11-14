@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de9c896f156dfef4c89bd2731740c83b, type: 3}
+  m_Name: CarajilloDelAbuelo
+  m_EditorClassIdentifier: Assembly-CSharp::DrinkData
+  id: carajillo
+  displayName: Carajillo del Abuelo
+  effectDescription: al recibir un golpe los abuelos te ignoran 4 s
+  sideEffectDescription: hueles a farmacia
+  cost: 2000
+  color: {r: 0.55, g: 0.35, b: 0.2, a: 1}
+  mods:
+  - stat: 5
+    multiplier: 1.05
+  special: 2
+  sideEffect: 0
