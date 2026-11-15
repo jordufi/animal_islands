@@ -37,6 +37,10 @@ public class EnemyVariant : ScriptableObject
     [Tooltip("Part of his health that is the mask.")]
     public float maskShare = 0.3f;
     public GameObject maskPrefab;
+    [Tooltip("Plague doctor: a cloud that hurts stays where he dies (0 = none).")]
+    public float deathCloudRadius = 0f;
+    public float deathCloudSeconds = 5f;
+    public float deathCloudDps = 12f;
 
     public float ChanceAt(int round) => round < firstRound ? 0f : Mathf.Min(maxChance, baseChance + chancePerRound * (round - firstRound));
 }

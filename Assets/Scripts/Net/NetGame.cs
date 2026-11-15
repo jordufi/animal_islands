@@ -17,7 +17,7 @@ public class NetGame : MonoBehaviour
     const float EnemySnapInterval = 0.05f;
     const float TickInterval = 0.25f;
 
-    public enum Fwd : byte { GiveWeapon = 1, Upgrade, RefillAmmo, RefillAll, AddDrink, CardBusy, CardFree, Revive }
+    public enum Fwd : byte { GiveWeapon = 1, Upgrade, RefillAmmo, RefillAll, AddDrink, CardBusy, CardFree, Revive, Gondola }
 
     public static NetGame Instance { get; private set; }
     public static NetGame H => Net.IsHost ? Instance : null;     // host-side hooks: NetGame.H?.Something()
@@ -236,6 +236,9 @@ public class NetGame : MonoBehaviour
             case Fwd.CardBusy: if (CardManager.Instance != null) CardManager.Instance.NetBusy(p.GetComponent<PlayerInteractor>(), true, value); break;
             case Fwd.CardFree: if (CardManager.Instance != null) CardManager.Instance.NetBusy(p.GetComponent<PlayerInteractor>(), false, 0f); break;
             case Fwd.Revive: p.Revive(); break;
+            case Fwd.Gondola:   // the host charged for it: this player's own machine does the ride
+                foreach (var g in FindObjectsByType<GondolaStop>()) if (g.name == arg) g.StartRide(p, Mathf.RoundToInt(value));
+                break;
         }
     }
 

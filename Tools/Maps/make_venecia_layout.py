@@ -102,6 +102,7 @@ fill(39, 17, 58, 30, 'e')
 blocks('#', (58, 17, 58, 22), (58, 25, 58, 30))   # the wide one: a single open square, 38 x 28 m, only the palace wall
 blocks('Z', (46, 22, 48, 24))                # campanile
 marks('o', (41, 21), (41, 26))               # the two columns of the molo
+marks('o', (43, 19), (46, 19), (50, 19), (53, 19), (43, 28), (50, 28), (53, 28))   # colonnades along the north and south sides
 marks('x', (43, 26), (51, 22), (51, 25), (44, 21), (42, 18), (50, 18), (43, 29), (50, 29))
 level(55, 18, 57, 22, 1); level(55, 25, 57, 29, 1)   # palace loggias, the gate to the vaporetto between them
 ramp([(53, 20), (54, 20)], '>')

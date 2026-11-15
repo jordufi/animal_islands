@@ -613,6 +613,7 @@ public class EnemyAI : MonoBehaviour
 
     void OnDied(EnemyHealth _, DamageInfo __)
     {
+        if (Variant != null && Variant.deathCloudRadius > 0f) GasCloud.Spawn(transform.position, Variant.deathCloudRadius, Variant.deathCloudSeconds, Variant.deathCloudDps);
         StopAllCoroutines();
         attacking = false;
         onLink = false;

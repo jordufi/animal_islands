@@ -410,6 +410,7 @@ public static class TestMapSetup
         });
         bauta.maskPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Maps/Venecia/Models/VN_Mascara_Bauta.fbx");
         peste.maskPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Maps/Venecia/Models/VN_Mascara_Peste.fbx");
+        if (peste.deathCloudRadius <= 0f) { peste.deathCloudRadius = 2.5f; peste.deathCloudSeconds = 5f; peste.deathCloudDps = 12f; }   // the asset may predate the cloud
         EditorUtility.SetDirty(bauta); EditorUtility.SetDirty(peste);
         d.maskVariants = new[] { peste, bauta };
         // night rounds (every 5): only these, green tracksuit, walk over props and throw flip-flops

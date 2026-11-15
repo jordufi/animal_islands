@@ -34,3 +34,6 @@ MonoBehaviour:
   maskHits: 3
   maskShare: 0.4
   maskPrefab: {fileID: 919132149155446097, guid: 635f95ab8de70fc41b04ae33e25c8eec, type: 3}
+  deathCloudRadius: 2.5
+  deathCloudSeconds: 5
+  deathCloudDps: 12

@@ -4,8 +4,8 @@ using UnityEngine;
 // Gondola stop (layout marker 'N', La Serenisima): pay a few conchas and the gondola takes you along the canals to
 // the next stop (going round the map) whose barrio is already open. An escape route: the old men stay behind, you
 // can shoot from the boat. One passenger at a time per stop; it never lands in a closed barrio.
-// The setup bakes the canal paths. Only local players ride (online: the host and its split-screen players; a client
-// can't yet, see CLAUDE.md).
+// The setup bakes the canal paths. Every player rides on their own machine (online: a client
+// asks the host, who charges and tells that player's machine to do the ride).
 public class GondolaStop : Interactable
 {
     [SerializeField] Zone zone;
@@ -49,19 +49,27 @@ public class GondolaStop : Interactable
         if (busy) return "";
         int i = Pick();
         if (i < 0) return "Góndola: no hay otro embarcadero abierto";
-        if (PlayerSlot.IsProxy(player)) return "";
         return "□  Góndola a " + next[i].zone.displayName + " (" + CostText(Cost) + ")";
     }
 
-    public override bool CanInteract(PlayerInteractor player) => !busy && Pick() >= 0 && !PlayerSlot.IsProxy(player);
+    public override bool CanInteract(PlayerInteractor player) => !busy && Pick() >= 0;
 
     public override void Interact(PlayerInteractor player)
     {
         int i = Pick();
-        if (busy || i < 0 || PlayerSlot.IsProxy(player)) return;
+        if (!Net.Authority || busy || i < 0) return;   // online client: PlayerInteractor asks the host
         var p = player.GetComponent<PlayerHealth>();
         if (p == null || !Pay(Cost, player)) return;
+        // a remote player rides on their own machine (they move their own body): the host only charges
+        if (PlayerSlot.IsProxy(player)) { if (NetGame.H != null) NetGame.H.Forward(player, NetGame.Fwd.Gondola, name, i); return; }
         StartCoroutine(Ride(p, i));
+    }
+
+    // Online client: the host's go-ahead for the local player.
+    public void StartRide(PlayerHealth p, int route)
+    {
+        if (p == null || busy || next == null || route < 0 || route >= next.Length) return;
+        StartCoroutine(Ride(p, route));
     }
 
     IEnumerator Ride(PlayerHealth p, int route)

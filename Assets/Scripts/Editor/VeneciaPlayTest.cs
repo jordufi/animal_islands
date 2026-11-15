@@ -248,6 +248,19 @@ public static class VeneciaPlayTest
                 Check(!b.killed && !masked.Masked, $"hit 2: mask broken, alive ({masked.Current:F0})");
                 var c = EnemyHits.ApplyLocal(masked, 99999f, true, HitKind.Gun, player, true, 0f, 0f, player.transform.position);
                 Check(c.killed && c.headshot, "hit 3: dead, headshot counts again");
+                // the plague doctor leaves a cloud where he dies
+                var so2 = new SerializedObject(rm);
+                var sv2 = so2.FindProperty("specialVariants");
+                EnemyVariant peste = null;
+                for (int i = 0; i < sv2.arraySize; i++) { var v = sv2.GetArrayElementAtIndex(i).objectReferenceValue as EnemyVariant; if (v != null && v.deathCloudRadius > 0f) peste = v; }
+                var doc = peste != null ? rm.SpawnEnemy(peste, player.transform.position + player.transform.forward * 6f) : null;
+                if (doc == null) Write("FAIL no plague doctor variant with a death cloud in this scene");
+                else
+                {
+                    int clouds = GasCloud.Alive;
+                    doc.GetComponent<EnemyHealth>().TakeDamage(999999f, false, true);
+                    Check(GasCloud.Alive == clouds + 1, $"plague doctor: 3-hit mask ({peste.maskHits}), dies and leaves a cloud of {peste.deathCloudRadius} m for {peste.deathCloudSeconds} s");
+                }
                 Next();
                 break;
             }
@@ -433,6 +446,19 @@ public static class VeneciaPlayTest
                 int p0 = gm.Points, z0 = ZoneManager.Instance.OpenCount;
                 door.Interact(inter);
                 Check(ZoneManager.Instance.OpenCount > z0 && gm.Points == p0 && MasterKey.Instance.Used, "vaporetto door opened for free and the key was spent");
+                Next();
+                break;
+            }
+
+            case 25:   // the boss comes as the Dux, with his golden mask
+            {
+                var boss = BossEncounter.Instance != null ? BossEncounter.Instance.Boss : null;
+                var dux = Object.FindAnyObjectByType<DuxMask>();
+                if (boss == null || dux == null || !dux.Wearing) { if (rt > 15f) { Write("FAIL the Dux never showed up with his mask (boss " + (boss != null) + ", DuxMask " + (dux != null) + ")"); Finish("failed"); } return; }
+                float before0 = boss.Health.Current;
+                var hit = EnemyHits.ApplyLocal(boss.Health, 1000000f, true, HitKind.Gun, player, true, 0f, 0f, player.transform.position);
+                Check(boss.Health.Masked && !hit.killed && !hit.headshot && boss.Health.Current < before0, $"the Dux wears the golden mask: a 1,000,000 headshot only chips it ({before0:F0} -> {boss.Health.Current:F0})");
+                Shot("dux", boss.transform.position + boss.transform.forward * 5f + Vector3.up * 3f, boss.transform.position + Vector3.up * 2.6f);
                 step = 30; stepTime = Time.time; realTime = Time.realtimeSinceStartup;
                 break;
             }

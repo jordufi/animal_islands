@@ -376,7 +376,11 @@ public static partial class IslaZombieSetup
         sun.intensity = 1.2f;
         sun.shadows = LightShadows.Soft;
         sun.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
-        if (Ven) { sun.color = new Color(1f, 0.82f, 0.62f); sun.intensity = 1.15f; sun.transform.rotation = Quaternion.Euler(28f, -60f, 0f); }   // late afternoon
+        if (Ven)   // sunset: low warm sun, long shadows, a little warm haze
+        {
+            sun.color = new Color(1f, 0.68f, 0.42f); sun.intensity = 1.3f; sun.transform.rotation = Quaternion.Euler(17f, -62f, 0f);
+            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Exponential; RenderSettings.fogDensity = 0.006f; RenderSettings.fogColor = new Color(0.95f, 0.66f, 0.5f);
+        }
         RenderSettings.sun = sun;
         if (Camera.main == null)
         {

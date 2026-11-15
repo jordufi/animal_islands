@@ -181,7 +181,7 @@ public static partial class IslaZombieSetup
                         break;
                     case 'i':
                         if (L.level[cell.x, cell.y] >= 2) PartColliders(VenPlace(pr, VN("VN_TorreEspiral"), p, 0f));
-                        else PartColliders(PlaceInRect(pr, VN(h < 0.5f ? "VN_Tumba_C" : "VN_Angel"), p, 1.9f, 1.9f, FaceOpen(L, cell)));
+                        else PartColliders(PlaceInRect(pr, VN(new[] { "VN_Tumba_C", "VN_Angel", "VN_Mausoleo" }[(cell.x * 2 + cell.y) % 3]), p, 1.9f, 1.9f, FaceOpen(L, cell)));
                         break;
                     case 'e':
                         PartColliders(PlaceInRect(pr, VN("VN_Columna"), p, 1.9f, 1.9f));
@@ -276,6 +276,7 @@ public static partial class IslaZombieSetup
             }
 
         // on the water, along the quays: mooring poles, gondolas and water taxis (no colliders: nobody stands there)
+        var hulls = new List<Vector3>();
         for (int r = 0; r < L.H; r++)
             for (int c = 0; c < L.W; c++)
             {
@@ -290,8 +291,9 @@ public static partial class IslaZombieSetup
                     if (h < 0.3f) VenPlace(floating, VN(Hash(c, r, 41) < 0.3f ? "VN_PaloRayas" : "VN_Palo"), p + toLand * 0.45f + along * (Hash(c, r, 42) - 0.5f), Hash(c, r, 43) * 360f);
                     bool clear = true;   // room for a 9 m hull: water two cells each way, land on this side all along
                     for (int i = -2; i <= 2 && clear; i++) clear = IsWater(L, c + a.x * i, r + a.y * i) && !IsWater(L, c + a.x * i + d.x, r + a.y * i + d.y) && !VenWalk(L, c + a.x * i - d.x, r + a.y * i - d.y);
-                    if (!clear) continue;
+                    if (!clear || L.cellZone[c + d.x, r + d.y] == 'd' || hulls.Any(q => (q - p).sqrMagnitude < 11f * 11f)) continue;
                     float hb = Hash(c, r, 44);
+                    if (hb < 0.13f) hulls.Add(p);
                     if (hb < 0.09f) VenPlace(floating, VN("VN_Gondola"), p + toLand * 0.15f, Yaw(along) + (Hash(c, r, 45) < 0.5f ? 0f : 180f));
                     else if (hb < 0.13f) VenPlace(floating, VN("VN_Lancha"), p + toLand * 0.05f, Yaw(along) + (Hash(c, r, 45) < 0.5f ? 0f : 180f));
                     break;
@@ -339,6 +341,10 @@ public static partial class IslaZombieSetup
         }
         VenBuildGondolas(root, L, zones);
         VenBuildTasks(root, L);
+        // the boss wears a golden mask here
+        var dux = Child(root, "DuxMask", Vector3.zero).AddComponent<DuxMask>();
+        dux.Configure(VN("VN_Mascara_Bauta"), TestMapSetup.Mat("Gold", new Color(1f, 0.8f, 0.1f), 0.8f));
+        EditorUtility.SetDirty(dux);
     }
 
     // The vaporetto task list (BoatMission.HasTasks): the campanile you climb to ring the bell (= dar la luz), the
