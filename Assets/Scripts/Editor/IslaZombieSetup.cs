@@ -22,20 +22,44 @@ using UnityEngine.AI;
 
 public static partial class IslaZombieSetup
 {
-    const string ScenePath = TestMapSetup.IslaZombieScenePath;
-    const string MapFolder = "Assets/Maps/IslaZombie";
-    const string LayoutPath = MapFolder + "/IslaZombie_Layout.txt";
-    const string MapTexturePath = MapFolder + "/IslaZombie_Map.png";
-    const string SignFolder = MapFolder + "/Signs";
-    const string ModelFolder = MapFolder + "/Models/";
+    // One map built from an ASCII layout. Isla del Faro, its copy with heights and the small heights test map
+    // share all the code; only these paths change (Docs/FASE3_FORMATO.md).
+    public class MapConfig
+    {
+        public string name, folder, file, scene, root = "IslaZombie";
+        public int originCol = 21, originRow = 18;   // this cell is the world origin
+        public bool isla = true;                     // Isla del Faro checks (named routes) and menu registration
+        public string LayoutPath => $"{folder}/{file}_Layout.txt";
+        public string MapTexturePath => $"{folder}/{file}_Map.png";
+        public string SignFolder => folder + "/Signs";
+        public string ScenePath => $"Assets/Scenes/{scene}.unity";
+        public string NavMeshPath => $"Assets/Scenes/{scene}_NavMesh.asset";
+        public string JumperNavMeshPath => $"Assets/Scenes/{scene}_NavMesh_Saltador.asset";
+    }
+
+    public static readonly MapConfig Isla = new MapConfig { name = "Isla del Faro", folder = "Assets/Maps/IslaZombie", file = "IslaZombie", scene = "IslaZombie" };
+    public static readonly MapConfig IslaAlturas = new MapConfig { name = "Isla del Faro (alturas)", folder = "Assets/Maps/IslaFaroAlturas", file = "IslaFaroAlturas", scene = "IslaFaroAlturas" };
+    public static readonly MapConfig Prueba = new MapConfig { name = "Prueba de alturas", folder = "Assets/Maps/PruebaAlturas", file = "PruebaAlturas", scene = "PruebaAlturas", originCol = 8, originRow = 4, isla = false };
+
+    static MapConfig cfg = Isla;
+    static Layout cur;   // the layout being built: World() reads its heights
+
+    static string ScenePath => cfg.ScenePath;
+    static string LayoutPath => cfg.LayoutPath;
+    static string MapTexturePath => cfg.MapTexturePath;
+    static string SignFolder => cfg.SignFolder;
+    static string NavMeshDataPath => cfg.NavMeshPath;
+    static string RootName => cfg.root;
+    static int OriginCol => cfg.originCol;
+    static int OriginRow => cfg.originRow;
+    const string ModelFolder = "Assets/Maps/IslaZombie/Models/";   // props are shared by every layout map
     const string IslandModels = "Assets/BeachIsland/Models/";
     const string IslandMats = "Assets/BeachIsland/Models/Materials/";
-    const string NavMeshDataPath = "Assets/Scenes/IslaZombie_NavMesh.asset";
     const string MenuScenePath = "Assets/Scenes/MainMenu.unity";
-    const string RootName = "IslaZombie";
     const float Cell = 2f;
-    const int OriginCol = 21, OriginRow = 18;   // cell (21, 18) is the world origin
+    public const float LevelH = 2f;             // one height level (Docs/FASE3_FORMATO.md): a normal jump (1.2 m) can't climb it
     const int DoorAreaBase = 3;                 // NavMesh area of door i = DoorAreaBase + i (used by the connection check)
+    const int LedgeArea = 12, SlideArea = 13;   // one-way links: drop off a ledge / slide between zones
     const int WaterLayer = 4;
     const float ColliderHeight = 10f, RoofY = 3.4f, WallH = 3.5f, RockH = 6f;
     public const float SprintSpeed = 5f;        // PlayerController.sprintSpeed, for the crossing-time report
@@ -43,7 +67,7 @@ public static partial class IslaZombieSetup
     public static string LastReport = "";
 
     // ------------------------------------------------------------------ layout
-    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox; }
+    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox, circuit; }
     class DoorDef { public char digit; public string name; public int cost; public char[] zones; public bool key; }
 
     class Layout
@@ -56,21 +80,110 @@ public static partial class IslaZombieSetup
         public ZoneDef Zone(char letter) => zones.FirstOrDefault(z => z.letter == letter);
         public char[,] cellZone;   // zone letter of every land cell (nearest floor), '\0' for sea
         public HashSet<Vector2Int> cabins = new HashSet<Vector2Int>();   // wall cells replaced by a spawn cabin
+
+        // ---- heights ([heights] section; without it every cell is level 0)
+        public string[] heights;            // raw rows, null = flat map
+        public int[,] level;                // level of a cell; ramps: the level at their LOW end
+        public char[,] ramp;                // '^' 'v' '<' '>' (uphill direction) or '\0'
+        public int[,] rampIdx, rampLen;     // position of a ramp cell in its run (0 = low end) and the run length
+        public float[,] floorY;             // walking height at the cell centre (m); solids: the highest floor beside them
+        public bool HasHeights => heights != null;
+        public List<string> heightErrors = new List<string>();
+        public bool InGrid(int c, int r) => c >= 0 && r >= 0 && c < W && r < H;
+        public float Y(int c, int r) => InGrid(c, r) ? floorY[c, r] : 0f;
+        public bool IsRamp(int c, int r) => InGrid(c, r) && ramp[c, r] != '\0';
+        public char HeightAt(int c, int r) => heights != null && r < heights.Length && c < heights[r].Length ? heights[r][c] : '.';
+    }
+
+    public static Vector2Int RampDir(char ch) => ch == '^' ? new Vector2Int(0, -1) : ch == 'v' ? new Vector2Int(0, 1) : ch == '<' ? new Vector2Int(-1, 0) : ch == '>' ? new Vector2Int(1, 0) : Vector2Int.zero;
+    static bool IsRampChar(char ch) => ch == '^' || ch == 'v' || ch == '<' || ch == '>';
+
+    // Fills level / ramp / floorY from the [heights] rows (Docs/FASE3_FORMATO.md, section 2). Errors go to `errors`.
+    static void ComputeHeights(Layout L, List<string> errors)
+    {
+        L.level = new int[L.W, L.H];
+        L.ramp = new char[L.W, L.H];
+        L.rampIdx = new int[L.W, L.H];
+        L.rampLen = new int[L.W, L.H];
+        L.floorY = new float[L.W, L.H];
+        if (!L.HasHeights) return;
+        if (L.heights.Length != L.H || L.heights.Any(row => row.Length != L.W))
+            errors.Add($"ERROR heights: [heights] is {L.heights.Max(r => r.Length)}x{L.heights.Length}, [map] is {L.W}x{L.H}");
+        for (int r = 0; r < L.H; r++)
+            for (int c = 0; c < L.W; c++)
+            {
+                char h = L.HeightAt(c, r);
+                if (h >= '0' && h <= '9') L.level[c, r] = h - '0';
+                else if (IsRampChar(h)) L.ramp[c, r] = h;
+            }
+        // ramp runs: walk downhill to the low end, then the run length; the low end's floor gives the level
+        for (int r = 0; r < L.H; r++)
+            for (int c = 0; c < L.W; c++)
+            {
+                char h = L.ramp[c, r];
+                if (h == '\0') continue;
+                var d = RampDir(h);
+                int i = 0;
+                while (L.InGrid(c - d.x * (i + 1), r - d.y * (i + 1)) && L.ramp[c - d.x * (i + 1), r - d.y * (i + 1)] == h) i++;
+                int sc = c - d.x * i, sr = r - d.y * i, n = 0;   // low end of the run
+                while (L.InGrid(sc + d.x * n, sr + d.y * n) && L.ramp[sc + d.x * n, sr + d.y * n] == h) n++;
+                L.rampIdx[c, r] = i;
+                L.rampLen[c, r] = n;
+                int lc = c - d.x * (i + 1), lr = r - d.y * (i + 1);
+                L.level[c, r] = L.InGrid(lc, lr) && !L.IsRamp(lc, lr) ? L.level[lc, lr] : 0;
+            }
+        for (int r = 0; r < L.H; r++)
+            for (int c = 0; c < L.W; c++)
+                L.floorY[c, r] = L.IsRamp(c, r) ? (L.level[c, r] + (L.rampIdx[c, r] + 0.5f) / L.rampLen[c, r]) * LevelH : L.level[c, r] * LevelH;
+        // solids, doors and slides stand at the highest walking floor beside them (signs, cabins, door posts)
+        var y = (float[,])L.floorY.Clone();
+        for (int r = 0; r < L.H; r++)
+            for (int c = 0; c < L.W; c++)
+            {
+                char ch = L.At(c, r);
+                if (!(IsSolid(ch) || IsDoor(ch) || ch == '!')) continue;
+                float best = 0f;
+                foreach (var d in new[] { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down })
+                {
+                    int nc = c + d.x, nr = r + d.y;
+                    char nch = L.At(nc, nr);
+                    if (nch == '.' || IsSolid(nch) || nch == '!') continue;
+                    best = Mathf.Max(best, L.floorY[nc, nr]);
+                }
+                y[c, r] = best;
+                L.level[c, r] = Mathf.RoundToInt(best / LevelH);
+            }
+        L.floorY = y;
     }
 
     const string Markers = "@sBDPKJbXLGUMEYTC";
     const string Roofed = "tq";   // temple and cave floors
 
-    static Layout Load()
+    static Layout Load() => Load(File.ReadAllLines(LayoutPath));
+
+    // Grid-only checks of a layout given as text (no scene, no NavMesh): heights grid + slide rule. For tests.
+    public static List<string> CheckLayoutLines(string[] lines)
+    {
+        var L = Load(lines);
+        cur = L;
+        var report = new List<string>(L.heightErrors);
+        report.AddRange(CheckHeights(L));
+        report.AddRange(SlideReport(L));
+        return report;
+    }
+
+    static Layout Load(string[] lines)
     {
         var L = new Layout();
         var mapLines = new List<string>();
+        List<string> heightLines = null;
         string section = "";
-        foreach (var raw in File.ReadAllLines(LayoutPath))
+        foreach (var raw in lines)
         {
             var line = raw.TrimEnd();
             if (section != "map" && (line.Length == 0 || line.StartsWith("#"))) continue;
-            if (line.StartsWith("[")) { section = line.Trim('[', ']'); continue; }
+            if (line.StartsWith("[")) { section = line.Trim('[', ']'); if (section == "heights") heightLines = new List<string>(); continue; }
+            if (section == "heights") { if (line.Length > 0 && !line.StartsWith("#")) heightLines.Add(line); continue; }
             var f = line.Split('|').Select(s => s.Trim()).ToArray();
             if (section == "zones")
                 L.zones.Add(new ZoneDef
@@ -78,7 +191,8 @@ public static partial class IslaZombieSetup
                     letter = f[0][0], id = f[1], name = f[2], group = int.Parse(f[3]),
                     color = ColorUtility.TryParseHtmlString("#" + f[4], out var col) ? col : Color.gray,
                     start = f.Skip(5).Contains("start"),
-                    firstBox = f.Skip(5).Contains("firstbox")
+                    firstBox = f.Skip(5).Contains("firstbox"),
+                    circuit = f.Skip(5).Contains("circuito")
                 });
             else if (section == "doors")
                 L.doors.Add(new DoorDef
@@ -91,6 +205,8 @@ public static partial class IslaZombieSetup
         L.map = mapLines.ToArray();
         L.H = L.map.Length;
         L.W = L.map.Max(r => r.Length);
+        L.heights = heightLines != null ? heightLines.ToArray() : null;
+        ComputeHeights(L, L.heightErrors);
 
         // every land cell gets the zone of the nearest floor cell (multi-source BFS) ...
         L.cellZone = new char[L.W, L.H];
@@ -126,7 +242,12 @@ public static partial class IslaZombieSetup
         return L;
     }
 
-    static Vector3 World(float c, float r, float y = 0f) => new Vector3((c - OriginCol) * Cell, y, (OriginRow - r) * Cell);
+    // Cell -> world point ON THE FLOOR of that cell (its height level; ramps at mid height). `y` is added on top.
+    static Vector3 World(float c, float r, float y = 0f) => new Vector3((c - OriginCol) * Cell, y + CellY(c, r), (OriginRow - r) * Cell);
+    static float CellY(float c, float r) => cur != null && cur.floorY != null ? cur.Y(Mathf.FloorToInt(c + 0.5f), Mathf.FloorToInt(r + 0.5f)) : 0f;
+    // Floor height under a world point (nearest cell).
+    static float GroundAt(Vector3 p) => CellY(p.x / Cell + OriginCol, OriginRow - p.z / Cell);
+    static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
     static bool IsFloor(Layout L, char ch) => L.Zone(ch) != null || Markers.IndexOf(ch) >= 0;
     static bool IsDoor(char ch) => ch >= '1' && ch <= '9';
     static bool IsSolid(char ch) => ch == '#' || ch == 'R' || ch == 'Z';
@@ -164,13 +285,25 @@ public static partial class IslaZombieSetup
 
     // ------------------------------------------------------------------ entry
     [MenuItem("Tools/Island/Setup Isla Zombie")]
-    public static void Setup()
+    public static void Setup() => Setup(Isla);
+
+    [MenuItem("Tools/Island/Setup Isla del Faro (alturas)")]
+    public static void SetupAlturas() => Setup(IslaAlturas);
+
+    [MenuItem("Tools/Island/Setup Prueba de alturas")]
+    public static void SetupPrueba() => Setup(Prueba);
+
+    public static void Setup(MapConfig config)
     {
+        cfg = config;
         mats.Clear();
         models.Clear();
         missing.Clear();
         var report = new List<string>();
         var L = Load();
+        cur = L;
+        report.AddRange(L.heightErrors);
+        report.AddRange(CheckHeights(L));
         ConfigureModelImports();
 
         var scene = File.Exists(ScenePath)
@@ -195,21 +328,26 @@ public static partial class IslaZombieSetup
         BuildEntrances(root, L, zones, entrances);
         BuildGameplay(root, data, L, zones, points, doors);
         BuildLabels(root, L, points);
+        BuildRamps(root, L, zones);
+        BuildLedgeLips(root, L);
 
         Physics.SyncTransforms();
         BakeNavMesh(root, L);
+        int links = BuildLinks(root, L, zones);
+        if (links > 0) report.Add($"OK  {links} one-way links (ledges and slides)");
         report.AddRange(CheckMap(L, zones, points));
+        report.AddRange(CheckHeightsNav(L, zones, points));
         report.AddRange(SpawnCoverage(L, zones));
         foreach (var d in doors) TestMapSetup.AddDoorObstacle(d.door.transform.Find("Barrier").gameObject, d.width);
         report.Add(BuildMapAndSigns(root, L, points, doors));
         if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
 
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
-        PointMenuToMap();
+        if (cfg.isla) PointMenuToMap();
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         LastReport = string.Join("\n", report);
-        Debug.Log("[IslaZombie] Setup done\n" + LastReport);
+        Debug.Log($"[IslaZombie] Setup of {cfg.name} done\n" + LastReport);
     }
 
     // The props FBX use the island's shared material remap (BeachIslandImportSettings); make sure they
@@ -293,7 +431,7 @@ public static partial class IslaZombieSetup
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
-        var pos = new Vector3(center.x, baseY + size.y / 2f, center.z);
+        var pos = new Vector3(center.x, center.y + baseY + size.y / 2f, center.z);   // baseY is above the centre's floor
         go.transform.position = pos;
         go.AddComponent<MeshFilter>().sharedMesh = TexBoxMesh(size, pos);
         go.AddComponent<MeshRenderer>().sharedMaterials = new[] { top, sides };
@@ -315,7 +453,7 @@ public static partial class IslaZombieSetup
     // Invisible collision box standing on the ground (the visual is a model).
     static GameObject Blocker(Transform parent, string name, Vector3 center, Vector3 size, int layer = 0)
     {
-        var go = Child(parent, name, new Vector3(center.x, size.y / 2f, center.z));
+        var go = Child(parent, name, new Vector3(center.x, center.y + size.y / 2f, center.z));
         go.layer = layer;
         go.AddComponent<BoxCollider>().size = size;
         return go;
@@ -327,7 +465,7 @@ public static partial class IslaZombieSetup
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.name = name;
         go.transform.SetParent(parent, false);
-        go.transform.position = new Vector3(center.x, baseY + size.y / 2f, center.z);
+        go.transform.position = new Vector3(center.x, center.y + baseY + size.y / 2f, center.z);
         go.transform.localScale = size;
         go.GetComponent<Renderer>().sharedMaterial = mat;
         if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
@@ -361,7 +499,7 @@ public static partial class IslaZombieSetup
         var rot = Quaternion.Euler(0f, (rot90 ? 90f : 0f) + turn, 0f);
         go.transform.localScale = Vector3.one * s;
         go.transform.rotation = rot;
-        go.transform.position = new Vector3(center.x, baseY, center.z) - rot * new Vector3(b.center.x * s, b.min.y * s, b.center.z * s);
+        go.transform.position = new Vector3(center.x, center.y + baseY, center.z) - rot * new Vector3(b.center.x * s, b.min.y * s, b.center.z * s);
         foreach (var col in go.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(col);
         return go;
     }
@@ -452,15 +590,18 @@ public static partial class IslaZombieSetup
     }
 
     // Merges the cells where pick(c, r) is true into rectangles (greedy), in grid coordinates.
-    static List<RectInt> Rects(Layout L, System.Func<int, int, bool> pick)
+    static List<RectInt> Rects(Layout L, System.Func<int, int, bool> pick, System.Func<int, int, int> key = null)
     {
         var used = new bool[L.W, L.H];
         var rects = new List<RectInt>();
-        bool Ok(int c, int r) => c < L.W && r < L.H && !used[c, r] && pick(c, r);
+        if (key == null) key = (c, r) => L.floorY != null ? Mathf.RoundToInt(L.Y(c, r) * 100f) : 0;   // same height only
+        int k0 = 0;
+        bool Ok(int c, int r) => c < L.W && r < L.H && !used[c, r] && pick(c, r) && key(c, r) == k0;
         for (int r = 0; r < L.H; r++)
             for (int c = 0; c < L.W; c++)
             {
-                if (!Ok(c, r)) continue;
+                if (c >= L.W || r >= L.H || used[c, r] || !pick(c, r)) continue;
+                k0 = key(c, r);
                 int w = 1;
                 while (Ok(c + w, r)) w++;
                 int h = 1;
@@ -527,8 +668,13 @@ public static partial class IslaZombieSetup
         foreach (var zd in L.zones)
         {
             var mat = GroundMaterial(zd);
-            foreach (var r in Rects(L, (c, row) => L.cellZone[c, row] == zd.letter))
-                TexBox(gr, "Ground_" + zd.id, RectCenter(r), RectSize(r, 3f), mat, zd.letter == 'd' ? mat : cliff, -3f);
+            // one block per (zone, level) from y = -3 up to the floor: its sides are the coast cliffs and the slopes
+            // between levels. Ramps stand on their low level; solids and slides on level 0 (their box covers the rest).
+            foreach (var r in Rects(L, (c, row) => L.cellZone[c, row] == zd.letter, (c, row) => GroundLevel(L, c, row)))
+            {
+                int lv = GroundLevel(L, r.x, r.y);
+                TexBox(gr, "Ground_" + zd.id + (lv > 0 ? "_N" + lv : ""), Flat(RectCenter(r)), RectSize(r, 3f + lv * LevelH), mat, zd.letter == 'd' ? mat : cliff, -3f);
+            }
         }
         var sea = GameObject.CreatePrimitive(PrimitiveType.Plane);
         sea.name = "Sea";
@@ -541,6 +687,29 @@ public static partial class IslaZombieSetup
         Object.DestroyImmediate(sea.GetComponent<Collider>());
     }
 
+    // Level of the ground block under a cell (ramps: their low end; solids, slides, sea: 0).
+    static int GroundLevel(Layout L, int c, int r)
+    {
+        char ch = L.At(c, r);
+        if (ch == '.' || IsSolid(ch) || ch == '!') return 0;
+        return L.level[c, r];
+    }
+
+    // Highest walking floor around a solid cell (8 neighbours; a ramp counts with its top), in metres.
+    static float SolidBase(Layout L, int c, int r)
+    {
+        float best = 0f;
+        for (int dr = -1; dr <= 1; dr++)
+            for (int dc = -1; dc <= 1; dc++)
+            {
+                int nc = c + dc, nr = r + dr;
+                char ch = L.At(nc, nr);
+                if (!L.InGrid(nc, nr) || ch == '.' || IsSolid(ch) || ch == '!') continue;
+                best = Mathf.Max(best, L.IsRamp(nc, nr) ? (L.level[nc, nr] + 1) * LevelH : L.floorY[nc, nr]);
+            }
+        return best;
+    }
+
     // Walls (#), rocks (R), temple stone (Z) and the roofs over the temple / cave floors.
     static void BuildSolids(Transform root, Layout L)
     {
@@ -550,9 +719,12 @@ public static partial class IslaZombieSetup
         var temple = Shared("M_TempleStone", new Color(0.62f, 0.58f, 0.47f));
         var carved = Shared("M_TempleCarved", new Color(0.62f, 0.58f, 0.47f));
         int n = 0;
-        foreach (var r in Rects(L, (c, row) => L.At(c, row) == '#' && !L.cabins.Contains(new Vector2Int(c, row)))) WallBox(sr, "Muro" + (n++), RectCenter(r), RectSize(r, WallH), stone, stone);
-        foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'R')) WallBox(sr, "Roca" + (n++), RectCenter(r), RectSize(r, RockH), rock, rock);
-        foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'Z')) WallBox(sr, "Templo" + (n++), RectCenter(r), RectSize(r, RockH), temple, n % 3 == 0 ? carved : temple);
+        // a solid stands on y = 0 and rises its height above the highest floor next to it (8 neighbours, ramp tops)
+        System.Func<int, int, int> top = (c, row) => Mathf.RoundToInt(SolidBase(L, c, row) * 100f);
+        foreach (var r in Rects(L, (c, row) => (L.At(c, row) == '#' || L.At(c, row) == '!') && !L.cabins.Contains(new Vector2Int(c, row)), top))
+            WallBox(sr, "Muro" + (n++), Flat(RectCenter(r)), RectSize(r, SolidBase(L, r.x, r.y) + WallH), stone, stone);
+        foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'R', top)) WallBox(sr, "Roca" + (n++), Flat(RectCenter(r)), RectSize(r, SolidBase(L, r.x, r.y) + RockH), rock, rock);
+        foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'Z', top)) WallBox(sr, "Templo" + (n++), Flat(RectCenter(r)), RectSize(r, SolidBase(L, r.x, r.y) + RockH), temple, n % 3 == 0 ? carved : temple);
         var roofs = Child(root, "Roofs", Vector3.zero).transform;
         var templeDark = Shared("M_TempleDark", new Color(0.35f, 0.33f, 0.3f));
         foreach (var r in Rects(L, (c, row) => (IsFloor(L, L.At(c, row)) || IsDoor(L.At(c, row))) && L.cellZone[c, row] == 't'))
@@ -571,16 +743,17 @@ public static partial class IslaZombieSetup
             var r = mf.GetComponent<Renderer>();
             if (r == null || mf.sharedMesh == null) continue;
             var b = r.bounds;
-            if (b.max.y < minTop || Mathf.Max(b.size.x, b.size.z) < 0.1f) continue;
+            float g = GroundAt(b.center);   // floor under the part
+            if (b.max.y - g < minTop || Mathf.Max(b.size.x, b.size.z) < 0.1f) continue;
             if (Mathf.Max(b.size.x, b.size.z) > 2.6f) { Footprint(mf, layer); continue; }   // big single meshes (crashed plane, bus)
             var box = mf.gameObject.AddComponent<BoxCollider>();
             box.center = mf.sharedMesh.bounds.center;
             box.size = mf.sharedMesh.bounds.size;
             mf.gameObject.layer = layer;
             // at least MinPropTop tall: lower things are a "step" for the NavMesh (climb 0.45) but a wall for the player (step 0.3)
-            if (b.max.y < MinPropTop)
+            if (b.max.y - g < MinPropTop)
             {
-                float extra = (MinPropTop - b.max.y) / Mathf.Max(0.01f, mf.transform.lossyScale.y);
+                float extra = (MinPropTop - (b.max.y - g)) / Mathf.Max(0.01f, mf.transform.lossyScale.y);
                 box.size += new Vector3(0f, extra, 0f);
                 box.center += new Vector3(0f, extra / 2f, 0f);
             }
@@ -599,13 +772,14 @@ public static partial class IslaZombieSetup
         mc.sharedMesh = mf.sharedMesh;
         Physics.SyncTransforms();
         var b = mc.bounds;
+        float g = GroundAt(b.center);   // columns stand on the floor of the cell, not on y = 0
         int nx = Mathf.CeilToInt(b.size.x / step), nz = Mathf.CeilToInt(b.size.z / step);
         var top = new float[nx, nz];
         for (int i = 0; i < nx; i++)
             for (int k = 0; k < nz; k++)
             {
                 var o = new Vector3(b.min.x + (i + 0.5f) * step, b.max.y + 1f, b.min.z + (k + 0.5f) * step);
-                top[i, k] = mc.Raycast(new Ray(o, Vector3.down), out var hit, b.size.y + 2f) && hit.point.y > 0.3f ? hit.point.y : 0f;
+                top[i, k] = mc.Raycast(new Ray(o, Vector3.down), out var hit, b.size.y + 2f) && hit.point.y > g + 0.3f ? hit.point.y - g : 0f;
             }
         Object.DestroyImmediate(mc);
         var holder = new GameObject("Huella");
@@ -620,7 +794,7 @@ public static partial class IslaZombieSetup
                 float h = Mathf.Max(MinPropTop, top[i, k]);
                 while (j + 1 < nx && top[j + 1, k] > 0f && Mathf.Abs(top[j + 1, k] - h) < 0.4f) { j++; h = Mathf.Max(h, top[j, k]); }
                 var col = holder.AddComponent<BoxCollider>();
-                var center = new Vector3(b.min.x + (i + j + 1) * step / 2f, h / 2f, b.min.z + (k + 0.5f) * step);
+                var center = new Vector3(b.min.x + (i + j + 1) * step / 2f, g + h / 2f, b.min.z + (k + 0.5f) * step);
                 col.center = holder.transform.InverseTransformPoint(center);
                 var ls = holder.transform.lossyScale;
                 col.size = new Vector3((j - i + 1) * step / ls.x, h / ls.y, step / ls.z);
@@ -958,7 +1132,7 @@ public static partial class IslaZombieSetup
                     case 'C':
                     {
                         var side = Dirs.FirstOrDefault(d => { char n = L.At(c + d.x, r + d.y); return !IsFloor(L, n) && !IsDoor(n); });
-                        var toWall = side == Vector2Int.zero ? Vector3.zero : (World(c + side.x, r + side.y) - p).normalized;
+                        var toWall = side == Vector2Int.zero ? Vector3.zero : Flat(World(c + side.x, r + side.y) - p).normalized;
                         (ch == 'E' ? pts.switches : pts.stations).Add((p, toWall));
                         break;
                     }
@@ -968,7 +1142,7 @@ public static partial class IslaZombieSetup
                     {
                         var wall = Dirs.FirstOrDefault(d => IsSolid(L.At(c + d.x, r + d.y)));
                         if (wall == Vector2Int.zero) { Debug.LogError($"[IslaZombie] wall weapon {ch} at ({c},{r}) needs a wall next to it"); break; }
-                        pts.wallBuys.Add((p, (World(c + wall.x, r + wall.y) - p).normalized, z, ch));
+                        pts.wallBuys.Add((p, Flat(World(c + wall.x, r + wall.y) - p).normalized, z, ch));
                         break;
                     }
                 }
@@ -1035,7 +1209,10 @@ public static partial class IslaZombieSetup
 
         var spawn = Child(root, "PlayerSpawn", pts.playerSpawn, 90f);
         var systems = Child(root, "Systems", Vector3.zero);
-        TestMapSetup.BuildSystems(systems, data, spawn.transform, zones['d'], bossSpawn.transform,
+        // the boss appears when the dock (d) opens; maps without a dock: the zone of the extraction point
+        int xc = Mathf.RoundToInt(pts.extraction.x / Cell) + OriginCol, xr = OriginRow - Mathf.RoundToInt(pts.extraction.z / Cell);
+        var bossZone = zones.TryGetValue('d', out var dock) ? dock : zones.TryGetValue(L.InGrid(xc, xr) ? L.cellZone[xc, xr] : '\0', out var xz) ? xz : zones.Values.Last();
+        TestMapSetup.BuildSystems(systems, data, spawn.transform, bossZone, bossSpawn.transform,
             TestMapSetup.Model(TestMapSetup.PrefabRoot + "/Enemy_OldMan.prefab"),
             TestMapSetup.Model(TestMapSetup.PrefabRoot + "/Boss_DonAnselmo.prefab").GetComponent<BossAI>());
         systems.AddComponent<MapInfo>();
@@ -1313,7 +1490,11 @@ public static partial class IslaZombieSetup
         var navSettings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/NavMeshAreas.asset")[0]);
         var areas = navSettings.FindProperty("areas");
         if (areas != null)
+        {
             for (int i = 0; i < L.doors.Count; i++) areas.GetArrayElementAtIndex(DoorAreaBase + i).FindPropertyRelative("name").stringValue = "Puerta" + (i + 1);
+            areas.GetArrayElementAtIndex(LedgeArea).FindPropertyRelative("name").stringValue = "Caida";
+            areas.GetArrayElementAtIndex(SlideArea).FindPropertyRelative("name").stringValue = "Tobogan";
+        }
         navSettings.ApplyModifiedProperties();
 
         var go = Child(root, "Navigation", Vector3.zero);
@@ -1333,7 +1514,7 @@ public static partial class IslaZombieSetup
         Bake(jumper, JumperNavMeshDataPath);
     }
 
-    const string JumperNavMeshDataPath = "Assets/Scenes/IslaZombie_NavMesh_Saltador.asset";
+    static string JumperNavMeshDataPath => cfg.JumperNavMeshPath;
 
     static void Bake(NavMeshSurface surface, string path)
     {
@@ -1377,7 +1558,8 @@ public static partial class IslaZombieSetup
         var report = new List<string>();
         int allDoorBits = 0;
         for (int i = 0; i < L.doors.Count; i++) allDoorBits |= 1 << (DoorAreaBase + i);
-        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits; foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
+        // slides are one-way shortcuts between groups: checked apart (CheckHeightsNav), never part of the door graph
+        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits & ~(1 << SlideArea); foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
         var path = new NavMeshPath();
         Vector3? Snap(Vector3 p) => NavMesh.SamplePosition(p, out var h, 1.5f, NavAgents.Filter(0)) ? h.position : (Vector3?)null;
         bool Reach(Vector3 a, Vector3 b, int mask) => NavMesh.CalculatePath(a, b, new NavMeshQueryFilter { agentTypeID = 0, areaMask = mask }, path) && path.status == NavMeshPathStatus.PathComplete;
@@ -1470,7 +1652,9 @@ public static partial class IslaZombieSetup
         var start = Snap(pts.playerSpawn);
         var end = Snap(pts.extraction);
         int Door(char digit) => L.doors.FindIndex(x => x.digit == digit);
-        if (start.HasValue && end.HasValue)
+        if (start.HasValue && end.HasValue && !cfg.isla)
+            report.Add(Reach(start.Value, end.Value, Mask(Enumerable.Range(0, L.doors.Count).ToArray())) ? $"OK  all doors open: {Length():F0} m to the extraction" : "ERROR: no path to the extraction");
+        else if (start.HasValue && end.HasValue)
             foreach (var (label, open) in new[]
             {
                 ("Templo route (doors 1,4,5,7)", new[] { Door('1'), Door('4'), Door('5'), Door('7') }),

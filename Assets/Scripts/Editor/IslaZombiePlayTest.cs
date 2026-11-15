@@ -33,10 +33,16 @@ public static class IslaZombiePlayTest
     static void Hook() { EditorApplication.update -= Tick; EditorApplication.update += Tick; }
 
     [MenuItem("Tools/Island/Play Test Isla Zombie")]
-    public static void Run()
+    public static void Run() => RunOn(TestMapSetup.IslaZombieScenePath);
+
+    // The same test on the Phase 3 copy (positions are Isla del Faro's: valid while the copy keeps its zones).
+    [MenuItem("Tools/Island/Play Test Isla Zombie (alturas)")]
+    public static void RunAlturas() => RunOn(IslaZombieSetup.IslaAlturas.ScenePath);
+
+    public static void RunOn(string scenePath)
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }
-        EditorSceneManager.OpenScene(TestMapSetup.IslaZombieScenePath, OpenSceneMode.Single);
+        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
         EditorPrefs.SetBool(Key + "SlowThisRun", EditorPrefs.GetBool(Key + "Slow"));   // RunSlow() applies to this run only
         EditorPrefs.SetBool(Key + "Slow", false);
         EditorPrefs.SetString(Key + "Log", "");

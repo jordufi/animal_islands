@@ -88,7 +88,8 @@ pause (timer 15 s, chooser frozen); online pause menu doesn't stop the world.
 | `C:\Users\Usuario\animal_island1` | Unity project |
 | `Assets/Scenes/MainMenu.unity` | **Start here** (build index 0): 3D title/menu diorama |
 | `Assets/Scenes/IslaZombie.unity` | **Isla del Faro** (build index 1) + `IslaZombie_NavMesh.asset` and `IslaZombie_NavMesh_Saltador.asset` |
-| `Assets/Scenes/BeachIsland.unity` | The original small test map, **"Original"** in the map selector (build index 2) |
+| `Assets/Scenes/BeachIsland.unity` | The original small test map, **"Original"** in the map selector (build index 3; build order follows the `Data/Maps` asset names) |
+| `Assets/Scenes/IslaFaroAlturas.unity` | **"Isla del Faro (alturas)"** (build index 2): Phase 3 copy with heights, from `Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Layout.txt` |
 | `Assets/Data/` | ScriptableObjects — **all balance numbers live here**: `Weapons/` (+ `Ukulele.asset` = `MeleeData`, `LentosPeta.asset` = wall buy), `AnselmoCagon.asset` (`TunnelData`), `Drinks/`, `Cards/`, `Animals/`, `Enemies/` (Jubilado, JubiladoChandal, AbueloCulturista, **AbueloSenderista**), `Maps/` (`MapData` for the map selector), `Economy.asset`, `Materials/` |
 | `Assets/Scripts/` | Game code (see Architecture) |
 | `Assets/Scripts/Editor/TestMapSetup.cs` | **Tools > Island > Setup Test Map** (`SetupAll`: data assets, prefabs, Original scene, menu) and **Rebuild Main Menu**; shared builders (`BuildDoor`, `BuildSystems`, shop, karaoke, ukulele, `SetBuildScenes`, `SetupMenuMaps`, `EnsureLayers`) |
@@ -327,7 +328,29 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
 
-## Status (2026-11-15, later) — PHASE 2 numbers applied and play-tested (not committed)
+## Phase 3 (heights) — tooling DONE and tested (2026-11-15, Opus), zone layouts pending the user's approval
+Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3
+cells per level); ledges inside a group are open drops with one-way `NavMeshLink`s; `!` in `[map]` = one-way slide between
+groups (only into a zone that is always open when the source is).
+- **Code:** `IslaZombieSetup.MapConfig` + `Setup(config)`: `Setup()` = Isla del Faro, `SetupAlturas()` = **"Isla del Faro
+  (alturas)"** (`Assets/Maps/IslaFaroAlturas`, scene `IslaFaroAlturas`, in the selector as map 3, still an identical copy:
+  the user asked to keep the original untouched), `SetupPrueba()` = test map `Assets/Maps/PruebaAlturas` (scene
+  `PruebaAlturas`, not in the build). `World(c, r)` now returns the cell's floor height; `TexBox / Box / Blocker /
+  PlaceInRect` place relative to the centre's floor; `Rects` never merges cells of different heights; prop colliders /
+  footprints measure from the cell floor. `IslaZombieSetup.Heights.cs`: grid checks, ramps (wedges), kerbs, links
+  (areas 12 "Caida" / 13 "Tobogan", both agent types), slides, NavMesh checks (walkable without drops, slide rule,
+  `circuito` zone flag, single-exit warning). Runtime: `EnemyAI.TraverseLink` (old men jump links in an arc,
+  `autoTraverseOffMeshLink` off), `Zones/OneWaySlide` (local players only, no network message).
+- **Tests:** `HeightsPlayTest` (Tools > Island > Play Test Alturas, 20 OK: broken layouts fail, ramp, jump vs super jump,
+  drop without damage, old men drop / climb, sealed door, slide down only, bullets, camera), `SmokePlayTest.RunAlturas()`,
+  `IslaZombiePlayTest.RunAlturas()`, `IslaZombieSetup.CheckLayoutLines(lines)` (grid checks on text).
+- **Verified 2026-11-15:** Isla del Faro rebuilt with the same report as before (69 entrances, 86 points, routes 97 / 123 m,
+  coverage 16/519), Smoke 15 OK on both maps, QuickChecks 31 OK, Base 27, Feedback 26, IslaZombie 13 (both maps), Phase1 21,
+  Coop 39, Original 3, map selector Original + Alturas OK (0 errors), Online RunDirect 69 / 0 (client rebuilt).
+- **Next:** propose the zone layouts (Faro → Camping → Volley → Mercadillo → Templo → Cueva) for the user to approve, then
+  apply them to `IslaFaroAlturas_Layout.txt` one zone at a time (setup + Smoke after each).
+
+## Status (2026-11-15, later) — PHASE 2 numbers applied and play-tested (committed `31c558c`)
 Written by Fable, tested by Sonnet; work list in `Docs/FASE2_TRASPASO.md`. `IslaZombieSetup.Setup()` and `TestMapSetup.SetupAll()`
 re-run, all checks OK (3 wall weapons). **Verified 2026-11-15 with the new numbers:** `BasePlayTest` 27 OK, `FeedbackPlayTest`
 26 OK, `IslaZombiePlayTest` 13 OK (needed `GodMode` at step 0: the idle test player died in the round-1 chase with 35 damage),

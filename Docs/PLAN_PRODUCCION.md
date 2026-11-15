@@ -187,6 +187,10 @@ un grupo de números cada vez (primero ingreso, luego precios, luego jefe).
   y las capturas (`Capture Isla Zombie Map`) muestran 3 alturas.
 
 #### Especificación del formato con alturas (Fase 3)
+**Sustituida el 2026-11-15 por [FASE3_FORMATO.md](FASE3_FORMATO.md)** (nivel de 2 m, rampas de 2–3 celdas escritas en
+`[heights]`, bordes abiertos dentro de un grupo, tobogán `!` entre grupos, mapa de prueba y checks). De las propuestas de
+arriba, «caída del Muelle al Mercadillo» y «salto del faro al Lago» no cumplen la regla del tobogán: ver ese documento.
+Lo que sigue queda solo como historial.
 - **Sección nueva `[heights]`** en el layout, misma anchura y altura que `[map]`: un carácter por celda.
   `0`–`4` = nivel (× **1,5 m**); `.` = igual que el vecino (para no rellenar todo). Si falta la sección, todo es nivel 0
   (los mapas actuales siguen valiendo).

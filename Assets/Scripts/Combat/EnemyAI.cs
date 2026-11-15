@@ -128,6 +128,7 @@ public class EnemyAI : MonoBehaviour
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        agent.autoTraverseOffMeshLink = false;   // ledge drops / slides: jumped in an arc by TraverseLink
         health = GetComponent<EnemyHealth>();
         animator = GetComponentInChildren<Animator>();
         if (animator != null) animator.applyRootMotion = false;
@@ -255,6 +256,8 @@ public class EnemyAI : MonoBehaviour
     void Update()
     {
         if (health.IsDead || emerging || IsPuppet) return;
+        if (onLink) return;
+        if (agent.enabled && agent.isOnOffMeshLink) { StartCoroutine(TraverseLink()); return; }
         if (Variant != null && Variant.jumper) UpdateHop();
         if (animator != null) animator.SetFloat(SpeedHash, agent.velocity.magnitude / Mathf.Max(0.1f, transform.localScale.x), 0.1f, Time.deltaTime);
 
@@ -537,6 +540,33 @@ public class EnemyAI : MonoBehaviour
 
     public bool Hopping { get; private set; }
 
+    // ---------------------------------------------------------------- one-way links (ledge drops, slides)
+    bool onLink;
+    public static event System.Action<EnemyAI> LinkJumped;   // tests
+
+    // Jumps from the link start to its end in an arc (old men only go DOWN ledges: the links are one-way).
+    IEnumerator TraverseLink()
+    {
+        onLink = true;
+        var data = agent.currentOffMeshLinkData;
+        Vector3 a = transform.position;
+        Vector3 b = data.endPos + Vector3.up * agent.baseOffset;
+        Vector3 flat = b - a; flat.y = 0f;
+        if (flat.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(flat);
+        float drop = Mathf.Max(0f, a.y - b.y);
+        float time = Mathf.Clamp(Mathf.Max(flat.magnitude / Mathf.Max(1f, agent.speed), Mathf.Sqrt(2f * drop / 20f) + 0.2f), 0.35f, 1.2f);
+        for (float t = 0f; t < time; t += Time.deltaTime)
+        {
+            float k = t / time;
+            transform.position = Vector3.Lerp(a, b, k) + Vector3.up * (0.6f * 4f * k * (1f - k));
+            yield return null;
+        }
+        transform.position = b;
+        if (agent.enabled && agent.isOnOffMeshLink) agent.CompleteOffMeshLink();
+        onLink = false;
+        LinkJumped?.Invoke(this);
+    }
+
     void FacePlayer(PlayerHealth player)
     {
         Vector3 toPlayer = player.transform.position - transform.position;
@@ -557,6 +587,7 @@ public class EnemyAI : MonoBehaviour
     {
         StopAllCoroutines();
         attacking = false;
+        onLink = false;
         if (entrance != null) { entrance.Release(); entrance = null; }
         emerging = false;
         if (agent.enabled && agent.isOnNavMesh) agent.isStopped = true;

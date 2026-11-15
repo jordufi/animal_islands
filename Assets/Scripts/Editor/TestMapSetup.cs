@@ -461,9 +461,13 @@ public static class TestMapSetup
                 m.description = "Isla redonda de callejones, templo, cueva laberinto y faro. Escapa en el barco del muelle."; }),
             Asset<MapData>(DataRoot + "/Maps/Original.asset", m => { m.id = "original"; m.displayName = "Original"; m.sceneName = "BeachIsland";
                 m.description = "La primera isla: pequeña, rápida y muy caótica."; }),
+            // Phase 3 workspace: Isla del Faro rebuilt with heights (Docs/FASE3_FORMATO.md); the original stays untouched
+            Asset<MapData>(DataRoot + "/Maps/IslaFaroAlturas.asset", m => { m.id = "isla-del-faro-alturas"; m.displayName = "Isla del Faro (alturas)"; m.sceneName = "IslaFaroAlturas";
+                m.description = "En obras: la Isla del Faro con terrazas, rampas, caídas y toboganes."; }),
         };
         d.maps[0].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         d.maps[1].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
+        d.maps[2].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Map.png");
         foreach (var m in d.maps) EditorUtility.SetDirty(m);
         AssetDatabase.SaveAssets();
         return d;

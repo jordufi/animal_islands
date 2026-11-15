@@ -1,0 +1,36 @@
+# Prueba de alturas: small test map for the heights format (Docs/FASE3_FORMATO.md). Not in the build.
+# Tools > Island > Setup Prueba de alturas builds Assets/Scenes/PruebaAlturas.unity; HeightsPlayTest plays it.
+# A ramp (row 2, 2 cells, level 0 -> 1), a level-1 terrace in Abajo with two open ledges (west and south),
+# the door at level 1 and a one-way slide '!' from Arriba (level 1) down to Abajo (level 0, the start zone).
+#
+# [heights] (before [map]): 0-9 = level x 2 m, '.' = no data (sea, solids, doors, slides; floor counts as 0),
+#   ^ v < > = ramp cell, the arrow points uphill; 2-3 equal arrows in a row climb one level.
+
+[zones]
+a | Abajo  | Abajo  | 0 | EDD699 | start
+b | Arriba | Arriba | 1 | 73AD4D
+
+[doors]
+1 | Puerta de prueba | 500 | a b
+
+[heights]
+................
+................
+..0>>1111.1111..
+..0001111.1111..
+..0000000.1111..
+..0000000.1111..
+..0000000.1111..
+................
+................
+
+[map]
+................
+.##############.
+.#aaaaaaa#bbbs#.
+.#a@aaaaa1bbbb#.
+.#aaaaaaa#bbbb#.
+.#saaaaaa!bbbb#.
+.#aaaaaBa#bbBX#.
+.##############.
+................

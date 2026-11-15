@@ -887,6 +887,7 @@ MonoBehaviour:
   maps:
   - {fileID: 11400000, guid: 7bd9312f772fe164f8b17f0fc6e1bd59, type: 2}
   - {fileID: 11400000, guid: f23d25253c220a340a3dd978be13c116, type: 2}
+  - {fileID: 11400000, guid: b4f65fa75549e1240b675281e351f76f, type: 2}
   gameScene: IslaZombie
   stepForward: 0.9
 --- !u!4 &1757856281

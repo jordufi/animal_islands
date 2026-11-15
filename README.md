@@ -18,7 +18,8 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   bebidas con efectos secundarios, ukelele cuerpo a cuerpo.
 - 5 animales con pasiva y habilidad activa. Rondas nocturnas cada 5 rondas.
 - Modos: **Clásico** y **Anselmo cagón** (la mitad de los abuelos usan atajos por las entradas).
-- Mapas: **Isla del Faro** (principal) y **Original** (mapa de pruebas).
+- Mapas: **Isla del Faro** (principal), **Isla del Faro (alturas)** (en obras: la misma isla con terrazas, rampas y
+  toboganes) y **Original** (mapa de pruebas).
 
 ## Requisitos
 - **Unity 6.6 (6000.6.4f1)**, URP, Input System. Windows 11.
@@ -41,7 +42,8 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
 | `CLAUDE.md` | Contexto técnico y decisiones de diseño detalladas del proyecto |
 
 ## Herramientas (menú Tools > Island)
-- **Setup Isla Zombie**: reconstruye la escena desde el layout y comprueba el mapa.
+- **Setup Isla Zombie**: reconstruye la escena desde el layout y comprueba el mapa. **Setup Isla del Faro (alturas)** y
+  **Setup Prueba de alturas** hacen lo mismo con la copia con alturas y con el mapa de prueba (formato en `Docs/FASE3_FORMATO.md`).
 - **Setup Test Map**: regenera datos, prefabs y la escena Original.
 - **Quick Checks** (reglas de diseño sobre los números de `Assets/Data`, al instante) y **Play Test Smoke** (partida entera por el camino corto, ~10 s): para entre cambio y cambio.
 - **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit.

@@ -105,7 +105,7 @@ public static partial class IslaZombieSetup
         var cabinRoot = Child(root, "Cabinas", Vector3.zero).transform;
         // every cabin is built once, with a doorway on each face that has an entrance
         foreach (var g in plans.Where(p => p.kind == '#').GroupBy(p => p.n))
-            BuildCabin(cabinRoot, World(g.Key.x, g.Key.y), g.First().zone, g.Select(p => World(p.cell.x, p.cell.y) - World(p.n.x, p.n.y)).Select(v => v.normalized).ToList());
+            BuildCabin(cabinRoot, World(g.Key.x, g.Key.y), g.First().zone, g.Select(p => Flat(World(p.cell.x, p.cell.y) - World(p.n.x, p.n.y))).Select(v => v.normalized).ToList());
         var black = M("Oscuridad", new Color(0.02f, 0.02f, 0.025f));
         var rock = Shared("M_Rock", new Color(0.45f, 0.41f, 0.37f));
         var temple = Shared("M_TempleDark", new Color(0.35f, 0.33f, 0.3f));
@@ -117,7 +117,7 @@ public static partial class IslaZombieSetup
         foreach (var pl in plans)
         {
             Vector3 ps = World(pl.cell.x, pl.cell.y), pn = World(pl.n.x, pl.n.y);
-            Vector3 d = (pn - ps).normalized;            // towards the place he comes out of
+            Vector3 d = Flat(pn - ps).normalized;        // towards the place he comes out of
             Vector3 B = ps + d * (Cell / 2f);            // the boundary between the two cells
             Quaternion R = Quaternion.LookRotation(-d);  // entrance faces the floor
             Vector3 right = R * Vector3.right;

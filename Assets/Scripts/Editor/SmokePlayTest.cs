@@ -28,10 +28,15 @@ public static class SmokePlayTest
     static void Hook() { EditorApplication.update -= Tick; EditorApplication.update += Tick; }
 
     [MenuItem("Tools/Island/Play Test Smoke")]
-    public static void Run()
+    public static void Run() => RunOn(TestMapSetup.IslaZombieScenePath);
+
+    [MenuItem("Tools/Island/Play Test Smoke (alturas)")]
+    public static void RunAlturas() => RunOn(IslaZombieSetup.IslaAlturas.ScenePath);
+
+    public static void RunOn(string scenePath)
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }
-        EditorSceneManager.OpenScene(TestMapSetup.IslaZombieScenePath, OpenSceneMode.Single);
+        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
         EditorPrefs.SetString(Key + "Log", "");
         EditorPrefs.SetString(Key + "Status", "running");
         EditorPrefs.SetBool(Key + "Running", true);
