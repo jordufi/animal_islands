@@ -16,6 +16,7 @@ public class GameHUD : MonoBehaviour
     readonly List<PlayerHUD> playerHuds = new List<PlayerHUD>();
 
     Transform root;
+    Text objectiveText, buffText;
     Text roundText, remainingText, pointsText, eggText, bossName, cardTimer;
     RectTransform bossFill, toastRoot;
     GameObject bossBar, cardPanel, pausePanel, endPanel, settingsPanel, spareMap;
@@ -77,6 +78,7 @@ public class GameHUD : MonoBehaviour
         // the round goes into the same strip (shown whenever there is no toast)
         roundText.gameObject.SetActive(false);
         remainingText.gameObject.SetActive(false);
+        objectiveText.gameObject.SetActive(false);
         toastRoot.anchorMin = toastRoot.anchorMax = toastRoot.pivot = new Vector2(0.5f, 0.5f);
         toastRoot.anchoredPosition = Vector2.zero;
         toastRoot.sizeDelta = new Vector2(1500, 56);
@@ -91,6 +93,10 @@ public class GameHUD : MonoBehaviour
         // top-left: round
         roundText = UIKit.Label("Round", root, new Vector2(0, 1), new Vector2(40, -20), new Vector2(400, 110), "", 96, TextAnchor.UpperLeft, RoundColor);
         remainingText = UIKit.Label("Remaining", root, new Vector2(0, 1), new Vector2(44, -125), new Vector2(500, 36), "", 24, TextAnchor.UpperLeft);
+
+        // what to do next (boat mission) under the round; active power-ups under the conchas
+        objectiveText = UIKit.Label("Objective", root, new Vector2(0, 1), new Vector2(44, -200), new Vector2(900, 34), "", 24, TextAnchor.UpperLeft, new Color(1f, 0.9f, 0.5f));
+        buffText = UIKit.Label("Buffs", root, new Vector2(1, 1), new Vector2(-40, -138), new Vector2(900, 36), "", 26, TextAnchor.UpperRight, new Color(1f, 0.45f, 0.35f));
 
         // top-right: shared conchas, easter egg
         pointsText = UIKit.Label("Points", root, new Vector2(1, 1), new Vector2(-40, -30), new Vector2(600, 70), "", 52, TextAnchor.UpperRight, UIKit.Accent);
@@ -124,6 +130,10 @@ public class GameHUD : MonoBehaviour
             remainingText.color = rm.IsNight ? new Color(0.55f, 1f, 0.55f) : Color.white;
         }
 
+        string objective = BoatMission.Instance != null ? BoatMission.Instance.Objective() : "";
+        objectiveText.text = objective.Length > 0 ? "Objetivo: " + objective : "";
+        buffText.text = PowerUpManager.Instance != null ? PowerUpManager.Instance.Status() : "";
+
         var egg = EasterEgg.Instance;
         eggText.text = egg != null && egg.DiscsFound > 0 && !egg.Completed ? "Discos de Julio: " + egg.DiscsFound + "/" + egg.DiscsNeeded : "";
 
@@ -144,7 +154,7 @@ public class GameHUD : MonoBehaviour
             else if (toastSplit)
             {
                 var rm2 = RoundManager.Instance;
-                toastText.text = (rm2 != null && rm2.Round > 0 ? "RONDA " + rm2.Round + "  ·  " : "") + remainingText.text;
+                toastText.text = (rm2 != null && rm2.Round > 0 ? "RONDA " + rm2.Round + "  ·  " : "") + remainingText.text + (objectiveText.text.Length > 0 ? "  ·  " + objectiveText.text : "");
                 toastText.color = remainingText.color;
             }
             else toastText.text = "";

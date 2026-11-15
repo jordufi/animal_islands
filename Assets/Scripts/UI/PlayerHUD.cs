@@ -178,7 +178,7 @@ public class PlayerHUD : MonoBehaviour
         }
 
         carryText.text = carry != null && carry.Carried != null ? "Llevas: " + carry.Carried.DisplayName + " (□ soltar)" : "";
-        keyText.text = MasterKey.Instance != null && MasterKey.Instance.IsHeldBy(interactor) ? "LLAVE MAESTRA: abre el muelle gratis" : "";
+        keyText.text = MasterKey.Instance != null && MasterKey.Instance.IsHeldBy(interactor) ? (BoatMission.Instance != null && BoatMission.Instance.HasMission ? "LLAVE MAESTRA: vale por una pieza al llamar al barco" : "LLAVE MAESTRA: abre el muelle gratis") : "";
 
         UpdateCoop(gm);
 

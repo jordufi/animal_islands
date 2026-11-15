@@ -30,4 +30,5 @@ public enum NetMsg : byte
     EnemySpawn, EnemySnap, EnemyEvent, ChanclaThrow, EntranceUse,
     DoorOpened, BoxState, KeyState, DiscPicked, KaraokeState, CarryState,
     PowerUpSpawn, PowerUpTaken, CardOffer, CardSelect, CardPick, CardChosen, BossDefeated, WorldInit,
+    Quest, Buffs,   // boat mission + light; timed power-ups
 }

@@ -327,6 +327,36 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
 
+## Status (2026-11-15) — PHASE 1 DONE (boat mission, light, power-ups), built and play-tested
+Written by Fable (2026-11-14), finished and verified by Opus. Background and risks: `Docs/FASE1_TRASPASO.md`.
+**The decided design changed** (replaces "Muelle 10000 or the Llave"):
+- **Dar la luz** (`Zones/PowerSwitch`): drinks and the Microondas are off until someone does (`BoatMission.PowerOn`).
+- **Boat mission** (`Zones/BoatMission`, next to the GameManager): petrol + radio (`Zones/MissionItem`, team-wide
+  pickups, never dropped) → call from the `Zones/CallStation` (the Llave Maestra replaces ONE missing piece and is
+  spent) → survive until the end of round `current + EconomyData.missionDefenseRounds` (a call in the intermission
+  after round N = after round N+1) → the dock door (`ZoneDoor.requiresMission`) opens for free → boss.
+  Maps without a CallStation / PowerSwitch keep the old behaviour. `DebugOpen` still opens the dock (tests, debug menu).
+- **Power-ups** (`PowerUps/PowerUpManager` + `Data/PowerUps.asset` = `PowerUpData`): Nevera de munición, Siesta
+  fulminante (insta-kill, not the boss), 2x1 en conchas (gains only), Paella para todos (nuke, +400, its kills drop
+  nothing); caps per round / active. Boss minions pay kills only (`EnemyHealth.PaysHits`, `EconomyData.bossMinionsPayHits`).
+- HUD (`GameHUD`): objective line under the health bar (y -200) and active power-ups under the conchas; split-screen puts
+  the objective in the middle strip. Debug menu: "Dar la luz y traer el barco". Online: `NetMsg.Quest / Buffs`,
+  `PowerUpSpawn` carries the kind, `WorldInit` carries the mission + timers, protocol `animal-island-online-2`.
+- Layout markers `E` cuadro eléctrico, `Y` gasolina, `T` radio, `C` emisora (Isla: E/C in the Faro, Y in the Parking,
+  T in the temple's south chamber); door flag `llave` = `requiresMission`; the Cueva `L` spot was removed. The setup
+  check now includes the mission objects. Original: placed by `TestMapSetup.ClearSpot` (dry, under 3.2 m, clear) in
+  Jungla / Playa / Cementerio / Campamento and checked for reachability at build time.
+- **Verified 2026-11-15:** new `Phase1PlayTest` (Tools > Island > Play Test Phase 1) all OK (no light = no purchase and
+  no charge; dock closed then free; emisora blockers; boat after the round after the call; insta-kill / 2x1 / nuke /
+  caps / Nevera / minion pay; boss survives insta-kill; HUD lines, `Renders/Phase1_hud.png`), `IslaZombiePlayTest`
+  13 OK (mission with the key instead of the radio, free dock, boss, victory), `OnlinePlayTest.RunDirect` 69 OK / 0 FAIL
+  (client gives the light / picks the radio, host the petrol, client calls, both see the boat, client opens the dock;
+  a first run had 3 intermittent FAILs: night chanclas with a single senderista and the box roll, both fine on the rerun),
+  `FeedbackPlayTest` 26 OK, `CoopPlayTest` 39 OK, `BasePlayTest` 28 OK, `OriginalMapPlayTest` OK, `MapSelectorPlayTest`
+  Original OK. Not run: `RunRelay` (needs internet), real humans.
+- **Not done (moved on):** "Bingo" power-up; the run log doesn't record mission steps / power-ups yet; boss health is
+  Phase 2 (see the plan's target table). Fable is used for planning only; Sonnet / Opus build and test.
+
 ## Status (2026-11-14) — PHASE 0 (plan in `Docs/PLAN_PRODUCCION.md`, ideas in `Docs/POSIBLES_MEJORAS.md`)
 Design review by Fable (read-only) → plan by phases for Sonnet/Opus. **Phase 0 done on the Original map + run log:**
 - **RunLog** now writes map, players, per round: duration, intermission (`pausa`), old-man health, damage taken, falls;

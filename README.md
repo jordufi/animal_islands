@@ -5,9 +5,14 @@ Unity. Animales de un resort de playa contra **jubilados hostiles**, con tono ir
 en pantalla dividida (2-4) u online (2-4 por código de sala).
 
 ## El juego
-- Una isla turística tomada por jubilados. Sobrevive rondas, gana **conchas** (puntos), abre puertas para
-  desbloquear zonas, llega al **Muelle**, vence al jefe (*Don Anselmo, presidente de la comunidad*) y **extráete**
-  en el barco de rescate.
+- Una isla turística tomada por jubilados. Sobrevive rondas, gana **conchas** (puntos) y abre puertas para
+  desbloquear zonas.
+- **Misión del barco**: da la luz en el cuadro eléctrico (sin luz no hay bebidas ni Microondas), encuentra la
+  **gasolina** y la **radio** (la Llave Maestra vale por una de las dos), llama al barco desde la emisora y aguanta
+  hasta que llegue. Entonces se abre el **Muelle**: vence al jefe (*Don Anselmo, presidente de la comunidad*) y
+  **extráete** en el barco de rescate.
+- **Power-ups** al matar abuelos: Nevera de munición, Siesta fulminante (mueren de un golpe), 2x1 en conchas y
+  Paella para todos (acaba con todos los abuelos).
 - Cada puerta abierta ofrece **1 de 3 cartas** (bendición + maldición) para toda la partida.
 - Armas en la **Máquina de Granizados** (una vez por zona), **Pack-a-Punch** en el Microondas del Chiringuito,
   bebidas con efectos secundarios, ukelele cuerpo a cuerpo.
@@ -38,7 +43,7 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
 ## Herramientas (menú Tools > Island)
 - **Setup Isla Zombie**: reconstruye la escena desde el layout y comprueba el mapa.
 - **Setup Test Map**: regenera datos, prefabs y la escena Original.
-- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Online): pruebas automáticas jugando.
+- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Online): pruebas automáticas jugando.
 - **Build Windows (.zip)**: exporta el juego a `Builds/` (también `Tools\Build-Game.ps1` con Unity cerrado).
 
 ## Control de versiones

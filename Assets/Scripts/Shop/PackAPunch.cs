@@ -9,13 +9,14 @@ public class PackAPunch : Interactable
 
     void Update()
     {
-        if (worldLabel != null) worldLabel.text = "EL MICROONDAS\nDEL CHIRINGUITO\n" + cost + " conchas";
+        if (worldLabel != null) worldLabel.text = "EL MICROONDAS\nDEL CHIRINGUITO\n" + (BoatMission.PowerOn ? cost + " conchas" : "SIN LUZ");
     }
 
     public override string Prompt(PlayerInteractor player)
     {
         var w = player.Shooter != null ? player.Shooter.Current : null;
         if (w == null || w.data == null) return "";
+        if (!BoatMission.PowerOn) return "El Microondas no tiene luz (hay que dar la luz)";
         if (w.upgraded) return w.Name + " ya está al punto";
         return "□  Microondas: mejorar " + w.Name + " → " + w.data.upgradedName + " (" + CostText(cost) + ")";
     }
@@ -23,12 +24,12 @@ public class PackAPunch : Interactable
     public override bool CanInteract(PlayerInteractor player)
     {
         var w = player.Shooter != null ? player.Shooter.Current : null;
-        return w != null && w.data != null && !w.upgraded;
+        return BoatMission.PowerOn && w != null && w.data != null && !w.upgraded;
     }
 
     public override void Interact(PlayerInteractor player)
     {
-        if (!Pay(cost, player)) return;
+        if (!BoatMission.PowerOn || !Pay(cost, player)) return;
         player.Shooter.UpgradeCurrent();
         Game.ShowMessage("¡DING! " + player.Shooter.Current.Name + " recién salida del microondas");
     }

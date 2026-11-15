@@ -58,7 +58,7 @@ public static partial class IslaZombieSetup
         public HashSet<Vector2Int> cabins = new HashSet<Vector2Int>();   // wall cells replaced by a spawn cabin
     }
 
-    const string Markers = "@sBDPKJbXLG";
+    const string Markers = "@sBDPKJbXLGEYTC";
     const string Roofed = "tq";   // temple and cave floors
 
     static Layout Load()
@@ -891,7 +891,8 @@ public static partial class IslaZombieSetup
             if (d.key)
             {
                 var so = new SerializedObject(zd);
-                so.FindProperty("acceptsMasterKey").boolValue = true;
+                // the dock: free once the boat mission is complete (the Llave Maestra is used at the call station)
+                so.FindProperty("requiresMission").boolValue = true;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
             // NavMesh area marking the doorway, so the check can treat each door as open/closed
@@ -917,6 +918,9 @@ public static partial class IslaZombieSetup
         public Vector3 playerSpawn, bossSpawn, extraction, firstBox;
         public List<Vector3> drinks = new List<Vector3>(), paps = new List<Vector3>(), karaokes = new List<Vector3>(), records = new List<Vector3>(), llaves = new List<Vector3>();
         public List<char> llaveZones = new List<char>();
+        // boat mission: E power switch, Y petrol, T radio, C call station (posts lean on something solid beside them)
+        public List<(Vector3 p, Vector3 toWall)> switches = new List<(Vector3, Vector3)>(), stations = new List<(Vector3, Vector3)>();
+        public List<Vector3> petrol = new List<Vector3>(), radios = new List<Vector3>();
         public List<(Vector3 floor, Vector3 toWall, char zone)> wallBuys = new List<(Vector3, Vector3, char)>();
         public Dictionary<char, Vector3> probe = new Dictionary<char, Vector3>();   // one walkable point per zone
     }
@@ -948,6 +952,16 @@ public static partial class IslaZombieSetup
                     case 'K': pts.karaokes.Add(p); break;
                     case 'J': pts.records.Add(p); break;
                     case 'L': pts.llaves.Add(p); pts.llaveZones.Add(z); break;
+                    case 'Y': pts.petrol.Add(p); break;
+                    case 'T': pts.radios.Add(p); break;
+                    case 'E':
+                    case 'C':
+                    {
+                        var side = Dirs.FirstOrDefault(d => { char n = L.At(c + d.x, r + d.y); return !IsFloor(L, n) && !IsDoor(n); });
+                        var toWall = side == Vector2Int.zero ? Vector3.zero : (World(c + side.x, r + side.y) - p).normalized;
+                        (ch == 'E' ? pts.switches : pts.stations).Add((p, toWall));
+                        break;
+                    }
                     case 'G':
                     {
                         var wall = Dirs.FirstOrDefault(d => IsSolid(L.At(c + d.x, r + d.y)));
@@ -995,6 +1009,14 @@ public static partial class IslaZombieSetup
         foreach (var p in pts.karaokes) TestMapSetup.BuildKaraoke(egg, p, disc);
 
         BuildMasterKey(root, pts, gold);
+
+        // boat mission
+        var mission = Child(root, "Mision", Vector3.zero).transform;
+        foreach (var sw in pts.switches) TestMapSetup.BuildPowerSwitch(mission, sw.p, sw.toWall);
+        foreach (var p in pts.petrol) TestMapSetup.BuildMissionItem(mission, MissionItem.Kind.Gasolina, p);
+        foreach (var p in pts.radios) TestMapSetup.BuildMissionItem(mission, MissionItem.Kind.Radio, p);
+        foreach (var st in pts.stations) TestMapSetup.BuildCallStation(mission, st.p, st.toWall);
+        if (pts.stations.Count > 0 && (pts.petrol.Count == 0 || pts.radios.Count == 0)) Debug.LogError("[IslaZombie] a call station (C) needs petrol (Y) and a radio (T) on the map");
 
         // boss + extraction at the pier end, rescue boat moored next to it
         var bossSpawn = Child(root, "BossSpawn", pts.bossSpawn, 0f);
@@ -1423,7 +1445,20 @@ public static partial class IslaZombieSetup
             bad++;
             report.Add($"ERROR: wall weapon at {wb.floor} is not reachable inside its zone");
         }
-        report.Add(bad == 0 ? $"OK  all {total} spawn points / box spots / {pts.llaves.Count} llave spots / {pts.wallBuys.Count} wall weapons on the NavMesh inside their zone" : $"FAIL {bad}/{total} points");
+        // boat mission objects (E / Y / T / C): the spot in front of them must be reachable inside its zone
+        var missionSpots = pts.switches.Select(x => ("cuadro eléctrico", x.p)).Concat(pts.stations.Select(x => ("emisora", x.p)))
+            .Concat(pts.petrol.Select(p => ("gasolina", p))).Concat(pts.radios.Select(p => ("radio", p))).ToList();
+        foreach (var (what, p) in missionSpots)
+        {
+            total++;
+            int mc = Mathf.RoundToInt(p.x / Cell) + OriginCol, mr = OriginRow - Mathf.RoundToInt(p.z / Cell);
+            char mz = L.cellZone[mc, mr];
+            var s = Snap(p);
+            if (probes.ContainsKey(mz) && s.HasValue && Reach(probes[mz], s.Value, closed)) continue;
+            bad++;
+            report.Add($"ERROR: {what} at {p} is not reachable inside its zone");
+        }
+        report.Add(bad == 0 ? $"OK  all {total} spawn points / box spots / {pts.llaves.Count} llave spots / {pts.wallBuys.Count} wall weapons / {missionSpots.Count} mission objects on the NavMesh inside their zone" : $"FAIL {bad}/{total} points");
 
         // 4) routes start -> extraction
         var start = Snap(pts.playerSpawn);

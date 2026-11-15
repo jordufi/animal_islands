@@ -858,6 +858,12 @@ public static class TestMapSetup
                 }
             var door = BuildDoor(doorsRoot, "Door_" + dd.a + "_" + dd.b, dd.name, new[] { zones[dd.a], zones[dd.b] }, doorPos, doorRot, dd.cost,
                 doorWidth, pole, dd.b == "Muelle" ? Mat("Towel_Boss", new Color(0.6f, 0.1f, 0.5f)) : towel[i % towel.Length], obstacle: false);
+            if (dd.b == "Muelle")   // the dock opens with the boat mission, not with conchas
+            {
+                var dso = new SerializedObject(door);
+                dso.FindProperty("requiresMission").boolValue = true;
+                dso.ApplyModifiedPropertiesWithoutUndo();
+            }
             // as tall as the walls: nobody jumps over a closed door (the Frog's super jump reaches ~5 m)
             var box = door.GetComponentInChildren<BoxCollider>();
             box.center = new Vector3(0f, (OriginalMapBorders.WallTop + OriginalMapBorders.WallBottom) / 2f - door.transform.position.y, 0f);
@@ -871,6 +877,14 @@ public static class TestMapSetup
         var drinkSpots = new[] { new Vector2(16.5f, -12.5f), new Vector2(18.5f, 2.5f), new Vector2(-8, 11), new Vector2(-23, -12) };
         for (int i = 0; i < data.drinks.Length; i++) BuildDrinkMachine(shop, data.drinks[i], Ground(drinkSpots[i]));
         BuildPackAPunch(shop, Ground(new Vector2(-6, -8)));
+
+        // boat mission: light in the Jungla (the far end), petrol on the Playa, radio in the Cementerio, call from the
+        // Campamento (next to the dock door)
+        var mission = Child(map, "Mision", Vector3.zero).transform;
+        BuildPowerSwitch(mission, ClearSpot(new Vector2(-28, -3)), Vector3.zero);
+        BuildMissionItem(mission, MissionItem.Kind.Gasolina, ClearSpot(new Vector2(8, 2)));
+        BuildMissionItem(mission, MissionItem.Kind.Radio, ClearSpot(new Vector2(-9, -6)));
+        BuildCallStation(mission, ClearSpot(new Vector2(-4, 14)), Vector3.zero);
 
         // easter egg
         var eggRoot = Child(map, "EasterEgg", Vector3.zero).transform;
@@ -930,6 +944,18 @@ public static class TestMapSetup
             Debug.Log($"[TestMap] bake {attempt + 1}: {isolated.Count} puntos aislados, {gone} casetas quitadas cerca");
             // FixIslands may also have dropped cabins: always bake again (3 attempts at most)
             Physics.SyncTransforms();
+        }
+        // the mission objects must be reachable from the start (doors still open on the mesh here)
+        {
+            var mpath = new NavMeshPath();
+            NavMesh.SamplePosition(spawn.transform.position, out var ms, 3f, NavMesh.AllAreas);
+            foreach (Transform m in mission)
+            {
+                bool ok = NavMesh.SamplePosition(m.position, out var mh, 2f, NavMesh.AllAreas)
+                    && NavMesh.CalculatePath(ms.position, mh.position, NavMesh.AllAreas, mpath) && mpath.status == NavMeshPathStatus.PathComplete;
+                if (ok) Debug.Log($"[TestMap] misión: {m.name} en {m.position} alcanzable");
+                else Debug.LogError($"[TestMap] misión: {m.name} en {m.position} NO es alcanzable desde el inicio");
+            }
         }
         // the carving door obstacles go in last: they would cut the NavMesh in every path check above
         foreach (var d in doors)
@@ -1028,7 +1054,9 @@ public static class TestMapSetup
         for (int i = 0; i < data.cards.Length; i++) pool.GetArrayElementAtIndex(i).objectReferenceValue = data.cards[i];
         cmso.ApplyModifiedPropertiesWithoutUndo();
         gmObj.AddComponent<EasterEgg>();
-        gmObj.AddComponent<PowerUpManager>();
+        var pum = gmObj.AddComponent<PowerUpManager>();
+        Set(pum, "data", Asset<PowerUpData>(DataRoot + "/PowerUps.asset", x => { }));
+        gmObj.AddComponent<BoatMission>();
         var be = gmObj.AddComponent<BossEncounter>();
         var bso = new SerializedObject(be);
         bso.FindProperty("triggerZone").objectReferenceValue = bossZone;
@@ -1121,6 +1149,102 @@ public static class TestMapSetup
         so.FindProperty("interactRadius").floatValue = 2f;
         so.ApplyModifiedPropertiesWithoutUndo();
         return ww;
+    }
+
+    // ------------------------------------------------------------------ boat mission objects (no colliders: thin
+    // posts / floating pickups, they never close a lane). `toWall` = flat direction to something solid beside the
+    // spot (or zero): posts stand against it and face away from it.
+    static Transform MissionRoot(Transform parent, string name, Vector3 pos, Vector3 toWall, float back)
+    {
+        var go = Child(parent, name, toWall == Vector3.zero ? pos : pos + toWall * back);
+        if (toWall != Vector3.zero) go.transform.rotation = Quaternion.LookRotation(-toWall);
+        return go.transform;
+    }
+
+    internal static PowerSwitch BuildPowerSwitch(Transform parent, Vector3 pos, Vector3 toWall)
+    {
+        var t = MissionRoot(parent, "CuadroElectrico", pos, toWall, 0.75f);
+        var grey = Mat("Cuadro_Gris", new Color(0.55f, 0.57f, 0.6f));
+        Prim(PrimitiveType.Cube, t, new Vector3(0, 0.65f, 0), new Vector3(0.12f, 1.3f, 0.12f), grey);
+        Prim(PrimitiveType.Cube, t, new Vector3(0, 1.5f, 0), new Vector3(0.7f, 0.9f, 0.22f), grey);
+        Prim(PrimitiveType.Cube, t, new Vector3(0, 1.5f, 0.115f), new Vector3(0.5f, 0.6f, 0.02f), Mat("Cuadro_Aviso", new Color(1f, 0.85f, 0.1f)));
+        var lamp = Prim(PrimitiveType.Sphere, t, new Vector3(0, 2.05f, 0), Vector3.one * 0.2f, Mat("Cuadro_Luz", new Color(1f, 0.15f, 0.1f), 1.5f));
+        var pivot = Child(t, "Palanca", t.TransformPoint(new Vector3(0.22f, 1.5f, 0.14f))).transform;
+        pivot.rotation = t.rotation;
+        Prim(PrimitiveType.Cube, pivot, new Vector3(0, 0.12f, 0.03f), new Vector3(0.05f, 0.28f, 0.05f), Mat("Cuadro_Palanca", new Color(0.8f, 0.1f, 0.1f)));
+        var label = WorldLabel.Create(t, new Vector3(0, 2.6f, 0), "CUADRO ELÉCTRICO\nDAR LA LUZ", 0.25f, new Color(1f, 0.9f, 0.3f));
+        var ps = t.gameObject.AddComponent<PowerSwitch>();
+        Set(ps, "lamp", lamp.GetComponent<Renderer>());
+        Set(ps, "lever", pivot);
+        Set(ps, "worldLabel", label);
+        return ps;
+    }
+
+    internal static MissionItem BuildMissionItem(Transform parent, MissionItem.Kind kind, Vector3 pos)
+    {
+        bool gas = kind == MissionItem.Kind.Gasolina;
+        var go = Child(parent, gas ? "Gasolina" : "Radio", pos);
+        var visual = Child(go.transform, "Visual", pos + Vector3.up * 0.8f).transform;
+        Color glowColor;
+        if (gas)
+        {
+            var red = Mat("Bidon_Rojo", new Color(0.85f, 0.12f, 0.1f));
+            Prim(PrimitiveType.Cube, visual, Vector3.zero, new Vector3(0.38f, 0.5f, 0.2f), red);
+            Prim(PrimitiveType.Cylinder, visual, new Vector3(0.1f, 0.3f, 0), new Vector3(0.08f, 0.06f, 0.08f), Mat("Bidon_Tapon", new Color(0.1f, 0.1f, 0.1f)));
+            Prim(PrimitiveType.Cube, visual, new Vector3(-0.06f, 0.3f, 0), new Vector3(0.16f, 0.04f, 0.06f), red);
+            glowColor = new Color(1f, 0.4f, 0.2f);
+        }
+        else
+        {
+            var dark = Mat("Radio_Negro", new Color(0.12f, 0.13f, 0.15f));
+            Prim(PrimitiveType.Cube, visual, Vector3.zero, new Vector3(0.5f, 0.3f, 0.16f), dark);
+            Prim(PrimitiveType.Cylinder, visual, new Vector3(-0.12f, 0f, 0.085f), new Vector3(0.18f, 0.01f, 0.18f), Mat("Radio_Altavoz", new Color(0.6f, 0.6f, 0.62f))).transform.localRotation = Quaternion.Euler(90, 0, 0);
+            Prim(PrimitiveType.Cylinder, visual, new Vector3(0.2f, 0.4f, 0), new Vector3(0.02f, 0.3f, 0.02f), Mat("Inox", new Color(0.75f, 0.77f, 0.8f)));
+            glowColor = new Color(0.4f, 0.8f, 1f);
+        }
+        var glow = new GameObject("Brillo").AddComponent<Light>();
+        glow.transform.SetParent(visual, false);
+        glow.type = LightType.Point; glow.range = 3.5f; glow.intensity = 2.5f; glow.color = glowColor;
+        var label = WorldLabel.Create(go.transform, new Vector3(0, 1.7f, 0), gas ? "GASOLINA" : "RADIO", 0.28f, Color.Lerp(glowColor, Color.white, 0.4f));
+        var mi = go.AddComponent<MissionItem>();
+        var so = new SerializedObject(mi);
+        so.FindProperty("kind").enumValueIndex = (int)kind;
+        so.FindProperty("visual").objectReferenceValue = visual;
+        so.FindProperty("worldLabel").objectReferenceValue = label;
+        so.FindProperty("interactRadius").floatValue = 2f;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return mi;
+    }
+
+    internal static CallStation BuildCallStation(Transform parent, Vector3 pos, Vector3 toWall)
+    {
+        var t = MissionRoot(parent, "Emisora", pos, toWall, 0.7f);
+        var wood = Mat("Pole", new Color(0.45f, 0.3f, 0.15f));
+        Prim(PrimitiveType.Cube, t, new Vector3(0, 0.45f, 0), new Vector3(0.9f, 0.9f, 0.35f), wood);
+        Prim(PrimitiveType.Cube, t, new Vector3(0, 1.08f, 0), new Vector3(0.6f, 0.35f, 0.28f), Mat("Radio_Negro", new Color(0.12f, 0.13f, 0.15f)));
+        Prim(PrimitiveType.Cylinder, t, new Vector3(0.35f, 2.0f, 0), new Vector3(0.04f, 1.1f, 0.04f), Mat("Inox", new Color(0.75f, 0.77f, 0.8f)));
+        Prim(PrimitiveType.Sphere, t, new Vector3(0.35f, 3.15f, 0), Vector3.one * 0.14f, Mat("Cuadro_Luz", new Color(1f, 0.15f, 0.1f), 1.5f));
+        var label = WorldLabel.Create(t, new Vector3(0, 3.5f, 0), "EMISORA\nLLAMAR AL BARCO", 0.25f, new Color(0.6f, 0.9f, 1f));
+        var cs = t.gameObject.AddComponent<CallStation>();
+        Set(cs, "worldLabel", label);
+        return cs;
+    }
+
+    // Original map: the nearest dry spot around (x, z) with room for a person and nothing solid in it.
+    static Vector3 ClearSpot(Vector2 xz)
+    {
+        Physics.SyncTransforms();
+        int mask = (1 << 0) | (1 << WallLayer) | (1 << PropLayer) | (1 << DoorLayer);
+        for (float rad = 0f; rad <= 8f; rad += 1f)
+            for (int a = 0; a < 360; a += (rad == 0f ? 360 : 30))
+            {
+                var c = Ground(xz + new Vector2(Mathf.Sin(a * Mathf.Deg2Rad), Mathf.Cos(a * Mathf.Deg2Rad)) * rad);
+                if (c.y < 0.12f || c.y > 3.2f) continue;   // dry, and not on top of the temple / a ruin (the island's floors are 0-2.7 m)
+                if (Physics.CheckCapsule(c + Vector3.up * 0.85f, c + Vector3.up * 1.7f, 0.6f, mask, QueryTriggerInteraction.Ignore)) continue;
+                return c;
+            }
+        Debug.LogError("[TestMap] no clear spot near " + xz);
+        return Ground(xz);
     }
 
     internal static void BuildDrinkMachine(Transform parent, DrinkData drink, Vector3 pos)

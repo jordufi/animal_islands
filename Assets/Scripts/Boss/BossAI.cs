@@ -129,7 +129,15 @@ public class BossAI : MonoBehaviour
         var rm = RoundManager.Instance;
         if (rm == null) return;
         int n = summonCount + (angry ? 2 : 0);
-        for (int i = 0; i < n; i++) rm.SpawnEnemy(null, transform.position);
+        // the neighbours he calls pay for the kill only (no hit points): the fight is not a concha farm
+        var gm = GameManager.Instance;
+        bool payHits = gm != null && gm.Economy != null && gm.Economy.bossMinionsPayHits;
+        for (int i = 0; i < n; i++)
+        {
+            var minion = rm.SpawnEnemy(null, transform.position);
+            var h = minion != null ? minion.GetComponent<EnemyHealth>() : null;
+            if (h != null) h.PaysHits = payHits;
+        }
         GameManager.Instance?.ShowMessage("Don Anselmo convoca a la junta de vecinos");
     }
 

@@ -92,6 +92,8 @@ public class NetGame : MonoBehaviour
         On(NetMsg.CardChosen, (s, r) => { if (Net.IsClient) Replay(() => { var cm = CardManager.Instance; if (cm != null) cm.NetChosen(FindAsset<CardData>(r.Str())); }); });
         On(NetMsg.BossDefeated, (s, r) => { if (Net.IsClient && BossEncounter.Instance != null) BossEncounter.Instance.NetBossDefeated(); });
         On(NetMsg.WorldInit, (s, r) => { if (Net.IsClient) ApplyWorld(r); });
+        On(NetMsg.Quest, (s, r) => { if (Net.IsClient && BoatMission.Instance != null) BoatMission.Instance.ReadNet(r); });
+        On(NetMsg.Buffs, (s, r) => { if (Net.IsClient) ApplyBuffs(r); });
     }
 
     void On(NetMsg m, Action<int, NetRead> h) => NetSession.On(m, (s, r) => { MessagesIn++; h(s, r); });
@@ -641,7 +643,29 @@ public class NetGame : MonoBehaviour
         int id = nextPickupId++;
         p.NetId = id;
         pickups[id] = p;
-        S.ToAll(NetBuf.Make(NetMsg.PowerUpSpawn).UShort(id).Vec(p.transform.position));
+        S.ToAll(NetBuf.Make(NetMsg.PowerUpSpawn).UShort(id).Vec(p.transform.position).Byte((byte)p.Kind));
+    }
+
+    // ---------------------------------------------------------------- boat mission, timed power-ups
+    public void QuestChanged()
+    {
+        var m = BoatMission.Instance;
+        if (m == null) return;
+        var b = NetBuf.Make(NetMsg.Quest);
+        m.WriteNet(b);
+        S.ToAll(b);
+    }
+
+    public void BuffsChanged()
+    {
+        var pm = PowerUpManager.Instance;
+        if (pm != null) S.ToAll(NetBuf.Make(NetMsg.Buffs).Float(pm.InstaKillLeft).Float(pm.DoublePointsLeft));
+    }
+
+    void ApplyBuffs(NetRead r)
+    {
+        float insta = r.Float(), dbl = r.Float();
+        if (PowerUpManager.Instance != null) PowerUpManager.Instance.NetSetBuffs(insta, dbl);
     }
 
     public void PowerUpTaken(AmmoPickup p)
@@ -655,9 +679,10 @@ public class NetGame : MonoBehaviour
         if (!Net.IsClient) return;
         int id = r.UShort();
         Vector3 pos = r.Vec();
+        var kind = (PowerUpKind)r.Byte();
         var pm = FindAnyObjectByType<PowerUpManager>();
         if (pm == null || pickups.ContainsKey(id)) return;
-        var p = pm.NetSpawn(pos);
+        var p = pm.NetSpawn(pos, kind);
         if (p != null) { p.NetId = id; pickups[id] = p; }
     }
 
@@ -750,6 +775,11 @@ public class NetGame : MonoBehaviour
         if (key != null) b.SByte(key.Holder != null ? IndexOf(key.Holder) : -1).Vec(key.transform.position).Bool(key.Used);
         b.Bool(disc != null);
         if (disc != null) { var c = CarryMsg(); b.Vec(disc.transform.position); b.Int(c.Length); for (int i = 1; i < c.Length; i++) b.Byte(c.Data[i]); }
+        var mission = BoatMission.Instance;
+        b.Bool(mission != null);
+        if (mission != null) mission.WriteNet(b);
+        var pum = PowerUpManager.Instance;
+        b.Float(pum != null ? pum.InstaKillLeft : 0f).Float(pum != null ? pum.DoublePointsLeft : 0f);
         return b;
     }
 
@@ -776,6 +806,8 @@ public class NetGame : MonoBehaviour
             if (disc == null && k != null) disc = k.NetDone(pos);
             ApplyCarry(r);
         }
+        if (r.Bool() && BoatMission.Instance != null) BoatMission.Instance.ReadNet(r);
+        ApplyBuffs(r);
     }
 
     // ---------------------------------------------------------------- loop

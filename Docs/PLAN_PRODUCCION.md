@@ -96,6 +96,11 @@ Cada fase termina con sus play tests en verde y CLAUDE.md / README actualizados.
 - Hecho cuando: 0 celdas inalcanzables, 0 muros invisibles en la auditoría, `MapSelectorPlayTest` con ronda 1–5.
 
 ### Fase 1 — Estructura de la partida (Opus: toca flujo, online y los dos mapas)
+**Estado 2026-11-15: HECHA y probada (Phase1PlayTest, IslaZombie, Online 69/0, Coop, Feedback, Base, Original). Pendiente: «Bingo» y registrar misión y power-ups en el run log.** Antes: código escrito por Fable, compila, SIN reconstruir mapas y SIN probar. La lista de trabajo para
+terminarla (reconstruir, adaptar tests, test nuevo, regresión, riesgos) está en [FASE1_TRASPASO.md](FASE1_TRASPASO.md).
+Cambios respecto a lo escrito abajo: la radio está en el Templo, la emisora y la luz en el Faro (no «arriba», el faro
+aún no se sube); la llave vale por una pieza; no hay «Bingo»; la vida del jefe pasa a la Fase 2.**
+
 Objetivo: que llegar al jefe exija **recorrer el mapa y llegar a ronda 12–15**, no solo pagar.
 - **«Dar la luz»**: interruptor en la zona más lejana (Isla del Faro: arriba del faro). Sin luz no funcionan bebidas ni
   Microondas. Megafonía: «Se ruega a los señores clientes no tocar el cuadro eléctrico».
@@ -118,7 +123,47 @@ Puntos de partida (ajustar con los logs nuevos de Fase 0, cambiando **solo** `As
 - Puertas Isla del Faro: escalar de 750 → 3.000 de forma que abrirlo todo ≈ 25.000 y el ingreso lo permita en ronda 10–12.
 - Daño de los abuelos: fijar «3 golpes sin Piña». Chándal: vida 0,8 → 0,6 (rápidos pero de papel). Culturista desde ronda 7 bien.
 - Cartas: hoy son ±% planos. Fase 5 las hace cambiar reglas; aquí solo comprobar que ninguna rompe (–20 % conchas + 50 % caja).
-- Hecho cuando: en logs de bot y de humano, ingreso/ronda y TTK por arma están dentro de la tabla objetivo que se escriba aquí.
+- Hecho cuando: en logs de bot y de humano, ingreso/ronda y TTK por arma están dentro de la tabla objetivo de abajo.
+
+#### Tabla objetivo de la Fase 2 (un jugador, dificultad Normal)
+Supuestos: ronda media 75 s + pausa 10 s; jefe en ronda 12–15; partida 25–30 min.
+
+| Ronda | Abuelos | Vida abuelo | Conchas ganadas en la ronda | Acumulado | Qué debería poder tener el jugador |
+|---|---|---|---|---|---|
+| 1 | 8 | 150 | 700–900 | ~1.300 (con las 500 iniciales) | Primera puerta (750) |
+| 3 | 13 | 350 | 1.300–1.600 | ~4.500 | Segunda puerta + arma de pared |
+| 5 (noche) | 11 | 550 ×0,9 | 1.400–1.800 | ~8.000 | Luz dada, una bebida |
+| 7 | 25 | 750 | 2.800–3.300 | ~14.000 | Templo abierto (5.000), radio |
+| 10 (noche) | 22 | ~1.045 ×0,9 | 3.000–3.500 | ~25.000–30.000 | Microondas en un arma, 2–3 bebidas |
+| 12 | 44 | ~1.265 | 5.000–6.000 | ~40.000 | Barco llamado, segunda arma mejorada |
+| 14 | 52 | ~1.530 | 6.000–7.000 | ~50.000–55.000 | Jefe |
+
+Gasto previsto antes del jefe en Isla del Faro (≈40.000): puertas 10.500 (el muelle ya es gratis), bebidas 9.000,
+Microondas 10.000 (dos armas), caja ~5.000, armas y munición de pared ~5.000.
+
+**Tiempo para matar (TTK) objetivo**, a un abuelo normal, disparando al cuerpo sin fallar:
+
+| Arma | Ronda 1 | Ronda 5 | Ronda 10 | Ronda 14 mejorada |
+|---|---|---|---|---|
+| Pistola | ≤ 0,6 s | 2–2,5 s | no viable (> 4 s) | — |
+| Escopeta (a 3 m) | 1 tiro | 2 tiros | 4 tiros | 3 tiros |
+| Thermomix | — | ≤ 0,7 s | 1,0–1,3 s | ≤ 1,0 s |
+| Catalejo | 1 tiro | 1 tiro | 2 tiros al cuerpo, 1 a la cabeza | 1 tiro |
+| Ukelele | 1 golpe | 4 golpes | no viable | — |
+
+**Jefe** (sacar `healthInEnemies` y `minHealth` de `BossEncounter` a `Data/Economy.asset` o a un `BossData`):
+objetivo 2,5–4 min de pelea con dos armas mejoradas. Punto de partida: vida = **60 ×** la de un abuelo de la ronda,
+mínimo **30.000** (hoy 25 × y 8.000: en ronda 7 son 18.750, unos 20 s de Thermomix). El mínimo alto es lo que impide
+correr al jefe en ronda 6 con la pistola.
+
+**Otros números a fijar en esta fase** (todos en `Assets/Data`): `missionDefenseRounds` (1 → probar 2),
+probabilidades de `PowerUps.asset`, coste del Microondas (5.000, hoy en el propio `PackAPunch`: moverlo a datos),
+`downPenalty` en cooperativo, y la curva de 2–4 jugadores (+50 % abuelos por jugador extra con un solo bote puede
+quedarse corta de conchas: medir conchas por jugador y ronda).
+
+**Método**: (1) hoja de cálculo o script que saque ingreso y TTK teóricos de los `.asset`; (2) bot de `BasePlayTest`
+jugando 10 rondas con cada arma y el run log nuevo; (3) dos partidas reales del usuario; (4) ajustar y repetir. Cambiar
+un grupo de números cada vez (primero ingreso, luego precios, luego jefe).
 
 ### Fase 3 — Rediseño de Isla del Faro: altura y circuitos (Opus diseña el formato; Sonnet aplica)
 - **Formato**: añadir al layout una segunda rejilla `[heights]` (un dígito por celda, nivel × 1,5 m) y marcadores de
@@ -135,6 +180,32 @@ Puntos de partida (ajustar con los logs nuevos de Fase 0, cambiando **solo** `As
   - **Templo**: bajar medio nivel (escaleras) para que el Microondas se sienta «cripta».
 - Hecho cuando: pasan los checks del setup + cobertura de spawns, cada zona tiene ≥1 circuito medido, máx. 2 callejones,
   y las capturas (`Capture Isla Zombie Map`) muestran 3 alturas.
+
+#### Especificación del formato con alturas (Fase 3)
+- **Sección nueva `[heights]`** en el layout, misma anchura y altura que `[map]`: un carácter por celda.
+  `0`–`4` = nivel (× **1,5 m**); `.` = igual que el vecino (para no rellenar todo). Si falta la sección, todo es nivel 0
+  (los mapas actuales siguen valiendo).
+- **Rampas y escaleras en `[map]`**: `^ v < >` = rampa de 1 celda que sube un nivel en esa dirección (3,5 m de
+  recorrido útil → pendiente ~37°, por debajo de los 45° de la malla); `=` = escalera ancha (dos celdas seguidas hacen
+  una rampa de 2 celdas, ~20°). La celda de rampa pertenece a la zona del suelo de abajo.
+- **Caída de un sentido**: `!` en el borde alto. Genera hueco en la barandilla y un `NavMeshLink` unidireccional hacia
+  abajo (los abuelos también saltan; de vuelta no). Altura máxima 2 niveles (3 m) y sin daño de caída.
+- **Lo que genera el setup**: suelo por celda a su altura; **talud o muro** en cada borde entre niveles distintos
+  (capa Wall, con textura de roca); **barandilla visible** de 1 m en los bordes altos sin rampa ni `!` (regla 1: lo
+  que no se puede saltar, se ve). Props, entradas de spawn, máquinas y marcadores se colocan a la altura de su celda.
+- **Mallas**: las dos (normal y Saltador) se hornean igual; añadir `NavMeshLink` en las caídas. Subir
+  `agentClimb` no hace falta: los cambios de nivel son siempre por rampa.
+- **Checks nuevos del setup** (fallan en voz alta): toda celda de suelo alcanzable andando desde el inicio con las
+  puertas abiertas; ninguna rampa desemboca en muro; ninguna caída `!` salta una puerta de pago hacia una zona
+  cerrada (comparar grupos); cada zona marcada con `circuito` en `[zones]` tiene un ciclo de celdas de ≥ 25 m con
+  carril ≥ 2 celdas en al menos la mitad; máximo 2 zonas con una sola salida.
+- **Cámara y combate**: comprobar la cámara en rampas y bajo voladizos, que las balas no atraviesan taludes y que
+  los senderistas (Saltador) no usan las barandillas como atajo entre niveles.
+- **Orden de trabajo**: (1) formato + generación con un mapa de prueba de 10×10; (2) checks; (3) aplicar a Isla del
+  Faro zona por zona (Faro → Camping → Volley → Mercadillo → Templo → Cueva), con captura y play tests tras cada una;
+  (4) carteles «ESTÁS AQUÍ» y mapa de pausa regenerados.
+- **Riesgo principal**: `IslaZombieSetup.cs` asume y = 0 en muchos sitios (`World(c, r)`, colliders de props, entradas,
+  huellas). Empezar buscando todos los usos de `World(` y de alturas fijas antes de escribir nada.
 
 ### Fase 4 — Sensación de juego y audio (Sonnet)
 - Audio completo: armas, impactos, bajas, pasos, puertas de spawn, megafonía del resort como narrador, cambio de

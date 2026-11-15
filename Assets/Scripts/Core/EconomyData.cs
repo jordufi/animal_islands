@@ -13,6 +13,10 @@ public class EconomyData : ScriptableObject
     public int meleeKillPoints = 130;
     public int abilityKillPoints = 60;
     public int bossKillPoints = 2000;
+    [Tooltip("Old men summoned by the boss: do their non-lethal hits pay hit points? (off = the boss fight is not a farm)")]
+    public bool bossMinionsPayHits = false;
+    [Tooltip("Boat mission: full rounds to survive after calling the boat.")]
+    public int missionDefenseRounds = 1;
 }
 
 // What a points change was for (floating "+10" colour on the HUD, per-run log).

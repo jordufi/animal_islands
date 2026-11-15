@@ -320,7 +320,7 @@ public class GameManager : MonoBehaviour
     public int AddPoints(int raw, PointSource source = PointSource.Bonus)
     {
         if (Net.IsClient) return 0;   // online: the pot lives on the host
-        int amount = source == PointSource.Debug ? raw : Mathf.RoundToInt(raw * RunModifiers.Get(Stat.PointsGain));
+        int amount = source == PointSource.Debug ? raw : Mathf.RoundToInt(raw * RunModifiers.Get(Stat.PointsGain) * (raw > 0 && PowerUpManager.DoublePoints ? 2f : 1f));
         Points += amount;
         if (source != PointSource.Debug)
         {

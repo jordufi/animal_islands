@@ -20,7 +20,8 @@ public static class IslaZombiePlayTest
 
     static int step;
     static float stepTime, realTime;
-    static int doorIndex;
+    static int doorIndex, missionStep;
+    static float missionT;
     static readonly Dictionary<EnemyAI, float> firstDistance = new Dictionary<EnemyAI, float>();
     static readonly int[] DoorOrder = { 1, 3, 2, 4, 5, 6, 7 };
 
@@ -39,7 +40,7 @@ public static class IslaZombiePlayTest
         EditorPrefs.SetString(Key + "Log", "");
         EditorPrefs.SetString(Key + "Status", "running");
         EditorPrefs.SetBool(Key + "Running", true);
-        step = 0; doorIndex = 0; firstDistance.Clear();
+        step = 0; doorIndex = 0; missionStep = 0; firstDistance.Clear();
         Hook();   // with domain reload enabled the static constructor hooks it again after entering play mode
         EditorApplication.EnterPlaymode();
     }
@@ -111,21 +112,49 @@ public static class IslaZombiePlayTest
                 if (CardManager.Instance.CurrentOffer != null) { CardManager.Instance.Choose(CardManager.Instance.CurrentOffer[0]); return; }
                 if (doorIndex < DoorOrder.Length)
                 {
-                    int n = DoorOrder[doorIndex++];
+                    int n = DoorOrder[doorIndex];
                     var door = Object.FindObjectsByType<ZoneDoor>().FirstOrDefault(d => d.name.StartsWith("Door" + n + "_"));
                     if (door == null) { Write($"FAIL door {n} not found"); doorIndex = 99; return; }
                     var interactor = player.GetComponent<PlayerInteractor>();
-                    if (door.AcceptsMasterKey && MasterKey.Instance != null)
+                    var m = BoatMission.Instance;
+                    if (door.RequiresMission && m != null && !m.Complete)
                     {
-                        var key = MasterKey.Instance;
-                        Write($"llave maestra at {key.transform.position} (prompt: '{key.Prompt(interactor)}')");
-                        key.Interact(interactor);
-                        Write((key.IsHeldBy(interactor) ? "OK " : "FAIL") + " picked up the Llave Maestra; door prompt: '" + door.Prompt(interactor) + "'");
+                        // the dock: closed until the boat mission is done (light, petrol, call with the key instead of the radio)
+                        if (missionStep == 0)
+                        {
+                            int p0 = gm.Points, z0 = ZoneManager.Instance.OpenCount;
+                            Write("dock prompt before the mission: '" + door.Prompt(interactor) + "'");
+                            door.Interact(interactor);
+                            Write((gm.Points == p0 && ZoneManager.Instance.OpenCount == z0 && door != null ? "OK " : "FAIL") + " the Muelle stays closed (and free) before the boat mission");
+                            var sw = Object.FindAnyObjectByType<PowerSwitch>();
+                            if (sw != null) sw.Interact(interactor);
+                            foreach (var it in Object.FindObjectsByType<MissionItem>()) if (it.ItemKind == MissionItem.Kind.Gasolina) it.Interact(interactor);
+                            var key = MasterKey.Instance;
+                            if (key != null) { Write($"llave maestra at {key.transform.position}"); key.Interact(interactor); }
+                            var st = Object.FindAnyObjectByType<CallStation>();
+                            Write("emisora prompt with petrol + key: '" + (st != null ? st.Prompt(interactor) : "NO STATION") + "'");
+                            if (st != null) st.Interact(interactor);
+                            Write((m.Power && m.Gas && m.Radio && m.Called && key != null && key.Used ? "OK " : "FAIL")
+                                + $" light on, petrol picked, boat called with the Llave Maestra instead of the radio (arrives after round {m.DefenseUntilRound})");
+                            missionStep = 1;
+                            missionT = Time.realtimeSinceStartup;
+                            return;
+                        }
+                        // hold out: end rounds until the boat arrives
+                        if (Time.realtimeSinceStartup - missionT > 90f) { Write("FAIL the boat never arrived"); doorIndex = 99; return; }
+                        RoundManager.Instance.DebugEndRound();
+                        return;
                     }
+                    if (door.RequiresMission && missionStep == 1)
+                    {
+                        Write($"OK  boat at the dock after round {m.DefenseUntilRound} (now round {RoundManager.Instance.Round}); dock prompt: '{door.Prompt(interactor)}'");
+                        missionStep = 2;
+                    }
+                    doorIndex++;
                     int before = ZoneManager.Instance.OpenCount, pts = gm.Points;
                     door.Interact(interactor);
                     Write($"door {n} '{door.name}': paid {pts - gm.Points}, open zones {before} -> {ZoneManager.Instance.OpenCount}");
-                    if (door.AcceptsMasterKey) Write((pts == gm.Points && MasterKey.Instance != null && MasterKey.Instance.Used ? "OK " : "FAIL") + " Muelle opened for free with the Llave Maestra");
+                    if (door.RequiresMission) Write((pts == gm.Points && ZoneManager.Instance.OpenCount > before ? "OK " : "FAIL") + " Muelle opened for free once the boat mission was done");
                     realTime = Time.realtimeSinceStartup;
                     return;
                 }

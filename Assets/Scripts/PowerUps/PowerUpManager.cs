@@ -1,57 +1,155 @@
 using UnityEngine;
 
-// Enemies have a small chance to drop a "Nevera de munición" (max ammo). Since weapons only come
-// from the mystery box, this is the main way to refill reserves.
+public enum PowerUpKind : byte { MaxAmmo, InstaKill, DoublePoints, Nuke }
+
+// Old men have a small chance to drop a power-up when they die (numbers in PowerUpData):
+//   Nevera de munición (max ammo for the team), Siesta fulminante (insta-kill), 2x1 en conchas (double points),
+//   Paella para todos (kills every old man on the map, pays a bonus).
+// The timed ones are team-wide timers (InstaKill / DoublePoints). Online: the host drops them, decides who takes
+// them and applies the effects; clients get the pickups and the timers (for the HUD).
 public class PowerUpManager : MonoBehaviour
 {
-    [SerializeField] float ammoDropChance = 0.025f;
-    [SerializeField] float lifetime = 25f;
-    [SerializeField] int maxActive = 2;
+    public static PowerUpManager Instance { get; private set; }
 
-    int active;
+    [SerializeField] PowerUpData data;
+
+    int active, droppedThisRound;
+    bool nuking;
+    float instaUntil, doubleUntil;
+
+    public static bool InstaKill => Instance != null && Time.time < Instance.instaUntil;
+    public static bool DoublePoints => Instance != null && Time.time < Instance.doubleUntil;
+    public float InstaKillLeft => Mathf.Max(0f, instaUntil - Time.time);
+    public float DoublePointsLeft => Mathf.Max(0f, doubleUntil - Time.time);
+    public PowerUpData Data => data;
+
+    void Awake()
+    {
+        Instance = this;
+        if (data == null) data = ScriptableObject.CreateInstance<PowerUpData>();   // scenes built before the asset existed
+    }
+
+    void OnDestroy() { if (Instance == this) Instance = null; }
+
+    void Start()
+    {
+        if (RoundManager.Instance != null) RoundManager.Instance.RoundStarted += _ => droppedThisRound = 0;
+    }
 
     void OnEnable() => EnemyHealth.AnyEnemyDied += OnEnemyDied;
     void OnDisable() => EnemyHealth.AnyEnemyDied -= OnEnemyDied;
 
     void OnEnemyDied(EnemyHealth enemy, DamageInfo info)
     {
-        if (!Net.Authority) return;   // online: the host drops them
-        if (active >= maxActive || enemy.GetComponent<BossAI>() != null) return;
-        if (Random.value > ammoDropChance * RunModifiers.Get(Stat.AmmoDropChance)) return;
-        Spawn(enemy.transform.position + Vector3.up * 0.6f);
+        if (!Net.Authority || nuking) return;   // online: the host drops them
+        if (active >= data.maxActive || droppedThisRound >= data.maxPerRound || enemy.GetComponent<BossAI>() != null) return;
+        float ammo = data.ammoDropChance * RunModifiers.Get(Stat.AmmoDropChance);
+        float roll = Random.value;
+        PowerUpKind kind;
+        if (roll < ammo) kind = PowerUpKind.MaxAmmo;
+        else if (roll < ammo + data.otherDropChance) kind = PickOther();
+        else return;
+        droppedThisRound++;
+        Spawn(enemy.transform.position + Vector3.up * 0.6f, kind);
     }
 
-    public void Spawn(Vector3 position)
+    PowerUpKind PickOther()
     {
-        var pickup = Create(position);
+        float total = data.instaKillWeight + data.doublePointsWeight + data.nukeWeight;
+        float r = Random.value * total;
+        if (r < data.instaKillWeight) return PowerUpKind.InstaKill;
+        if (r < data.instaKillWeight + data.doublePointsWeight) return PowerUpKind.DoublePoints;
+        return PowerUpKind.Nuke;
+    }
+
+    public void Spawn(Vector3 position, PowerUpKind kind = PowerUpKind.MaxAmmo)
+    {
+        var pickup = Create(position, kind);
         if (NetGame.H != null) NetGame.H.PowerUpSpawned(pickup);
     }
 
     // Online client: the host dropped one here (the host also decides who takes it).
-    public AmmoPickup NetSpawn(Vector3 position) => Create(position);
+    public AmmoPickup NetSpawn(Vector3 position, PowerUpKind kind) => Create(position, kind);
 
-    AmmoPickup Create(Vector3 position)
+    static string Label(PowerUpKind k) => k == PowerUpKind.MaxAmmo ? "NEVERA DE\nMUNICIÓN" : k == PowerUpKind.InstaKill ? "SIESTA\nFULMINANTE"
+        : k == PowerUpKind.DoublePoints ? "2x1 EN\nCONCHAS" : "PAELLA\nPARA TODOS";
+
+    static Color Tint(PowerUpKind k) => k == PowerUpKind.MaxAmmo ? new Color(0.2f, 0.6f, 1f) : k == PowerUpKind.InstaKill ? new Color(0.9f, 0.15f, 0.15f)
+        : k == PowerUpKind.DoublePoints ? new Color(1f, 0.8f, 0.1f) : new Color(1f, 0.5f, 0.1f);
+
+    AmmoPickup Create(Vector3 position, PowerUpKind kind)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go.name = "PowerUp_MaxAmmo";
+        go.name = "PowerUp_" + kind;
         go.transform.position = position;
         go.transform.localScale = new Vector3(0.6f, 0.45f, 0.4f);
-        go.GetComponent<Renderer>().material.color = new Color(0.2f, 0.6f, 1f);
+        go.GetComponent<Renderer>().material.color = Tint(kind);
         var col = go.GetComponent<BoxCollider>();
         col.isTrigger = true;
         col.size = new Vector3(2.5f, 4f, 3f);
         var rb = go.AddComponent<Rigidbody>();
         rb.isKinematic = true;
-        WorldLabel.Create(go.transform, new Vector3(0f, 1.8f, 0f), "NEVERA DE\nMUNICIÓN", 0.25f, new Color(0.6f, 0.9f, 1f));
+        var label = WorldLabel.Create(go.transform, Vector3.zero, Label(kind), 0.25f, Color.Lerp(Tint(kind), Color.white, 0.5f));
+        label.transform.position = position + Vector3.up * 0.8f;
         var pickup = go.AddComponent<AmmoPickup>();
-        pickup.Init(this, lifetime);
+        pickup.Init(this, data.lifetime, kind);
         active++;
         return pickup;
     }
 
     public void Released() => active = Mathf.Max(0, active - 1);
+
+    // ---------------------------------------------------------------- effects (offline / host)
+    public void Apply(PowerUpKind kind, PlayerShooter taker)
+    {
+        var gm = GameManager.Instance;
+        switch (kind)
+        {
+            case PowerUpKind.MaxAmmo:
+                // like Zombies' Max Ammo: whoever picks it up refills the whole team
+                if (gm != null && gm.PlayerCount > 0)
+                    foreach (var p in gm.Players) { var s = p != null ? p.GetComponent<PlayerShooter>() : null; if (s != null) s.RefillAllAmmo(); }
+                else if (taker != null) taker.RefillAllAmmo();
+                gm?.ShowMessage("¡NEVERA DE MUNICIÓN! Munición al máximo");
+                break;
+            case PowerUpKind.InstaKill:
+                instaUntil = Time.time + data.instaKillSeconds;
+                gm?.ShowMessage("¡SIESTA FULMINANTE! Los abuelos caen de un golpe (" + Mathf.RoundToInt(data.instaKillSeconds) + " s)");
+                break;
+            case PowerUpKind.DoublePoints:
+                doubleUntil = Time.time + data.doublePointsSeconds;
+                gm?.ShowMessage("¡2x1 EN CONCHAS! Todo paga el doble (" + Mathf.RoundToInt(data.doublePointsSeconds) + " s)");
+                break;
+            case PowerUpKind.Nuke:
+                nuking = true;
+                foreach (var e in FindObjectsByType<EnemyHealth>())
+                    if (!e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false);
+                nuking = false;
+                gm?.AddPoints(data.nukePoints, PointSource.Bonus);
+                gm?.ShowMessage("¡PAELLA PARA TODOS! Los abuelos se van a comer (+" + data.nukePoints + ")");
+                break;
+        }
+        if (NetGame.H != null) NetGame.H.BuffsChanged();
+    }
+
+    // Online client: the timers the host is running (HUD only).
+    public void NetSetBuffs(float instaLeft, float doubleLeft)
+    {
+        instaUntil = Time.time + instaLeft;
+        doubleUntil = Time.time + doubleLeft;
+    }
+
+    // HUD line ("" when nothing is active).
+    public string Status()
+    {
+        string s = "";
+        if (InstaKill) s = "SIESTA FULMINANTE " + Mathf.CeilToInt(InstaKillLeft) + " s";
+        if (DoublePoints) s += (s.Length > 0 ? "  ·  " : "") + "CONCHAS x2 " + Mathf.CeilToInt(DoublePointsLeft) + " s";
+        return s;
+    }
 }
 
+// A power-up lying on the ground (the name stays from when the only one was the ammo cooler).
 public class AmmoPickup : MonoBehaviour
 {
     PowerUpManager owner;
@@ -59,10 +157,12 @@ public class AmmoPickup : MonoBehaviour
     Renderer rend;
 
     public int NetId { get; set; }
+    public PowerUpKind Kind { get; private set; }
 
-    public void Init(PowerUpManager manager, float lifetime)
+    public void Init(PowerUpManager manager, float lifetime, PowerUpKind kind)
     {
         owner = manager;
+        Kind = kind;
         bornAt = Time.time;
         despawnAt = Time.time + lifetime;
         rend = GetComponent<Renderer>();
@@ -95,12 +195,7 @@ public class AmmoPickup : MonoBehaviour
         if (shooter == null || taken) return;
         taken = true;
         if (NetGame.H != null) NetGame.H.PowerUpTaken(this);
-        // like Zombies' Max Ammo: whoever picks it up refills the whole team
-        var gm = GameManager.Instance;
-        if (gm != null && gm.PlayerCount > 0)
-            foreach (var p in gm.Players) { var s = p != null ? p.GetComponent<PlayerShooter>() : null; if (s != null) s.RefillAllAmmo(); }
-        else shooter.RefillAllAmmo();
-        GameManager.Instance?.ShowMessage("¡NEVERA DE MUNICIÓN! Munición al máximo");
+        if (owner != null) owner.Apply(Kind, shooter);
         Destroy(gameObject);
     }
 

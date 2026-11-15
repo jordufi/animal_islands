@@ -18,6 +18,7 @@ public class EnemyHealth : MonoBehaviour
     public float Current { get; private set; }
     public bool IsDead { get; private set; }
     public float PointsMultiplier { get; set; } = 1f;
+    public bool PaysHits { get; set; } = true;   // false: only the kill pays (the boss's neighbours)
     public int NetId { get; set; }   // online: the same old man on every machine
 
     public event Action<EnemyHealth, DamageInfo> Damaged;

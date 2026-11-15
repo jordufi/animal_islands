@@ -498,12 +498,12 @@ public static class OnlinePlayTest
         Check(V("dead") == "False" && V("weapons") == "Pistol,-", "client: back with the pistol only (" + V("weapons") + ")");
         Cmd("god on");
 
-        // ---------------------------------------------------------- 7. key, boss, extraction
+        // ---------------------------------------------------------- 7. key, boat mission (light, petrol, radio, call), dock
+        foreach (var d in Object.FindObjectsByType<ZoneDoor>()) if (!d.RequiresMission) d.DebugOpen();   // all zones except the dock
+        yield return Wait(1f);
         var key = MasterKey.Instance;
         if (key != null && key.Holder == null && !key.Used)
         {
-            foreach (var d in Object.FindObjectsByType<ZoneDoor>()) if (!d.AcceptsMasterKey) d.DebugOpen();   // all zones except the dock
-            yield return Wait(1f);
             Vector3 kp = key.transform.position;
             Tp(Near(kp, 1f));
             yield return Wait(0.8f);
@@ -512,7 +512,48 @@ public static class OnlinePlayTest
             Check(key.Holder != null && NetGame.IndexOf(key.Holder) == 1, "client picks up the Llave Maestra -> host knows J2 has it");
             yield return Ask("key");
             Check(V("key") == "J2", "client: key in its pocket (" + V("key") + ")");
-            var dock = Object.FindObjectsByType<ZoneDoor>().FirstOrDefault(d => d.AcceptsMasterKey);
+        }
+        else Write("   (no free key on this map / run)");
+        var mission = BoatMission.Instance;
+        if (mission != null && mission.HasMission)
+        {
+            // the client gives the light and picks the radio; the host picks the petrol; the client calls the boat
+            var sw = Object.FindAnyObjectByType<PowerSwitch>();
+            if (sw != null)
+            {
+                Tp(Near(sw.InteractPoint, 1.2f));
+                yield return Wait(0.8f);
+                Cmd("use");
+                yield return Until(() => mission.Power, 3f);
+            }
+            var radio = Object.FindObjectsByType<MissionItem>().FirstOrDefault(i => i.ItemKind == MissionItem.Kind.Radio);
+            if (radio != null)
+            {
+                Tp(Near(radio.transform.position, 1f));
+                yield return Wait(0.8f);
+                Cmd("use");
+                yield return Until(() => mission.Radio, 3f);
+            }
+            var petrol = Object.FindObjectsByType<MissionItem>().FirstOrDefault(i => i.ItemKind == MissionItem.Kind.Gasolina);
+            if (petrol != null) petrol.Interact(gm.Player.GetComponent<PlayerInteractor>());
+            yield return Wait(0.6f);
+            yield return Ask("quest");
+            Check(mission.Power && mission.Radio && mission.Gas && V("quest") == "P1G1R1C0D0", "client gives the light and picks the radio, host picks the petrol: both see it (client " + V("quest") + ")");
+            var st = Object.FindAnyObjectByType<CallStation>();
+            if (st != null)
+            {
+                Tp(Near(st.InteractPoint, 1.2f));
+                yield return Wait(0.8f);
+                Cmd("use");
+                yield return Until(() => mission.Called, 3f);
+            }
+            Check(mission.Called && key != null && !key.Used, $"client calls the boat (arrives after round {mission.DefenseUntilRound}); the key is not spent with both pieces");
+            float boatDeadline = Time.realtimeSinceStartup + 60f;
+            while (!mission.Complete && Time.realtimeSinceStartup < boatDeadline) { RoundManager.Instance.DebugEndRound(); yield return Wait(0.3f); }
+            yield return Wait(0.6f);
+            yield return Ask("quest");
+            Check(mission.Complete && V("quest") == "P1G1R1C1D1", "boat at the dock for both (client " + V("quest") + ")");
+            var dock = Object.FindObjectsByType<ZoneDoor>().FirstOrDefault(d => d.RequiresMission);
             if (dock != null)
             {
                 Vector3 dp = dock.InteractPoint;
@@ -521,13 +562,13 @@ public static class OnlinePlayTest
                 int pot = gm.Points;
                 Cmd("use");
                 yield return Until(() => dock == null, 3f);
-                Check(dock == null && gm.Points == pot && key.Used, "client opens the dock with the key for free");
+                Check(dock == null && gm.Points == pot, "client opens the dock for free once the boat is there");
                 var cm = CardManager.Instance;
                 yield return Until(() => cm.CurrentOffer != null, 2f);
                 if (cm.CurrentOffer != null) { Cmd("card 0"); yield return Until(() => cm.CurrentOffer == null, 3f); }
             }
         }
-        else Write("   (no free key on this map / run)");
+        else Write("   (no boat mission on this map)");
 
         // ---------------------------------------------------------- 7b. easter egg: records, karaoke, Golden Disc
         var egg = EasterEgg.Instance;

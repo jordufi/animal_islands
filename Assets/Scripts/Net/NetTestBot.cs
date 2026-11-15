@@ -208,6 +208,8 @@ public class NetTestBot : MonoBehaviour
         }
         var key = MasterKey.Instance;
         if (key != null) Kv("key", key.Used ? "used" : key.Holder != null ? "J" + (NetGame.IndexOf(key.Holder) + 1) : "floor");
+        var bm = BoatMission.Instance;
+        if (bm != null) Kv("quest", "P" + (bm.Power ? 1 : 0) + "G" + (bm.Gas ? 1 : 0) + "R" + (bm.Radio ? 1 : 0) + "C" + (bm.Called ? 1 : 0) + "D" + (bm.Complete ? 1 : 0));
         if (gm != null)
             foreach (var p in gm.Players)
             {

@@ -13,7 +13,12 @@ public class ZoneDoor : Interactable
     [SerializeField] bool acceptsMasterKey;
 
     public int Cost => Mathf.RoundToInt(cost * RunModifiers.Get(Stat.DoorCost) / 10f) * 10;
+    [SerializeField] bool requiresMission;   // the dock: free, but only once the boat mission is complete
+
     public bool AcceptsMasterKey => acceptsMasterKey;
+    public bool RequiresMission => requiresMission;
+    bool Locked => requiresMission && !BoatMission.DockOpen;
+    bool Free => requiresMission && BoatMission.Instance != null && BoatMission.Instance.HasMission;
 
     string Destination()
     {
@@ -26,17 +31,23 @@ public class ZoneDoor : Interactable
     void Update()
     {
         if (worldLabel != null)
-            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : "");
+            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + (Locked ? "CERRADO: falta el barco" : Free ? "ABRIR" : Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : ""));
     }
 
-    public override string Prompt(PlayerInteractor player) => HasKey(player)
-        ? "□  Abrir hacia " + Destination() + " con la LLAVE MAESTRA (gratis)"
+    public override bool CanInteract(PlayerInteractor player) => !Locked;
+
+    public override string Prompt(PlayerInteractor player) => Locked ? "Muelle cerrado. " + BoatMission.Instance.Objective()
+        : Free ? "□  Abrir hacia " + Destination()
+        : HasKey(player)
+        ?"□  Abrir hacia " + Destination() + " con la LLAVE MAESTRA (gratis)"
         : "□  Abrir hacia " + Destination() + " (" + CostText(Cost) + ")";
 
     public override void Interact(PlayerInteractor player)
     {
         if (!Net.Authority) return;   // online client: PlayerInteractor asks the host instead
-        if (HasKey(player)) MasterKey.Instance.Use(player);
+        if (Locked) return;
+        if (Free) { }
+        else if (HasKey(player)) MasterKey.Instance.Use(player);
         else if (!Pay(Cost, player)) return;
         bool newZone = false;
         foreach (var z in connects)

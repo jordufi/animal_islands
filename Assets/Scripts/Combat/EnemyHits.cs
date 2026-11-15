@@ -31,6 +31,8 @@ public static class EnemyHits
             if (stun > 0f) ai.Stun(stun);
             if (knockback > 0f) ai.Knockback(from, knockback);
         }
+        // Siesta fulminante (insta-kill power-up): anything but the boss dies from one hit
+        if (PowerUpManager.InstaKill && enemy.GetComponent<BossAI>() == null) amount = Mathf.Max(amount, enemy.Current + 1f);
         var info = enemy.TakeDamage(amount, head);
         if (ai != null && kind == HitKind.Melee && !info.killed)
         {
@@ -62,6 +64,6 @@ public static class EnemyHits
             gm.AddPoints(Mathf.RoundToInt(pts * enemy.PointsMultiplier), source);
             gm.RegisterKill(head, by);
         }
-        else if (payHit) gm.AddPoints(eco != null ? eco.hitPoints : 10, PointSource.Hit);
+        else if (payHit && enemy.PaysHits) gm.AddPoints(eco != null ? eco.hitPoints : 10, PointSource.Hit);
     }
 }

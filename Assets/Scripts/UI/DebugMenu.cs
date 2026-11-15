@@ -63,6 +63,7 @@ public class DebugMenu : MonoBehaviour
             foreach (var d in FindObjectsByType<ZoneDoor>()) d.DebugOpen();
             Close();
         });
+        Add("Dar la luz y traer el barco (misión hecha)", () => { if (BoatMission.Instance != null) BoatMission.Instance.DebugComplete(); Close(); });
         Add("Cerrar", Close);
         UIKit.ChainVertical(buttons.ToArray());
         UIKit.Select(buttons[0]);
