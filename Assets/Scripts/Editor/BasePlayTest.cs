@@ -233,13 +233,13 @@ public static class BasePlayTest
         Check(meleePts > 0 && swinging, $"melee kill pays +{meleePts} conchas (source Melee), ukulele swung");
         Check(GameObject.Find("PointsPopup") != null, "floating +points shown next to the counter");
         Shot(cam, "Renders/Base_melee.png");
-        victim = SpawnTestEnemy(rm, player.transform.position + player.transform.forward * 3.1f, 0f);
+        victim = SpawnTestEnemy(rm, player.transform.position + player.transform.forward * Mathf.Max(1.5f, melee.Data.lungeRange - 0.4f), 0f);
         Vector3 before = player.transform.position;
         yield return Wait(0.2f);
         melee.TrySwing();
         yield return Wait(0.7f);
         float lunge = Vector3.Distance(before, player.transform.position);
-        Check(victim.IsDead && lunge > 0.6f, $"lunge: old man 3.1 m away killed, player lunged {lunge:F1} m");
+        Check(victim.IsDead && lunge > 0.6f, $"lunge: old man {melee.Data.lungeRange - 0.4f:F1} m away killed, player lunged {lunge:F1} m");
 
         // ---------------------------------------------------------- 6. shotgun: hit points once per shot, not per pellet
         var shooter = player.GetComponent<PlayerShooter>();

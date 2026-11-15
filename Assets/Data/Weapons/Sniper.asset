@@ -37,7 +37,7 @@ MonoBehaviour:
   boxWeight: 0.8
   wallCost: 500
   wallAmmoCost: 250
-  upgradeDamageMultiplier: 2
+  upgradeDamageMultiplier: 2.5
   upgradeMagazineMultiplier: 1.5
   recoil: 5
   tracerColor: {r: 0.6, g: 0.9, b: 1, a: 1}

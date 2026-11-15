@@ -51,6 +51,7 @@ public class BoatMission : MonoBehaviour
     {
         if (!Net.Authority || Power) return;
         Power = true;
+        RunLog.Note("LUZ");
         Game.ShowMessage("¡HAY LUZ! Las bebidas y el Microondas ya funcionan");
         Notify();
     }
@@ -58,8 +59,8 @@ public class BoatMission : MonoBehaviour
     public void Pick(MissionItem.Kind kind)
     {
         if (!Net.Authority) return;
-        if (kind == MissionItem.Kind.Gasolina) { if (Gas) return; Gas = true; Game.ShowMessage("¡Tenéis la GASOLINA para el barco!"); }
-        else { if (Radio) return; Radio = true; Game.ShowMessage("¡Tenéis la RADIO para llamar al barco!"); }
+        if (kind == MissionItem.Kind.Gasolina) { if (Gas) return; Gas = true; RunLog.Note("GASOLINA"); Game.ShowMessage("¡Tenéis la GASOLINA para el barco!"); }
+        else { if (Radio) return; Radio = true; RunLog.Note("RADIO"); Game.ShowMessage("¡Tenéis la RADIO para llamar al barco!"); }
         Notify();
     }
 
@@ -84,9 +85,11 @@ public class BoatMission : MonoBehaviour
         {
             if (MasterKey.Instance == null || !MasterKey.Instance.Use(player)) return;
             if (!Gas) Gas = true; else Radio = true;
+            RunLog.Note("LLAVE POR PIEZA");
             Game.ShowMessage("La LLAVE MAESTRA abre la taquilla del farero: dentro estaba la pieza que faltaba");
         }
         Called = true;
+        RunLog.Note("LLAMADA");
         var rm = RoundManager.Instance;
         int round = rm != null ? rm.Round : 0;
         // the round in progress doesn't count (in the intermission `round` is already over): the boat comes when
@@ -105,6 +108,7 @@ public class BoatMission : MonoBehaviour
     void Finish()
     {
         Complete = true;
+        RunLog.Note("BARCO");
         Game.ShowMessage("¡EL BARCO ESTÁ EN EL MUELLE! Abrid el muelle... si Don Anselmo os deja");
         Notify();
     }

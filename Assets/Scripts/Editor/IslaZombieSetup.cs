@@ -58,7 +58,7 @@ public static partial class IslaZombieSetup
         public HashSet<Vector2Int> cabins = new HashSet<Vector2Int>();   // wall cells replaced by a spawn cabin
     }
 
-    const string Markers = "@sBDPKJbXLGEYTC";
+    const string Markers = "@sBDPKJbXLGUMEYTC";
     const string Roofed = "tq";   // temple and cave floors
 
     static Layout Load()
@@ -921,7 +921,7 @@ public static partial class IslaZombieSetup
         // boat mission: E power switch, Y petrol, T radio, C call station (posts lean on something solid beside them)
         public List<(Vector3 p, Vector3 toWall)> switches = new List<(Vector3, Vector3)>(), stations = new List<(Vector3, Vector3)>();
         public List<Vector3> petrol = new List<Vector3>(), radios = new List<Vector3>();
-        public List<(Vector3 floor, Vector3 toWall, char zone)> wallBuys = new List<(Vector3, Vector3, char)>();
+        public List<(Vector3 floor, Vector3 toWall, char zone, char kind)> wallBuys = new List<(Vector3, Vector3, char, char)>();   // kind: G Lentos-peta, U escopeta, M Thermomix
         public Dictionary<char, Vector3> probe = new Dictionary<char, Vector3>();   // one walkable point per zone
     }
 
@@ -963,10 +963,12 @@ public static partial class IslaZombieSetup
                         break;
                     }
                     case 'G':
+                    case 'U':
+                    case 'M':
                     {
                         var wall = Dirs.FirstOrDefault(d => IsSolid(L.At(c + d.x, r + d.y)));
-                        if (wall == Vector2Int.zero) { Debug.LogError($"[IslaZombie] wall weapon G at ({c},{r}) needs a wall next to it"); break; }
-                        pts.wallBuys.Add((p, (World(c + wall.x, r + wall.y) - p).normalized, z));
+                        if (wall == Vector2Int.zero) { Debug.LogError($"[IslaZombie] wall weapon {ch} at ({c},{r}) needs a wall next to it"); break; }
+                        pts.wallBuys.Add((p, (World(c + wall.x, r + wall.y) - p).normalized, z, ch));
                         break;
                     }
                 }
@@ -990,7 +992,11 @@ public static partial class IslaZombieSetup
             for (int i = 0; i < first.Length; i++) fz.GetArrayElementAtIndex(i).objectReferenceValue = first[i];
             bso.ApplyModifiedPropertiesWithoutUndo();
         }
-        foreach (var wb in pts.wallBuys) TestMapSetup.BuildWallWeapon(shop, data.wallWeapon, wb.floor, wb.toWall, Cell / 2f);
+        foreach (var wb in pts.wallBuys)
+        {
+            var weapon = wb.kind == 'U' ? data.wallShotgun : wb.kind == 'M' ? data.wallSmg : data.wallWeapon;
+            TestMapSetup.BuildWallWeapon(shop, weapon, wb.floor, wb.toWall, Cell / 2f);
+        }
         for (int i = 0; i < data.drinks.Length && i < pts.drinks.Count; i++) TestMapSetup.BuildDrinkMachine(shop, data.drinks[i], pts.drinks[i]);
         foreach (var p in pts.paps) TestMapSetup.BuildPackAPunch(shop, p);
 

@@ -10,8 +10,7 @@ public class BossEncounter : MonoBehaviour
     [SerializeField] Zone triggerZone;
     [SerializeField] BossAI bossPrefab;
     [SerializeField] Transform spawnPoint;
-    [SerializeField] float healthInEnemies = 25f;   // boss health = this x a normal enemy of the current round
-    [SerializeField] float minHealth = 8000f;
+    // health: EconomyData.bossHealthInEnemies x a normal old man of the current round, at least bossMinHealth
 
     public BossAI Boss { get; private set; }
     public BossAI BossPrefab => bossPrefab;
@@ -34,8 +33,10 @@ public class BossEncounter : MonoBehaviour
         rm.SpawningPaused = true;
         Boss = Instantiate(bossPrefab, spawnPoint.position, spawnPoint.rotation);
         Boss.name = "Boss_DonAnselmo";
-        float hp = Mathf.Max(minHealth, healthInEnemies * rm.HealthForRound(Mathf.Max(1, rm.Round)));
         var gm = GameManager.Instance;
+        var eco = gm != null ? gm.Economy : null;
+        float hp = Mathf.Max(eco != null ? eco.bossMinHealth : 30000f,
+                             (eco != null ? eco.bossHealthInEnemies : 45f) * rm.HealthForRound(Mathf.Max(1, rm.Round)));
         if (gm != null && gm.PlayerCount > 1 && gm.Coop != null) hp *= 1f + gm.Coop.bossHealthPerExtraPlayer * (gm.PlayerCount - 1);   // co-op scaling
         Boss.Configure(hp);
         Boss.Defeated += OnBossDefeated;

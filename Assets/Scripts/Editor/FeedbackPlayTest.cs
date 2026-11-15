@@ -142,7 +142,7 @@ public static class FeedbackPlayTest
         Check(box.IsAvailable && boxZone != null && boxZone.displayName == "Parking", $"box appears in the Parking when it opens (zone {(boxZone != null ? boxZone.displayName : "-")}, prompt '{box.Prompt(interactor)}')");
 
         // ---------------------------------------------------------- 3. Lentos-peta on the Camping wall
-        var wall = Object.FindAnyObjectByType<WallWeapon>();
+        var wall = Object.FindObjectsByType<WallWeapon>().FirstOrDefault(w => w.Weapon.id == "lentospeta");
         var wallZone = wall != null ? ZoneOf(wall.transform.position) : null;
         Check(wall != null && wall.Weapon.displayName == "Lentos-peta" && wall.Cost == 500, $"wall weapon: {(wall != null ? wall.Weapon.displayName + " " + wall.Cost : "missing")} in {(wallZone != null ? wallZone.displayName : "?")}");
         Teleport(player, wall.transform.position + wall.transform.forward * 1.2f, wall.transform.eulerAngles.y + 180f);
@@ -202,7 +202,7 @@ public static class FeedbackPlayTest
         Pad(Vector2.zero);
         yield return Wait(0.3f);
         var hs = deltas.Where(d => d.source == PointSource.Headshot).ToList();
-        Check(victim.IsDead && hs.Count == 1 && hs[0].amount == 65, $"headshot kill pays {(hs.Count > 0 ? hs[0].amount : 0)} (expected 65; economy {gm.Economy.headshotKillPoints})");
+        Check(victim.IsDead && hs.Count == 1 && hs[0].amount == gm.Economy.headshotKillPoints && gm.Economy.headshotKillPoints > gm.Economy.killPoints, $"headshot kill pays {(hs.Count > 0 ? hs[0].amount : 0)} (economy: head {gm.Economy.headshotKillPoints}, body {gm.Economy.killPoints})");
         if (!victim.IsDead) victim.TakeDamage(victim.Current + 1f, false);
 
         // ---------------------------------------------------------- 5. tree trunks: collision on the visible trunk

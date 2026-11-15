@@ -4,7 +4,7 @@ using UnityEngine;
 // (more damage, bigger magazine, full ammo, new name and colour).
 public class PackAPunch : Interactable
 {
-    [SerializeField] int cost = 5000;
+    int cost => Game != null && Game.Economy != null ? Game.Economy.packAPunchCost : 5000;   // Data/Economy.asset
     [SerializeField] TextMesh worldLabel;
 
     void Update()

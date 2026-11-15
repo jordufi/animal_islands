@@ -43,7 +43,8 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
 ## Herramientas (menú Tools > Island)
 - **Setup Isla Zombie**: reconstruye la escena desde el layout y comprueba el mapa.
 - **Setup Test Map**: regenera datos, prefabs y la escena Original.
-- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Online): pruebas automáticas jugando.
+- **Quick Checks** (reglas de diseño sobre los números de `Assets/Data`, al instante) y **Play Test Smoke** (partida entera por el camino corto, ~10 s): para entre cambio y cambio.
+- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit.
 - **Build Windows (.zip)**: exporta el juego a `Builds/` (también `Tools\Build-Game.ps1` con Unity cerrado).
 
 ## Control de versiones

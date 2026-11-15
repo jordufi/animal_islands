@@ -114,6 +114,11 @@ Objetivo: que llegar al jefe exija **recorrer el mapa y llegar a ronda 12–15**
 - Hecho cuando: partida escriptada completa dura 20–30 min simulados y los logs muestran jefe en ronda ≥12.
 
 ### Fase 2 — Balance con números (Sonnet, con hoja de TTK por ronda)
+**Estado 2026-11-15: números de partida aplicados por Fable (compila, Isla del Faro reconstruida), SIN play tests.
+Qué cambió, avisos de la hoja teórica y lista de pruebas: [FASE2_TRASPASO.md](FASE2_TRASPASO.md). Cambios respecto a
+lo de abajo: las puertas no se tocan (10.500, el muelle ya es gratis), jefe 45 × en vez de 60 × (por munición), no hay
+pistola de pared.**
+
 Puntos de partida (ajustar con los logs nuevos de Fase 0, cambiando **solo** `Assets/Data`):
 - Ukelele: daño 350 → **150** (un golpe solo en ronda 1, dos en ronda 2–3), paga 130 → **100**; embestida 3,5 → 2,5 m.
 - Baja a la cabeza 65 → **100**; baja normal 60 → **50** (como BO: apuntar paga).

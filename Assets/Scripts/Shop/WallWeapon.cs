@@ -46,7 +46,8 @@ public class WallWeapon : Interactable
         {
             if (!Pay(Cost, player)) return;
             shooter.GiveWeapon(weapon);
-            Game.ShowMessage("¡" + weapon.displayName + "! Lenta pero contundente. Mete los cartuchos de uno en uno.");
+            Game.ShowMessage(weapon.reloadOneByOne ? "¡" + weapon.displayName + "! Lenta pero contundente. Mete los cartuchos de uno en uno."
+                                                   : "¡" + weapon.displayName + "! Recién descolgada de la pared.");
         }
         else
         {

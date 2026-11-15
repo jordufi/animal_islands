@@ -103,6 +103,7 @@ public class PowerUpManager : MonoBehaviour
     public void Apply(PowerUpKind kind, PlayerShooter taker)
     {
         var gm = GameManager.Instance;
+        RunLog.Note("POWERUP " + kind);
         switch (kind)
         {
             case PowerUpKind.MaxAmmo:

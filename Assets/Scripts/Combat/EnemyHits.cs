@@ -43,6 +43,16 @@ public static class EnemyHits
         return info;
     }
 
+    // Fast guns (Thermomix) earn less per hit. Online the host reads the proxy's mirrored weapon in hand.
+    static int HitPay(EconomyData eco, HitKind kind, Component by)
+    {
+        if (eco == null) return 10;
+        if (kind != HitKind.Gun || by == null) return eco.hitPoints;
+        var shooter = by.GetComponent<PlayerShooter>();
+        var slot = shooter != null ? shooter.Current : null;
+        return slot != null && slot.data != null ? eco.HitPointsFor(slot.data.fireInterval) : eco.hitPoints;
+    }
+
     static void Award(EnemyHealth enemy, DamageInfo info, bool head, HitKind kind, Component by, bool payHit)
     {
         var gm = GameManager.Instance;
@@ -64,6 +74,6 @@ public static class EnemyHits
             gm.AddPoints(Mathf.RoundToInt(pts * enemy.PointsMultiplier), source);
             gm.RegisterKill(head, by);
         }
-        else if (payHit && enemy.PaysHits) gm.AddPoints(eco != null ? eco.hitPoints : 10, PointSource.Hit);
+        else if (payHit && enemy.PaysHits) gm.AddPoints(HitPay(eco, kind, by), PointSource.Hit);
     }
 }

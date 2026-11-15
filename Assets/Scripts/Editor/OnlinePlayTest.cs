@@ -310,7 +310,7 @@ public static class OnlinePlayTest
         int kills0 = gm.Kills, pts0 = gm.Points;
         Cmd("hit 99999 head");
         yield return Until(() => gm.Kills > kills0, 3f);
-        Check(gm.Kills == kills0 + 1 && gm.Points >= pts0 + 65, "client headshot -> host kills him and pays +" + (gm.Points - pts0));
+        Check(gm.Kills == kills0 + 1 && gm.Points >= pts0 + gm.Economy.headshotKillPoints, "client headshot -> host kills him and pays +" + (gm.Points - pts0));
         var j2 = PlayerSlot.Of(proxy);
         Check(j2.Kills >= 1 && j2.Headshots >= 1, "the kill counts for J2 (" + j2.Kills + " kills, " + j2.Headshots + " headshots)");
 

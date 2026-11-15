@@ -35,8 +35,8 @@ MonoBehaviour:
   reloadStartTime: 0.4
   shellLoadTime: 0.6
   boxWeight: 1
-  wallCost: 500
-  wallAmmoCost: 250
+  wallCost: 1500
+  wallAmmoCost: 750
   upgradeDamageMultiplier: 2
   upgradeMagazineMultiplier: 1.5
   recoil: 3.5

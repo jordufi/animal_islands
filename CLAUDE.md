@@ -327,6 +327,32 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
 
+## Status (2026-11-15, later) — PHASE 2 numbers applied and play-tested (not committed)
+Written by Fable, tested by Sonnet; work list in `Docs/FASE2_TRASPASO.md`. `IslaZombieSetup.Setup()` and `TestMapSetup.SetupAll()`
+re-run, all checks OK (3 wall weapons). **Verified 2026-11-15 with the new numbers:** `BasePlayTest` 27 OK, `FeedbackPlayTest`
+26 OK, `IslaZombiePlayTest` 13 OK (needed `GodMode` at step 0: the idle test player died in the round-1 chase with 35 damage),
+`Phase1PlayTest` 21 OK, `CoopPlayTest` 39 OK, `OriginalMapPlayTest` OK, `MapSelectorPlayTest.RunOriginal` OK (0 errors),
+`OnlinePlayTest.RunDirect` 69 OK / 0 FAIL (client rebuilt first). Not run: `RunRelay`, humans, a 10-round bot per weapon,
+real games to tune income (steps 4-5 of the work list; **balance is only theoretical so far**).
+- **Fast checks (new):** `Tools > Island > Quick Checks` (`QuickChecks.Run()`, 31 checks on the `.asset` numbers, no Play Mode,
+  instant; give every new design-rule number a line there) and `Tools > Island > Play Test Smoke` (`SmokePlayTest`, one Isla del
+  Faro session in ~11 s: round 1, hit / kill / headshot pay, door + card, wall buy, no light = no drink, mission skipped, free
+  dock, boss health, boss killed, extraction, 0 console errors). **Run these between changes; the long tests before a commit.**
+  `TestClock.Fast()/Normal()` (x3 clock for filler waits only, see its header for what never to speed up) is used in
+  `IslaZombiePlayTest` (chase wait); `IslaZombiePlayTest.RunSlow()` repeats a failure at x1.
+- `Data/Economy.asset`: kill 50, headshot 100, melee kill 100; new `fastHitPoints` 5 for guns faster than `fastFireRate`
+  8 shots/s (`EconomyData.HitPointsFor`, used by `EnemyHits.HitPay`; online the host reads the proxy's weapon in hand);
+  boss health moved here (`bossHealthInEnemies` 45, `bossMinHealth` 30000, was 25 / 8000 in `BossEncounter`);
+  `packAPunchCost` 5000 (was a field of `PackAPunch`).
+- Ukulele 150 dmg (one hit only in round 1), lunge 2.5 m. Old men hit for 35 (culturista 50, senderista 25) = 3 hits
+  without Piña, 5 with. Chándal health ×0.6. Catalejo upgrade ×2.5.
+- Wall weapons on Isla del Faro: layout markers `U` La Chancla 1500 (Parking west wall) and `M` La Thermomix 2500 (Lago
+  east wall), ammo half price; `G` stays the Lentos-peta. Door prices unchanged.
+- `RunLog.Note`: mission steps and power-ups taken go to the events list.
+- `Tools/balance_sheet.py`: theoretical income / TTK per round and boss table straight from the `.asset` files.
+- Tests adapted to the data: `FeedbackPlayTest` (Lentos-peta by id, headshot pay from Economy), `OnlinePlayTest`,
+  `BasePlayTest` (lunge distance from data).
+
 ## Status (2026-11-15) — PHASE 1 DONE (boat mission, light, power-ups), built and play-tested
 Written by Fable (2026-11-14), finished and verified by Opus. Background and risks: `Docs/FASE1_TRASPASO.md`.
 **The decided design changed** (replaces "Muelle 10000 or the Llave"):

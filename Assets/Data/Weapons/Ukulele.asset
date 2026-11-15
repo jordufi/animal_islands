@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Ukulele
   m_EditorClassIdentifier: Assembly-CSharp::MeleeData
   displayName: El Ukelele
-  damage: 350
+  damage: 150
   range: 1.9
   arc: 70
-  lungeRange: 3.5
+  lungeRange: 2.5
   lungeSpeed: 10
   lungeMaxTime: 0.22
   hitDelay: 0.16

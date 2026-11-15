@@ -37,6 +37,8 @@ public static class IslaZombiePlayTest
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }
         EditorSceneManager.OpenScene(TestMapSetup.IslaZombieScenePath, OpenSceneMode.Single);
+        EditorPrefs.SetBool(Key + "SlowThisRun", EditorPrefs.GetBool(Key + "Slow"));   // RunSlow() applies to this run only
+        EditorPrefs.SetBool(Key + "Slow", false);
         EditorPrefs.SetString(Key + "Log", "");
         EditorPrefs.SetString(Key + "Status", "running");
         EditorPrefs.SetBool(Key + "Running", true);
@@ -47,8 +49,12 @@ public static class IslaZombiePlayTest
 
     static void Write(string line) => EditorPrefs.SetString(Key + "Log", Log + line + "\n");
 
+    // Set to true to run the whole test at x1 (repeat a failure that happened with the fast clock).
+    public static void RunSlow() { EditorPrefs.SetBool(Key + "Slow", true); Run(); }
+
     static void Finish(string status)
     {
+        TestClock.Normal();
         EditorPrefs.SetString(Key + "Status", status);
         EditorPrefs.SetBool(Key + "Running", false);
         EditorApplication.update -= Tick;
@@ -79,6 +85,8 @@ public static class IslaZombiePlayTest
         {
             case 0:
                 Write($"Player {gm.Animal.id} spawned at {player.transform.position}");
+                player.GodMode = true;   // the idle test player must survive the round-1 chase (old men hit for 35: 3 hits kill)
+                if (!EditorPrefs.GetBool(Key + "SlowThisRun")) TestClock.Fast();   // the chase check below only needs enemies to get closer
                 Next();
                 break;
 
@@ -103,6 +111,7 @@ public static class IslaZombiePlayTest
                 Write($"t=16s {closer}/{total} enemies got closer to the player (chasing); playerHP={player.CurrentHealth}");
                 Write((total > 0 && closer >= total / 2 ? "OK " : "FAIL") + " round 1 spawns and chases");
                 player.SetIgnored(100000f);   // from here on the enemies leave the test player alone
+                TestClock.Normal();
                 gm.AddPoints(100000);
                 Next();
                 break;

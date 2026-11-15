@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: Abuelo senderista
   healthMultiplier: 0.9
   moveSpeed: 3.2
-  damage: 20
+  damage: 25
   scale: 1
   pointsMultiplier: 1.5
   clothingColor: {r: 0.15, g: 0.6, b: 0.2, a: 1}

@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: Jubilado
   healthMultiplier: 1
   moveSpeed: 1.8
-  damage: 25
+  damage: 35
   scale: 1
   pointsMultiplier: 1
   clothingColor: {r: 0, g: 0, b: 0, a: 0}

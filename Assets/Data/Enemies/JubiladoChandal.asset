@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: JubiladoChandal
   m_EditorClassIdentifier: Assembly-CSharp::EnemyVariant
   displayName: "Jubilado en ch\xE1ndal"
-  healthMultiplier: 0.8
+  healthMultiplier: 0.6
   moveSpeed: 4
-  damage: 25
+  damage: 35
   scale: 0.95
   pointsMultiplier: 1.2
   clothingColor: {r: 0.85, g: 0.12, b: 0.1, a: 1}

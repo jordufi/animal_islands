@@ -304,6 +304,7 @@ public static class TestMapSetup
         public MeleeData melee;
         public EnemyVariant nightVariant;
         public WeaponData wallWeapon;   // Lentos-peta (wall buy, Isla del Faro camping)
+        public WeaponData wallShotgun, wallSmg;   // La Chancla / La Thermomix also hang on walls (WeaponData.wallCost)
         public TunnelData tunnels;      // "Anselmo cagón" mode numbers
         public CoopData coop;           // co-op: down / revive, scaling, cards
     }
@@ -375,6 +376,8 @@ public static class TestMapSetup
         if (smg.recoil < 0f) smg.recoil = 0.35f;
         foreach (var w in new[] { d.pistol, shotgun, sniper, smg, d.wallWeapon }) EditorUtility.SetDirty(w);
         d.boxWeapons = new[] { shotgun, sniper, smg };
+        d.wallShotgun = shotgun;
+        d.wallSmg = smg;
 
         d.baseVariant = Asset<EnemyVariant>(DataRoot + "/Enemies/Jubilado.asset", v =>
         {

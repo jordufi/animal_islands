@@ -120,6 +120,12 @@ public class RunLog : MonoBehaviour
         return slot != null ? "J" + (slot.Index + 1) : "J1";
     }
 
+    // Milestones for balancing: mission steps (LUZ, GASOLINA, RADIO, LLAMADA, BARCO) and power-ups taken.
+    public static void Note(string what)
+    {
+        if (Instance != null) Instance.events.Add($"r{Instance.current.round} {Time.timeSinceLevelLoad:F0}s {what}");
+    }
+
     void Event(string what, string who, Vector3 pos) =>
         events.Add($"r{current.round} {Time.timeSinceLevelLoad:F0}s {what} {who} ({pos.x:F0},{pos.z:F0})");
 

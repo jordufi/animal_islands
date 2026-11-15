@@ -14,8 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EconomyData
   startingPoints: 500
   hitPoints: 10
-  killPoints: 60
-  headshotKillPoints: 65
-  meleeKillPoints: 130
+  fastHitPoints: 5
+  fastFireRate: 8
+  killPoints: 50
+  headshotKillPoints: 100
+  meleeKillPoints: 100
   abilityKillPoints: 60
   bossKillPoints: 2000
+  bossMinionsPayHits: 0
+  missionDefenseRounds: 1
+  bossHealthInEnemies: 45
+  bossMinHealth: 30000
+  packAPunchCost: 5000
