@@ -161,6 +161,43 @@ public static partial class IslaZombieSetup
             go.AddComponent<MeshRenderer>().sharedMaterials = new[] { mat, cliff };
             go.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
+        // Ramp sides over lower floor: along the lowest cell the side is under the NavMesh climb (0.45 m) but over the
+        // player's step (0.3 m), so the old men would walk onto the ramp sideways where a player is stopped (a NavMesh
+        // "Not Walkable" volume does not cut it). A visible low stone kerb along that side stops both the same way;
+        // higher up the side is too tall for anyone and stays an open drop.
+        foreach (var p in Cells(L))
+        {
+            if (!L.IsRamp(p.x, p.y) || L.rampIdx[p.x, p.y] != 0) continue;
+            var d = RampDir(L.ramp[p.x, p.y]);
+            int n = L.rampLen[p.x, p.y];
+            foreach (var s in new[] { new Vector2Int(-d.y, d.x), new Vector2Int(d.y, -d.x) })
+            {
+                int nc = p.x + s.x, nr = p.y + s.y;
+                if (!IsWalk(L, nc, nr) || L.IsRamp(nc, nr) || World(nc, nr).y >= World(p.x, p.y).y - 0.05f) continue;
+                Vector3 sw = new Vector3(s.x, 0f, -s.y);
+                float floor = World(nc, nr).y, top = World(p.x, p.y).y + LevelH / (2f * n) + 0.25f - floor;
+                Vector3 c = Flat(World(p.x, p.y)) + sw * (Cell / 2f + 0.125f) + Vector3.up * floor;
+                var kerb = TexBox(parent, $"MuretRampa_{p.x}_{p.y}", c, s.x != 0 ? new Vector3(0.25f, top, Cell) : new Vector3(Cell, top, 0.25f), cliff, cliff, 0f);
+                kerb.layer = TestMapSetup.WallLayer;
+            }
+        }
+        // Same mismatch at the top cell beside HIGHER floor (the ramp ends ~0.3-0.45 m under it): a parapet 0.6 m tall on
+        // the edge of the higher floor, so the ramp is entered from its top end only.
+        foreach (var p in Cells(L))
+        {
+            if (!L.IsRamp(p.x, p.y) || L.rampIdx[p.x, p.y] != L.rampLen[p.x, p.y] - 1) continue;
+            var d = RampDir(L.ramp[p.x, p.y]);
+            foreach (var s in new[] { new Vector2Int(-d.y, d.x), new Vector2Int(d.y, -d.x) })
+            {
+                int nc = p.x + s.x, nr = p.y + s.y;
+                if (!IsWalk(L, nc, nr) || L.IsRamp(nc, nr) || World(nc, nr).y <= World(p.x, p.y).y + 0.05f) continue;
+                Vector3 sw = new Vector3(s.x, 0f, -s.y);
+                float floor = World(nc, nr).y;
+                Vector3 c = Flat(World(p.x, p.y)) + sw * (Cell / 2f + 0.125f) + Vector3.up * floor;
+                var wall = TexBox(parent, $"PretilRampa_{p.x}_{p.y}", c, s.x != 0 ? new Vector3(0.25f, 0.6f, Cell) : new Vector3(Cell, 0.6f, 0.25f), cliff, cliff, 0f);
+                wall.layer = TestMapSetup.WallLayer;
+            }
+        }
     }
 
     // Wedge in world space: slope from (low, y0) to (high, y1), a vertical back at `high`, two triangle sides, a bottom.
@@ -434,7 +471,10 @@ public static partial class IslaZombieSetup
                 }
             float len = ring.Count * Cell;
             int wide = ring.Count(r => Four.Any(d => ring.Contains(r + d) == false && Walk(r.x + d.x, r.y + d.y)));
-            if (len > bestLen) { bestLen = len; bestWide = ring.Count > 0 ? (float)wide / ring.Count : 0f; }
+            float share = ring.Count > 0 ? (float)wide / ring.Count : 0f;
+            // a loop that meets the rule (25 m, half of it 2 cells wide) beats any longer one that doesn't
+            bool good = len >= 25f && share >= 0.5f, bestGood = bestLen >= 25f && bestWide >= 0.5f;
+            if ((good && !bestGood) || (good == bestGood && len > bestLen)) { bestLen = len; bestWide = share; }
         }
         return (bestLen, bestWide);
     }

@@ -57,16 +57,26 @@ public static class OnlinePlayTest
     [MenuItem("Tools/Island/Play Test Online (Relay)")]
     public static void RunRelay()
     {
-        relay = true;
+        relay = true; matchScene = "IslaZombie"; matchMap = null;
         Run();
     }
 
     static bool relay;
+    static string matchScene = "IslaZombie", matchMap;
+
+    // Same as RunDirect on "Isla del Faro (alturas)" (Phase 3 heights map). Rebuild the client first: it carries the scene.
+    [MenuItem("Tools/Island/Play Test Online (alturas)")]
+    public static void RunDirectAlturas()
+    {
+        relay = false; matchScene = "IslaZombie"; matchMap = null;
+        matchScene = IslaZombieSetup.IslaAlturas.scene; matchMap = "isla-del-faro-alturas";
+        Run();
+    }
 
     [MenuItem("Tools/Island/Play Test Online")]
     public static void RunDirect()
     {
-        relay = false;
+        relay = false; matchScene = "IslaZombie"; matchMap = null;
         Run();
     }
 
@@ -246,8 +256,9 @@ public static class OnlinePlayTest
         Check(V("scene") == "MainMenu" && V("active") == "True" && I("index") == 1, "client is in the room as J2 (" + V("scene") + ", index " + V("index") + ")");
 
         // ---------------------------------------------------------- 2. start
-        ns.SetSettings(Difficulty.Normal, false, ns.MapId);
-        ns.StartMatch("IslaZombie");
+        ns.SetSettings(Difficulty.Normal, false, matchMap ?? ns.MapId);
+        ns.StartMatch(matchScene);
+        Write("   match scene " + matchScene);
         yield return Until(() => NetGame.Instance != null && NetGame.Instance.Ready, 90f);
         var net = NetGame.Instance;
         Check(net != null && net.Ready, "both loaded Isla del Faro: match started");
@@ -382,7 +393,7 @@ public static class OnlinePlayTest
             yield return Until(() => cooler == null, 3f);
             yield return Wait(0.8f);
             yield return Ask("cooler");
-            Check(cooler == null && I("coolers") == 0 && I("reserve") > 0, "client walks into it: taken for everyone, its ammo refilled (reserve " + V("reserve") + ")");
+            Check(cooler == null && I("coolers") == 0 && I("reserve") > 0, "client walks into it: taken for everyone, its ammo refilled (reserve " + V("reserve") + ", host cooler gone " + (cooler == null) + ", client coolers " + V("coolers") + ")");
         }
 
         // ---------------------------------------------------------- 4. door + card chosen by the client
@@ -662,7 +673,7 @@ public static class OnlinePlayTest
         yield return Wait(3f);
         yield return Ask("lobby");
         Check(V("scene") == "MainMenu" && V("active") == "True" && ns.Active && ns.Roster.Count == 2, "host takes everyone back to the room (client: " + V("scene") + ")");
-        ns.StartMatch("IslaZombie");
+        ns.StartMatch(matchScene);
         yield return Until(() => NetGame.Instance != null && NetGame.Instance.Ready, 90f);
         Check(NetGame.Instance != null && NetGame.Instance.Ready, "second match from the room starts");
         yield return Wait(1f);
@@ -670,7 +681,7 @@ public static class OnlinePlayTest
         yield return Wait(2f);
         yield return Until(() => NetGame.Instance != null && NetGame.Instance.Ready, 90f);
         yield return Ask("restart");
-        Check(NetGame.Instance != null && NetGame.Instance.Ready && V("scene") == "IslaZombie" && V("ready") == "True" && I("doors") == 0, "restart for everyone (client " + V("scene") + ", doors " + V("doors") + ")");
+        Check(NetGame.Instance != null && NetGame.Instance.Ready && V("scene") == matchScene && V("ready") == "True" && I("doors") == 0, "restart for everyone (client " + V("scene") + ", doors " + V("doors") + ")");
 
         // everyone down = game over for both
         var gm2 = GameManager.Instance;

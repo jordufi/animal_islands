@@ -102,7 +102,7 @@ pause (timer 15 s, chooser frozen); online pause menu doesn't stop the world.
 | `Assets/Scripts/Editor/CoopPlayTest.cs` | **Tools > Island > Play Test Coop**: split-screen co-op (see Status). Starts in the MainMenu scene with virtual pads. EditorPrefs `CoopPlayTest.Log` / `.Status`, screenshots `Renders/Coop_*.png` |
 | `Assets/Scripts/Net/` | **Online**: `Net` (flags + `NetMsg`), `NetSession` (room, Relay / direct IP, flow, messaging), `NetGame` (match sync), `NetPlayer`, `NetEnemy`, `NetInterp`, `NetBuf`, `NetTestBot` (only with `-netbot`) |
 | `Assets/Scripts/UI/MainMenu.Online.cs` | "JUGAR ONLINE" screen (create / join by code / IP) and the online room (partial of `MainMenu`) |
-| `Assets/Scripts/Editor/OnlinePlayTest.cs` | **Tools > Island > Build Online Test Client** (`BuildClient()`, Windows player in `Builds/NetTest`, ~15 s incremental) and **Play Test Online** (`RunDirect()`: editor = host, the built exe = client J2 by 127.0.0.1) / **(Relay)** (`RunRelay()`: same through a real Relay code). EditorPrefs `OnlinePlayTest.Log` / `.Status`, screenshots `Renders/Online_*.png` (host and client), client log `Builds/NetTest/client.log` |
+| `Assets/Scripts/Editor/OnlinePlayTest.cs` | **Tools > Island > Build Online Test Client** (`BuildClient()`, Windows player in `Builds/NetTest`, ~15 s incremental) and **Play Test Online** (`RunDirect()`: editor = host, the built exe = client J2 by 127.0.0.1) / **(Relay)** (`RunRelay()`: same through a real Relay code) / **(alturas)** (`RunDirectAlturas()`: RunDirect on the heights map). EditorPrefs `OnlinePlayTest.Log` / `.Status`, screenshots `Renders/Online_*.png` (host and client), client log `Builds/NetTest/client.log` |
 | `Assets/Scripts/Editor/MapSelectorPlayTest.cs` | Loads each map from the menu selector (`RunOriginal()` …): scene loads, player spawns, round 1, 0 errors |
 | `Assets/Maps/IslaZombie/Models/` | Low-poly props (IZ_Faro, IZ_Coche, IZ_Autobus, IZ_Puesto, IZ_Tienda, IZ_Caseta, IZ_Contenedor, IZ_Barco, IZ_Avioneta, IZ_Grada) made by `Tools/Blender/make_map_props.py` (blend: `Documents/BeachAnimals/IslaZombie/IslaZombie_Props.blend`) |
 | `Assets/Maps/IslaZombie/IslaZombie_Map.png`, `Signs/` | Generated: top-down map (pause menu) and one "ESTÁS AQUÍ" picture per door |
@@ -328,7 +328,7 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
 
-## Phase 3 (heights) — tooling DONE and tested (2026-11-15, Opus), zone layouts pending the user's approval
+## Phase 3 (heights) — DONE (2026-11-15, Opus): tooling + all zone layouts of "Isla del Faro (alturas)", not committed yet
 Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3
 cells per level); ledges inside a group are open drops with one-way `NavMeshLink`s; `!` in `[map]` = one-way slide between
 groups (only into a zone that is always open when the source is).
@@ -347,8 +347,39 @@ groups (only into a zone that is always open when the source is).
 - **Verified 2026-11-15:** Isla del Faro rebuilt with the same report as before (69 entrances, 86 points, routes 97 / 123 m,
   coverage 16/519), Smoke 15 OK on both maps, QuickChecks 31 OK, Base 27, Feedback 26, IslaZombie 13 (both maps), Phase1 21,
   Coop 39, Original 3, map selector Original + Alturas OK (0 errors), Online RunDirect 69 / 0 (client rebuilt).
-- **Next:** propose the zone layouts (Faro → Camping → Volley → Mercadillo → Templo → Cueva) for the user to approve, then
-  apply them to `IslaFaroAlturas_Layout.txt` one zone at a time (setup + Smoke after each).
+- **Zone layouts (the user said "termina la fase 3"; the header comments of `[heights]` list them):** levels 0/1/2, 9 ramp
+  runs, 2 slides, 50+ one-way links.
+  - Faro: mirador around the lighthouse (level 1, light switch up there, hut (29,7) became floor); two ramps make a loop
+    over two levels. The planned "jump into the lake" breaks the slide rule (Faro can be opened without the Lago), so
+    you drop inside the Faro instead.
+  - Camping: ring of lanes around a 2x3 tent block (no more checkerboard); south terrace + east strip up to the Templo
+    door at level 1, ramp at col 14.
+  - Templo = crypt: the corridor starts high at the Camping door and goes down a ramp into the Microondas hall (level 0,
+    same as the Lago).
+  - Volley: high walk over the sunken court, slide (8,24) to the Chiringuito.
+  - Cueva: central room (cols 20-24, rows 3-6) with a ring around a pond under a skylight (roofs are only built over
+    floor, so the water has none); labyrinth route unchanged (122 m).
+  - Mercadillo: main street rows 25-26 + ring around a stall block; north balcony (level 1) with a slide (26,22) down to
+    the Lago (its second way out); high south strip + level-2 lookout (SW corner). "Drop from the Muelle" breaks the
+    slide rule, not done.
+  - Zones flagged `circuito`: Camping 28 m, Parking 28, Volley 26, Cueva 28, Mercadillo 32 (Templo is a bottleneck by
+    design; Lago / Muelle / Chiringuito / Faro have none by the block rule).
+  - Single-exit zones: 2 (Chiringuito, Muelle).
+- **Ramp sides (`BuildRamps`):** beside lower floor the lowest ramp cell gets a stone kerb ("MuretRampa"), beside higher
+  floor the top cell gets a 0.6 m parapet ("PretilRampa"). Without them the NavMesh (climb 0.45) let old men step onto
+  a ramp sideways where the player (step 0.3) is stopped. A NavMesh "Not Walkable" `NavMeshModifierVolume` does NOT cut
+  the mesh here (tried), use real geometry.
+- `Circuit` check now prefers a loop that meets the rule over a longer one that doesn't.
+- **Verified 2026-11-15 (final layout):**
+  - Setup: 0 errors, 536/536 cells walkable without drops, routes 105 / 122 m, 70 entrances.
+  - Coverage: 31/536 safe cells (warning only; original map 16): Volley 8, Faro 7, Templo 4 (crypt hall), Muelle 4.
+  - Tests: `HeightsPlayTest` 20 OK; `IslaZombiePlayTest.RunAlturas` 13 OK (whole walk 103 m); Smoke 15 OK on both maps;
+    QuickChecks 0 fails; `OnlinePlayTest.RunDirectAlturas()` (new) 69 / 0 with the client rebuilt.
+  - Captures in `Renders/Alturas_*.png` (top, persp, Camping, Templo, Templo_rampa, Cueva, Cueva_tragaluz, Mercadillo,
+    Faro, Volley).
+  - Render cost probe: no difference vs the original map.
+  - Not done: real split-screen FPS with 4 players; Base / Feedback / Coop run on the original map only; the user decides
+    whether the heights map replaces Isla del Faro.
 
 ## Status (2026-11-15, later) — PHASE 2 numbers applied and play-tested (committed `31c558c`)
 Written by Fable, tested by Sonnet; work list in `Docs/FASE2_TRASPASO.md`. `IslaZombieSetup.Setup()` and `TestMapSetup.SetupAll()`

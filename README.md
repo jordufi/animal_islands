@@ -18,8 +18,8 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   bebidas con efectos secundarios, ukelele cuerpo a cuerpo.
 - 5 animales con pasiva y habilidad activa. Rondas nocturnas cada 5 rondas.
 - Modos: **Clásico** y **Anselmo cagón** (la mitad de los abuelos usan atajos por las entradas).
-- Mapas: **Isla del Faro** (principal), **Isla del Faro (alturas)** (en obras: la misma isla con terrazas, rampas y
-  toboganes) y **Original** (mapa de pruebas).
+- Mapas: **Isla del Faro** (principal), **Isla del Faro (alturas)** (la misma isla con tres alturas, rampas, caídas,
+  toboganes, la cripta del Templo y la sala del tragaluz en la Cueva) y **Original** (mapa de pruebas).
 
 ## Requisitos
 - **Unity 6.6 (6000.6.4f1)**, URP, Input System. Windows 11.

@@ -4,7 +4,14 @@ Especificación para que Opus / Sonnet la implementen en `IslaZombieSetup*.cs`. 
 «Especificación del formato con alturas» de `PLAN_PRODUCCION.md` (cambia la altura de nivel, dónde se escriben las
 rampas y cómo son las caídas).
 
-> **Estado 2026-11-15 (Opus): herramientas hechas y probadas; trazado de las zonas pendiente de aprobación.**
+> **Estado final 2026-11-15 (Opus): fase 3 terminada.** El usuario pidió «termina la fase 3»: las seis zonas tienen trazado
+> en `IslaFaroAlturas_Layout.txt` (Faro, Camping, Volley, Mercadillo, Templo-cripta, Cueva con sala y tragaluz), tres
+> alturas (0/1/2), dos toboganes (Volley → Chiringuito, Mercadillo → Lago), cinco zonas con `circuito` y solo 2 zonas con
+> una salida (Chiringuito y Muelle). Los dos atajos imposibles por la regla del tobogán no se hicieron (ver sección 1).
+> Añadido al formato: muretes / pretiles en los laterales de rampa donde el desnivel queda entre el escalón del jugador
+> (0,3 m) y el de la malla (0,45 m); un volumen «Not Walkable» no recorta la malla. Detalle y resultados en `CLAUDE.md`.
+>
+> **Estado anterior 2026-11-15 (Opus): herramientas hechas y probadas; trazado de las zonas pendiente de aprobación.**
 > Pasos 1–4 del orden de trabajo hechos y el 5 preparado: `Setup(MapConfig)` (Isla del Faro, «Isla del Faro (alturas)»,
 > «Prueba de alturas»), lector de `[heights]`, suelo por niveles, sólidos que suben, rampas (cuñas), bordillos, enlaces
 > de un sentido (área 12 «Caida», 13 «Tobogan»), `EnemyAI.TraverseLink` (salto en arco), `Zones/OneWaySlide`, checks 1–9

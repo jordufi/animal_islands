@@ -463,7 +463,7 @@ public static class TestMapSetup
                 m.description = "La primera isla: pequeña, rápida y muy caótica."; }),
             // Phase 3 workspace: Isla del Faro rebuilt with heights (Docs/FASE3_FORMATO.md); the original stays untouched
             Asset<MapData>(DataRoot + "/Maps/IslaFaroAlturas.asset", m => { m.id = "isla-del-faro-alturas"; m.displayName = "Isla del Faro (alturas)"; m.sceneName = "IslaFaroAlturas";
-                m.description = "En obras: la Isla del Faro con terrazas, rampas, caídas y toboganes."; }),
+                m.description = "La Isla del Faro con alturas: terrazas, rampas, caídas, toboganes y la cripta del Templo."; }),
         };
         d.maps[0].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         d.maps[1].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
