@@ -198,7 +198,7 @@ public class RoundManager : MonoBehaviour
     {
         toSpawn = 0;
         foreach (var e in alive.ToList())
-            if (e != null && !e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false);
+            if (e != null && !e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false, true);
         if (intermission) intermissionEnd = Time.time;
     }
 

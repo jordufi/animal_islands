@@ -23,7 +23,7 @@ public class NetSession : MonoBehaviour
 {
     public const int MaxPlayers = 4;
     public const ushort DefaultPort = 7777;
-    const string Version = "animal-island-online-2";
+    const string Version = "animal-island-online-3";
     const float LoadTimeout = 45f;
 
     public static NetSession Instance { get; private set; }

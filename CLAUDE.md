@@ -90,6 +90,7 @@ pause (timer 15 s, chooser frozen); online pause menu doesn't stop the world.
 | `Assets/Scenes/IslaZombie.unity` | **Isla del Faro** (build index 1) + `IslaZombie_NavMesh.asset` and `IslaZombie_NavMesh_Saltador.asset` |
 | `Assets/Scenes/BeachIsland.unity` | The original small test map, **"Original"** in the map selector (build index 3; build order follows the `Data/Maps` asset names) |
 | `Assets/Scenes/IslaFaroAlturas.unity` | **"Isla del Faro (alturas)"** (build index 2): Phase 3 copy with heights, from `Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Layout.txt` |
+| `Assets/Scenes/Venecia.unity` | **"La Serenísima"** (map 4 in the selector): Venice + cemetery, see its section |
 | `Assets/Data/` | ScriptableObjects — **all balance numbers live here**: `Weapons/` (+ `Ukulele.asset` = `MeleeData`, `LentosPeta.asset` = wall buy), `AnselmoCagon.asset` (`TunnelData`), `Drinks/`, `Cards/`, `Animals/`, `Enemies/` (Jubilado, JubiladoChandal, AbueloCulturista, **AbueloSenderista**), `Maps/` (`MapData` for the map selector), `Economy.asset`, `Materials/` |
 | `Assets/Scripts/` | Game code (see Architecture) |
 | `Assets/Scripts/Editor/TestMapSetup.cs` | **Tools > Island > Setup Test Map** (`SetupAll`: data assets, prefabs, Original scene, menu) and **Rebuild Main Menu**; shared builders (`BuildDoor`, `BuildSystems`, shop, karaoke, ukulele, `SetBuildScenes`, `SetupMenuMaps`, `EnsureLayers`) |
@@ -327,6 +328,70 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 **Windows export (2026-10-11):** first build OK (`Builds/AnimalIsland_2026-10-11_1353.zip`, 83 MB); the exported
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
+
+## La Serenísima (third map, files: Venecia) — first playable version 2026-11-15 (Fable), NOT committed yet
+Decided with the user (don't re-ask): Venice + Milan's Monumental cemetery; ~30 % bigger than Isla del Faro; **paid bridges**
+are the doors; **acqua alta instead of night rounds**; the boat mission reused with other names (campanas = dar la luz,
+vaporetto = barco); gondolas and falling into canals are a trial ("si no, serán barrera"); models 30-50 % more detailed
+than the Isla props but not final; barrios delivered already dressed with objects (no graybox phase).
+- **Layout is generated:** edit `Tools/Maps/make_venecia_layout.py` (rectangles per barrio, it checks spawns have something
+  solid beside them) -> `Assets/Maps/Venecia/Venecia_Layout.txt` -> `IslaZombieSetup.SetupVenecia()` (Tools > Island > Setup La
+  Serenisima). 70 x 48 cells, origin cell (34, 24). 8 zones, each its own group: Ferrovia `a` (start, SW), Mercato `r`,
+  Cannaregio `g` (maze + high street), Carnevale `n` (stage), Cimitero `i` (island in the basin: ring, terrace level 1, tower
+  top level 2 with the Microondas), Piazza `e` (campanile, loggias; campanas E), Arsenale `u` (darsena = water inside, rampart,
+  emisora C), Vaporetto `d` (pier: boss + extraction). 9 doors: 1 a-r 750, 2 r-g 1000, 3 a-n 1500 (big arched bridge), 4 r-i 1250,
+  5 i-e 1500, 6 e-n 1250, 7 g-u 2000 (big arched bridge), 8 e-u 1500, 9 e-d (mission). Two loops through the island (figure 8).
+  A door never touches a ramp: the big bridges have the door between two pillar cells on the west bank, then flat / ramps / top.
+- **Theme code:** `MapConfig.theme = "venecia"` + `menu = true`; `IslaZombieSetup.Venecia.cs` (`Ven`, `VenPlace` = model origin
+  at a point, facades, monuments, props, quay lips, balustrades on bridge cells, lamps, boats, runtime objects, gondolas).
+  Hooks in `BuildGround / BuildSolids / BuildProps / BuildDecor / BuildCoast (skipped) / BuildDoors / PlaceSignBoards (boards on a
+  post at bridges) / PlanEntrances + BuildEntrances ('#' = dark doorway in the facade, no cabin)`. Kit: 31 FBX in
+  `Assets/Maps/Venecia/Models` from `Tools/Blender/make_venecia_props.py` (blend: `Documents/BeachAnimals/Venecia/Venecia_Props.blend`).
+- **New runtime rules** (all local, no new network message; the task list below did bump the protocol):
+  - `Zones/CanalRescue`: no invisible coast walls; a player below the water line, or grounded in a zone that is still closed
+    (long jump / Frog over a canal), is carried back to the last cell of an open zone he stood on (15 damage for the bath,
+    never lethal). Door cells are neutral ('+').
+  - `Rounds/AcquaAlta`: every 5 rounds (or `ForceNext`, debug menu toggle) the sea plane and the `Flotantes` rise to +0.45 m;
+    players with their feet under water move x0.6 (`PlayerController.ExternalSpeedFactor`), old men don't; a Nevera when it ends.
+    This scene's RoundManager has `nightVariant` = null (no senderistas).
+  - Carnival masks: `EnemyVariant.maskHits / maskShare / maskPrefab`; `EnemyHealth.Masked` = the top share of the health bar,
+    each hit takes exactly one mask segment and is never a headshot (`TakeDamage(.., pierce)` for insta-kill / nuke / NetKill).
+    Variants `Data/Enemies/AnselmoBauta` (2 hits, from round 2) and `AnselmoPeste` (3 hits, faster, from round 6), only in this
+    scene's `specialVariants`. The plague doctor's gas cloud is NOT done.
+  - `Zones/GondolaStop` (layout marker `N`, 7 stops, `EconomyData.gondolaCost` 250): carries to the next stop round the map
+    whose zone is open, along baked canal paths (BFS; passes under bridge decks, the hull clips the solid bridge). **Online
+    clients cannot ride yet** (host and local players only): it needs a host -> owner message.
+- **Verified 2026-11-15:** setup 0 errors (9 doors join their groups, 71 entrances, 1376 cells walkable without drops, 123 m to
+  the extraction; coverage 52/1376 safe cells, warning in Cimitero); `VeneciaPlayTest` (Tools > Island > Play Test La Serenisima)
+  26 OK incl. 8 walks over every bridge / ramp with the player's body; `SmokePlayTest.RunVenecia()` 15 OK; regression on Isla
+  del Faro: Smoke 15 OK, Feedback 26 OK. Captures `Renders/Venecia_*.png`, `Renders/VeneciaTest_*.png`.
+- Later the same day (user: more graves you can't walk through): a wall of tall tombs down the middle of the west and east
+  rings of the Cimitero (two 1-cell aisles each), clusters on the terrace, the spiral tower on the top (29,24). Setup 0 errors
+  (1362 cells, coverage 58 safe, Cimitero 16), `VeneciaPlayTest` 26 OK again. Street-level captures `Renders/Venecia_Calle_*.png`.
+  Cosmetic: a decoration gondola and a taxi overlap beside the pier; a crate of the pier stack floats.
+- User (same day): "it is Venice: one zone must be big and wide, another narrow with alleys". **Piazza = the wide one**: one
+  open square 38 x 28 m (no inner blocks; campanile, two columns, tables, loggias), it floods whole in the acqua alta.
+  **Cannaregio = the narrow one**: no campo, only 1-cell alleys that turn and dead-end (drink machine in a dead end).
+  Keep this contrast. Setup 0 errors (75 entrances, 1378 cells, coverage 58 safe), `VeneciaPlayTest` 26 OK.
+- **Vaporetto task list** (user, same day; replaces gasolina / radio / emisora on this map, don't re-ask): 5 jobs in different
+  barrios, shown top-left with checks (`GameHUD`, solo screen; split-screen shows "Tareas del vaporetto n/5" in the strip):
+  1 the 3 Julio records to the karaoke (Ferrovia), 2 ring the bell on top of the campanile (= dar la luz, Piazza), 3 find the
+  golden gondolier (dead end of the Carnevale, fixed spot), 4 dig up Giuseppe in the Cimitero (needs the shovel: stall in the
+  Mercato, `EconomyData.shovelCost` 500), 5 find the key. Jobs 1-4 done -> vaporetto on its way, arrives at the end of the next
+  round (`missionDefenseRounds`) -> the last door is free but wants the key in the opener's pocket (`BoatMission.DoorNeedsKey`).
+  Code: `BoatMission.HasTasks` (a map with `MissionTask` objects) + `Shovel / Giuseppe / Gondolier / TaskList()`,
+  `Zones/MissionTask` (Shovel / Grave / Gondolier), `Zones/TowerClimb` (walk into the campanile door -> carried up to the
+  belfry; jump off any side, the game has no fall damage; after 20 s up there you are thrown off, old men can't climb),
+  the bell is a `PowerSwitch` with `action` "Tocar la campana". Layout markers `S` shovel stall, `F` grave, `O` gondolier
+  (`VenBuildTasks`); `E Y T C` are gone from this layout. **Protocol bumped to `animal-island-online-3`** (the Quest message
+  carries the three new flags): rebuild the online test client before any online test.
+  Verified: `VeneciaPlayTest` 42 OK (list, shovel, grave refused without shovel, gondolier, climb, bell, 16 m jump without damage,
+  thrown off, records, key, vaporetto after the round, last door with the key, plus everything from before),
+  `SmokePlayTest.RunVenecia` 15 OK, `Phase1PlayTest` 21 OK on Isla del Faro. The karaoke song itself is skipped in that test
+  (`EasterEgg.Completed` set by hand). Captures `Renders/Venecia_Tarea_*.png`. Giuseppe and the gondolier are primitive figures.
+- **Not done / not verified:** online on this map (not run; gondolas for clients missing), split-screen, Base / Coop / Online
+  tests after the EnemyHealth change, boss as Dux with mask, sunset look (DayNight still looks like noon), bridges are solid
+  blocks (no arch underneath), no balance pass (mask chances, tide, gondola price are first guesses), humans have not played it.
 
 ## Phase 3 (heights) — DONE (2026-11-15, Opus): tooling + all zone layouts of "Isla del Faro (alturas)", not committed yet
 Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3

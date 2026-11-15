@@ -25,9 +25,9 @@ NavMeshProjectSettings:
     cost: 1
   - name: Puerta7
     cost: 1
-  - name: 
+  - name: Puerta8
     cost: 1
-  - name: 
+  - name: Puerta9
     cost: 1
   - name: Caida
     cost: 1

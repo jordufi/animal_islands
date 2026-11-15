@@ -33,6 +33,9 @@ public static class SmokePlayTest
     [MenuItem("Tools/Island/Play Test Smoke (alturas)")]
     public static void RunAlturas() => RunOn(IslaZombieSetup.IslaAlturas.ScenePath);
 
+    [MenuItem("Tools/Island/Play Test Smoke (La Serenisima)")]
+    public static void RunVenecia() => RunOn(IslaZombieSetup.Venecia.ScenePath);
+
     public static void RunOn(string scenePath)
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }

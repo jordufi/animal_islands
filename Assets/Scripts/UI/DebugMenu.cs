@@ -55,7 +55,7 @@ public class DebugMenu : MonoBehaviour
         });
         Add("Terminar ronda ahora", () => { if (RoundManager.Instance != null) RoundManager.Instance.DebugEndRound(); Close(); });
         Button night = null;
-        night = Add(NightText(), () => { var rm = RoundManager.Instance; if (rm != null) rm.ForceNextNight = !rm.ForceNextNight; Relabel(night, NightText()); });
+        night = Add(NightText(), () => { var rm = RoundManager.Instance; if (rm != null) rm.ForceNextNight = !rm.ForceNextNight; if (rm != null && AcquaAlta.Instance != null) AcquaAlta.Instance.ForceNext = rm.ForceNextNight; Relabel(night, NightText()); });
         Button cols = null;
         cols = Add(ColText(), () => { ColliderViewer.Toggle(); Relabel(cols, ColText()); });
         Add("Abrir todas las puertas (sin cartas)", () =>
@@ -70,7 +70,7 @@ public class DebugMenu : MonoBehaviour
     }
 
     static string GodText() => "Modo dios: " + (GameManager.Instance != null && GameManager.Instance.Player != null && GameManager.Instance.Player.GodMode ? "SÍ" : "NO");
-    static string NightText() => "Siguiente ronda de noche: " + (RoundManager.Instance != null && RoundManager.Instance.ForceNextNight ? "SÍ" : "NO");
+    static string NightText() => (AcquaAlta.Instance != null ? "Siguiente ronda acqua alta: " : "Siguiente ronda de noche: ") + (RoundManager.Instance != null && RoundManager.Instance.ForceNextNight ? "SÍ" : "NO");
     static string ColText() => "Ver colisiones: " + (ColliderViewer.Visible ? "SÍ" : "NO");
 
     void Close()

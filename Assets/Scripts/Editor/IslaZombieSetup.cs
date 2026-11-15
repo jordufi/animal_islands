@@ -29,6 +29,8 @@ public static partial class IslaZombieSetup
         public string name, folder, file, scene, root = "IslaZombie";
         public int originCol = 21, originRow = 18;   // this cell is the world origin
         public bool isla = true;                     // Isla del Faro checks (named routes) and menu registration
+        public bool menu;                            // other maps listed in the menu's map selector
+        public string theme = "";                    // "venecia": canals, facades, bridges (IslaZombieSetup.Venecia.cs)
         public string LayoutPath => $"{folder}/{file}_Layout.txt";
         public string MapTexturePath => $"{folder}/{file}_Map.png";
         public string SignFolder => folder + "/Signs";
@@ -156,7 +158,7 @@ public static partial class IslaZombieSetup
         L.floorY = y;
     }
 
-    const string Markers = "@sBDPKJbXLGUMEYTC";
+    const string Markers = "@sBDPKJbXLGUMEYTCNSFO";   // venecia: N gondola stop, S shovel stall, F Giuseppe's grave, O golden gondolier   // N = gondola stop (theme venecia)
     const string Roofed = "tq";   // temple and cave floors
 
     static Layout Load() => Load(File.ReadAllLines(LayoutPath));
@@ -327,6 +329,7 @@ public static partial class IslaZombieSetup
         var points = PlaceMarkers(L, zones, entrances);
         BuildEntrances(root, L, zones, entrances);
         BuildGameplay(root, data, L, zones, points, doors);
+        if (Ven) VenBuildRuntime(root, L, zones);
         BuildLabels(root, L, points);
         BuildRamps(root, L, zones);
         BuildLedgeLips(root, L);
@@ -343,7 +346,7 @@ public static partial class IslaZombieSetup
         if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
 
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
-        if (cfg.isla) PointMenuToMap();
+        if (cfg.isla || cfg.menu) PointMenuToMap();
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         LastReport = string.Join("\n", report);
@@ -373,6 +376,7 @@ public static partial class IslaZombieSetup
         sun.intensity = 1.2f;
         sun.shadows = LightShadows.Soft;
         sun.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
+        if (Ven) { sun.color = new Color(1f, 0.82f, 0.62f); sun.intensity = 1.15f; sun.transform.rotation = Quaternion.Euler(28f, -60f, 0f); }   // late afternoon
         RenderSettings.sun = sun;
         if (Camera.main == null)
         {
@@ -664,10 +668,10 @@ public static partial class IslaZombieSetup
     static void BuildGround(Transform root, Layout L)
     {
         var gr = Child(root, "Ground", Vector3.zero).transform;
-        var cliff = Shared("M_Rock", new Color(0.5f, 0.5f, 0.48f));
+        var cliff = Ven ? M("VN_Ladrillo", new Color(0.52f, 0.33f, 0.27f)) : Shared("M_Rock", new Color(0.5f, 0.5f, 0.48f));
         foreach (var zd in L.zones)
         {
-            var mat = GroundMaterial(zd);
+            var mat = Ven ? VenGroundMaterial(zd) : GroundMaterial(zd);
             // one block per (zone, level) from y = -3 up to the floor: its sides are the coast cliffs and the slopes
             // between levels. Ramps stand on their low level; solids and slides on level 0 (their box covers the rest).
             foreach (var r in Rects(L, (c, row) => L.cellZone[c, row] == zd.letter, (c, row) => GroundLevel(L, c, row)))
@@ -683,7 +687,7 @@ public static partial class IslaZombieSetup
         sea.transform.localScale = new Vector3(60f, 1f, 60f);
         sea.layer = WaterLayer;
         var seaMat = AssetDatabase.LoadAssetAtPath<Material>(IslandMats + "M_Water_Ocean.mat");
-        sea.GetComponent<Renderer>().sharedMaterial = seaMat != null ? seaMat : M("Sea", new Color(0.12f, 0.5f, 0.65f));
+        sea.GetComponent<Renderer>().sharedMaterial = Ven ? M("VN_Canal", new Color(0.12f, 0.27f, 0.25f)) : seaMat != null ? seaMat : M("Sea", new Color(0.12f, 0.5f, 0.65f));
         Object.DestroyImmediate(sea.GetComponent<Collider>());
     }
 
@@ -713,6 +717,7 @@ public static partial class IslaZombieSetup
     // Walls (#), rocks (R), temple stone (Z) and the roofs over the temple / cave floors.
     static void BuildSolids(Transform root, Layout L)
     {
+        if (Ven) { VenBuildSolids(root, L); return; }
         var sr = Child(root, "Walls", Vector3.zero).transform;
         var stone = Shared("M_StoneMoss", new Color(0.5f, 0.53f, 0.47f));
         var rock = Shared("M_Rock", new Color(0.45f, 0.41f, 0.37f));
@@ -805,6 +810,7 @@ public static partial class IslaZombieSetup
     // Props: low-poly models with colliders fitted to their parts; the model depends on the zone.
     static void BuildProps(Transform root, Layout L)
     {
+        if (Ven) { VenBuildProps(root, L); return; }
         var pr = Child(root, "Props", Vector3.zero).transform;
         var col = Child(root, "PropColliders", Vector3.zero).transform;
         var tentPaints = new[] { TestMapSetup.Mat("IZ_Tent_Orange", new Color(0.9f, 0.5f, 0.15f)), TestMapSetup.Mat("IZ_Tent_Blue", new Color(0.2f, 0.4f, 0.75f)), TestMapSetup.Mat("IZ_Tent_Green", new Color(0.3f, 0.6f, 0.25f)), TestMapSetup.Mat("IZ_Tent_Yellow", new Color(0.95f, 0.8f, 0.3f)) };
@@ -993,6 +999,7 @@ public static partial class IslaZombieSetup
     // that looks solid (crates, barrels, logs) so nothing looks like an obstacle you can walk through.
     static void BuildDecor(Transform root, Layout L)
     {
+        if (Ven) { VenBuildDecor(root, L); return; }
         var dr = Child(root, "Decor", Vector3.zero).transform;
         var sets = new Dictionary<char, (string[] names, float chance, float size)>
         {
@@ -1022,6 +1029,7 @@ public static partial class IslaZombieSetup
     // Invisible walls on the sea cells that touch land (nobody walks into the sea).
     static void BuildCoast(Transform root, Layout L)
     {
+        if (Ven) return;   // open water: Zones/CanalRescue puts back whoever falls in
         var cr = Child(root, "CoastWalls", Vector3.zero).transform;
         bool Ring(int c, int r)
         {
@@ -1056,7 +1064,7 @@ public static partial class IslaZombieSetup
             if (cells.Count != 1) { Debug.LogError($"[IslaZombie] door {d.digit} must be one straight run of cells (found {cells.Count})"); continue; }
             var r = cells[0];
             // the barrier runs along the wall: horizontal wall if the cell left of the run is wall
-            bool alongX = r.width > r.height || (r.width == r.height && IsSolid(L.At(r.x - 1, r.y)));
+            bool alongX = r.width > r.height || (r.width == r.height && (IsSolid(L.At(r.x - 1, r.y)) || L.At(r.x - 1, r.y) == '.'));   // sea beside it: a bridge
             float width = (alongX ? r.width : r.height) * Cell;
             var mat = d.zones.Contains('d') ? M("DoorCloth_Boss", new Color(0.6f, 0.1f, 0.5f))
                     : d.cost >= 5000 ? M("DoorCloth_Gold", new Color(1f, 0.75f, 0.1f)) : cloth[i % cloth.Length];
@@ -1075,6 +1083,7 @@ public static partial class IslaZombieSetup
             vol.size = new Vector3(width + 0.5f, 4f, Cell + 0.5f);
             vol.area = DoorAreaBase + i;
             // stone gate: two pillars and a lintel over the doorway (visual only)
+            if (Ven) { VenPlace(dr, VN("VN_PortalPuente"), RectCenter(r), alongX ? 0f : 90f, (width + 0.4f) / 2.4f); result.Add(new BuiltDoor { door = zd, width = width, cells = r, alongX = alongX, def = d }); continue; }
             var gate = Child(dr, "Portal" + d.digit, RectCenter(r)).transform;
             var along = alongX ? Vector3.right : Vector3.forward;
             var gm = d.cost >= 5000 ? temple : stone;
@@ -1203,7 +1212,7 @@ public static partial class IslaZombieSetup
         var extraction = Child(root, "Extraction", pts.extraction);
         var beacon = TestMapSetup.Prim(PrimitiveType.Cylinder, extraction.transform, new Vector3(0, 15, 0), new Vector3(0.6f, 15f, 0.6f), TestMapSetup.Mat("Beacon", new Color(0.2f, 1f, 0.4f, 0.35f), 2f));
         TestMapSetup.Set(extraction.AddComponent<ExtractionPoint>(), "beacon", beacon);
-        WorldLabel.Create(extraction.transform, new Vector3(0, 2.2f, 0), "BARCO DE RESCATE", 0.3f, new Color(0.6f, 1f, 0.6f));
+        WorldLabel.Create(extraction.transform, new Vector3(0, 2.2f, 0), Ven ? "VAPORETTO DE RESCATE" : "BARCO DE RESCATE", 0.3f, new Color(0.6f, 1f, 0.6f));
         var boatSide = FindSea(L, pts.extraction);
         PlaceInRect(Child(root, "Barco", Vector3.zero).transform, IZ("IZ_Barco"), pts.extraction + boatSide * 3.4f + Vector3.left * 3f, 9f, 3.4f, 0f, 0f, -0.9f);
 
@@ -1421,14 +1430,34 @@ public static partial class IslaZombieSetup
         int placed = 0;
         foreach (var n in normals)
         {
+            bool done = false;
             foreach (var wall in candidates)
             {
                 if (!IsSolid(L.At(wall.x, wall.y)) || !IsFloor(L, L.At(wall.x + n.x, wall.y + n.y))) continue;
                 var nWorld = new Vector3(n.x, 0f, -n.y);
                 float face = L.At(wall.x, wall.y) == '#' ? Cell / 2f : Cell / 2f;
-                var pos = World(wall.x, wall.y) + nWorld * (face + 0.06f) + Vector3.up * 2f;
+                Board(World(wall.x, wall.y) + nWorld * (face + 0.06f) + Vector3.up * 2f, nWorld, 1f);
+                done = true;
+                break;
+            }
+            // a bridge has no wall beside it: a smaller board on a post at the foot of the bridge
+            if (!done && Ven && IsFloor(L, L.At(r.x + n.x, r.y + n.y)))
+            {
+                var nWorld = new Vector3(n.x, 0f, -n.y);
+                var side = d.alongX ? Vector3.left : Vector3.forward;
+                var foot = World(r.x + n.x, r.y + n.y) - nWorld * 0.55f + side * 0.78f;
+                Box(parent, "Poste_Cartel" + d.def.digit, foot, new Vector3(0.1f, 1.2f, 0.1f), wood, 0f, false);
+                Board(foot + Vector3.up * 1.75f, nWorld, 0.6f);
+            }
+        }
+        return placed;
+
+        void Board(Vector3 pos, Vector3 nWorld, float scale)
+        {
+            {
                 var board = Child(parent, "Cartel_Puerta" + d.def.digit, pos).transform;
                 board.rotation = Quaternion.LookRotation(nWorld);
+                board.localScale = Vector3.one * scale;
                 var frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 frame.name = "Marco";
                 frame.transform.SetParent(board, false);
@@ -1445,10 +1474,8 @@ public static partial class IslaZombieSetup
                 quad.GetComponent<Renderer>().sharedMaterial = picture;
                 Object.DestroyImmediate(quad.GetComponent<Collider>());
                 placed++;
-                break;
             }
         }
-        return placed;
     }
 
     static void RenderToPng(Camera cam, int w, int h, string path)

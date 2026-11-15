@@ -21,6 +21,30 @@ public class EnemyHealth : MonoBehaviour
     public bool PaysHits { get; set; } = true;   // false: only the kill pays (the boss's neighbours)
     public int NetId { get; set; }   // online: the same old man on every machine
 
+    // Carnival mask: the top `maskPool` of the health bar. While it lasts, a hit takes exactly one of its `maskHits`
+    // segments (whatever the weapon) and never counts as a headshot. Derived from Current, so it needs no network message.
+    public bool Masked => maskPool > 0f && !IsDead && Current > MaxHealth - maskPool + 0.01f;
+    public event Action<EnemyHealth> MaskBroken;
+    float maskPool;
+    int maskHits;
+
+    public void SetMask(int hits, float share)
+    {
+        maskHits = Mathf.Max(0, hits);
+        maskPool = maskHits > 0 ? MaxHealth * Mathf.Clamp(share, 0.05f, 0.9f) : 0f;
+    }
+
+    // What a hit really takes off: one mask segment while masked (pierce = insta-kill / nuke / host's kill order).
+    float Shielded(ref float amount, ref bool headshot, bool pierce)
+    {
+        if (pierce || !Masked) return amount;
+        headshot = false;
+        float left = Current - (MaxHealth - maskPool);
+        amount = Mathf.Min(maskPool / maskHits, left);
+        if (left - amount < 0.02f) amount = left;   // the last segment takes the rounding with it
+        return amount;
+    }
+
     public event Action<EnemyHealth, DamageInfo> Damaged;
     public event Action<EnemyHealth, DamageInfo> Died;
     public static event Action<EnemyHealth, DamageInfo> AnyEnemyDied;
@@ -34,14 +58,19 @@ public class EnemyHealth : MonoBehaviour
     {
         MaxHealth = Current = Mathf.Max(1f, maxHealth);
         IsDead = false;
+        maskPool = 0f; maskHits = 0;
     }
 
     // Returns the resulting damage info (killed = this hit was the lethal one).
-    public DamageInfo TakeDamage(float amount, bool headshot)
+    public DamageInfo TakeDamage(float amount, bool headshot, bool pierce = false)
     {
         var info = new DamageInfo { amount = amount, headshot = headshot };
         if (IsDead || amount <= 0f) return info;
+        bool wasMasked = Masked;
+        info.amount = amount = Shielded(ref amount, ref headshot, pierce);
+        info.headshot = headshot;
         Current -= amount;
+        if (wasMasked && !Masked) MaskBroken?.Invoke(this);
         if (Current <= 0f)
         {
             Current = 0f;
@@ -63,9 +92,13 @@ public class EnemyHealth : MonoBehaviour
     {
         var info = new DamageInfo { amount = amount, headshot = headshot };
         if (IsDead || amount <= 0f) return info;
+        bool wasMasked = Masked;
+        info.amount = amount = Shielded(ref amount, ref headshot, false);
+        info.headshot = headshot;
         info.killed = Current - amount <= 0f;
         Current = Mathf.Max(0f, Current - amount);
         predictedUntil = Time.time + 0.4f;
+        if (wasMasked && !Masked) MaskBroken?.Invoke(this);
         Damaged?.Invoke(this, info);
         return info;
     }
@@ -78,13 +111,15 @@ public class EnemyHealth : MonoBehaviour
         if (IsDead) return;
         if (Time.time < predictedUntil && current > Current) return;   // our hit is still on its way to the host
         bool hit = current < Current - 0.5f;
+        bool wasMasked = Masked;
         Current = Mathf.Clamp(current, 0f, MaxHealth);
+        if (wasMasked && !Masked) MaskBroken?.Invoke(this);
         if (hit) Damaged?.Invoke(this, new DamageInfo { amount = 0f });
     }
 
     public void NetKill(bool headshot)
     {
         if (IsDead) return;
-        TakeDamage(Current + 1f, headshot);
+        TakeDamage(Current + 1f, headshot, true);
     }
 }

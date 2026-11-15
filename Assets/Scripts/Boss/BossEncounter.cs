@@ -65,7 +65,7 @@ public class BossEncounter : MonoBehaviour
         gm.BossDefeated = true;
         gm.AddPoints(gm.Economy != null ? gm.Economy.bossKillPoints : 2000, PointSource.Kill);
         foreach (var e in FindObjectsByType<EnemyHealth>())
-            if (!e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false);
+            if (!e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false, true);
         gm.ShowMessage("¡Don Anselmo ha caído! Corre al final del muelle y sube al barco");
         if (NetGame.H != null) NetGame.H.BossDefeated();
         BossDefeated?.Invoke();

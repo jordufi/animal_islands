@@ -124,7 +124,7 @@ public class PowerUpManager : MonoBehaviour
             case PowerUpKind.Nuke:
                 nuking = true;
                 foreach (var e in FindObjectsByType<EnemyHealth>())
-                    if (!e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false);
+                    if (!e.IsDead && e.GetComponent<BossAI>() == null) e.TakeDamage(e.Current + 1f, false, true);
                 nuking = false;
                 gm?.AddPoints(data.nukePoints, PointSource.Bonus);
                 gm?.ShowMessage("¡PAELLA PARA TODOS! Los abuelos se van a comer (+" + data.nukePoints + ")");

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8876afa6742b6ae4a857f085cafff746, type: 3}
+  m_Name: AnselmoBauta
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVariant
+  displayName: Anselmo enmascarado
+  healthMultiplier: 1.4
+  moveSpeed: 1.9
+  damage: 35
+  scale: 1
+  pointsMultiplier: 1.3
+  clothingColor: {r: 0.12, g: 0.12, b: 0.16, a: 1}
+  firstRound: 2
+  baseChance: 0.2
+  chancePerRound: 0.04
+  maxChance: 0.45
+  maxAliveAtOnce: 0
+  jumper: 0
+  throwsChanclas: 0
+  throwMinRange: 4
+  throwMaxRange: 14
+  throwCooldown: 3.5
+  throwDamage: 15
+  throwSpeed: 13
+  maskHits: 2
+  maskShare: 0.3
+  maskPrefab: {fileID: 919132149155446097, guid: 09a979de1feaec046bcbfbbe21411247, type: 3}

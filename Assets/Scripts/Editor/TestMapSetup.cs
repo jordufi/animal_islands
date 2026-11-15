@@ -303,6 +303,7 @@ public static class TestMapSetup
         public EconomyData economy;
         public MeleeData melee;
         public EnemyVariant nightVariant;
+        public EnemyVariant[] maskVariants;   // La Serenisima: old men with a carnival mask
         public WeaponData wallWeapon;   // Lentos-peta (wall buy, Isla del Faro camping)
         public WeaponData wallShotgun, wallSmg;   // La Chancla / La Thermomix also hang on walls (WeaponData.wallCost)
         public TunnelData tunnels;      // "Anselmo cagón" mode numbers
@@ -394,6 +395,23 @@ public static class TestMapSetup
             v.clothingColor = new Color(0.45f, 0.15f, 0.6f, 1f); v.firstRound = 7; v.baseChance = 0.06f; v.chancePerRound = 0.01f; v.maxChance = 0.15f;
         });
         d.specials = new[] { tank, runner };
+        // La Serenisima only: carnival masks = a shield that takes a few hits to break (no headshots meanwhile)
+        var bauta = Asset<EnemyVariant>(DataRoot + "/Enemies/AnselmoBauta.asset", v =>
+        {
+            v.displayName = "Anselmo enmascarado"; v.healthMultiplier = 1.4f; v.moveSpeed = 1.9f; v.damage = 35; v.scale = 1f; v.pointsMultiplier = 1.3f;
+            v.clothingColor = new Color(0.12f, 0.12f, 0.16f, 1f); v.firstRound = 2; v.baseChance = 0.2f; v.chancePerRound = 0.04f; v.maxChance = 0.45f;
+            v.maskHits = 2; v.maskShare = 0.3f;
+        });
+        var peste = Asset<EnemyVariant>(DataRoot + "/Enemies/AnselmoPeste.asset", v =>
+        {
+            v.displayName = "Médico de la peste"; v.healthMultiplier = 1.8f; v.moveSpeed = 2.6f; v.damage = 35; v.scale = 1.05f; v.pointsMultiplier = 1.6f;
+            v.clothingColor = new Color(0.25f, 0.2f, 0.12f, 1f); v.firstRound = 6; v.baseChance = 0.08f; v.chancePerRound = 0.03f; v.maxChance = 0.3f;
+            v.maskHits = 3; v.maskShare = 0.4f;
+        });
+        bauta.maskPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Maps/Venecia/Models/VN_Mascara_Bauta.fbx");
+        peste.maskPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Maps/Venecia/Models/VN_Mascara_Peste.fbx");
+        EditorUtility.SetDirty(bauta); EditorUtility.SetDirty(peste);
+        d.maskVariants = new[] { peste, bauta };
         // night rounds (every 5): only these, green tracksuit, walk over props and throw flip-flops
         d.nightVariant = Asset<EnemyVariant>(DataRoot + "/Enemies/AbueloSenderista.asset", v =>
         {
@@ -464,10 +482,13 @@ public static class TestMapSetup
             // Phase 3 workspace: Isla del Faro rebuilt with heights (Docs/FASE3_FORMATO.md); the original stays untouched
             Asset<MapData>(DataRoot + "/Maps/IslaFaroAlturas.asset", m => { m.id = "isla-del-faro-alturas"; m.displayName = "Isla del Faro (alturas)"; m.sceneName = "IslaFaroAlturas";
                 m.description = "La Isla del Faro con alturas: terrazas, rampas, caídas, toboganes y la cripta del Templo."; }),
+            Asset<MapData>(DataRoot + "/Maps/Venecia.asset", m => { m.id = "la-serenisima"; m.displayName = "La Serenísima"; m.sceneName = "Venecia";
+                m.description = "Canales, puentes de pago y un cementerio monumental en medio. Cuidado con el acqua alta."; }),
         };
         d.maps[0].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         d.maps[1].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
         d.maps[2].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Map.png");
+        d.maps[3].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/Venecia/Venecia_Map.png");
         foreach (var m in d.maps) EditorUtility.SetDirty(m);
         AssetDatabase.SaveAssets();
         return d;

@@ -98,7 +98,8 @@ public class PlayerController : MonoBehaviour
         if (cam != null) cameraTransform = cam.transform;
     }
 
-    float SpeedMultiplier => stats != null ? stats.Get(Stat.MoveSpeed) : 1f;
+    public float ExternalSpeedFactor { get; set; } = 1f;   // wading in the acqua alta (Rounds/AcquaAlta)
+    float SpeedMultiplier => (stats != null ? stats.Get(Stat.MoveSpeed) : 1f) * ExternalSpeedFactor;
 
     // Instant upward jump of the given height (abilities, hiccups).
     public void Launch(float height)

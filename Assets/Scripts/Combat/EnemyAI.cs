@@ -148,12 +148,40 @@ public class EnemyAI : MonoBehaviour
         nextAttackTime = Time.time + 0.5f;
     }
 
+    // Carnival mask (EnemyVariant.maskHits): hangs on the face until EnemyHealth.MaskBroken, then flies off.
+    GameObject mask;
+
+    void WearMask(GameObject prefab)
+    {
+        if (mask != null) Destroy(mask);
+        if (prefab == null || head == null) return;
+        float k = transform.lossyScale.y;   // the old man's head is big: the mask model is 0.34 m wide
+        mask = Instantiate(prefab, head.position + transform.forward * 0.3f * k + Vector3.up * 0.26f * k, transform.rotation, head);
+        mask.transform.localScale *= 2.1f;
+        foreach (var c in mask.GetComponentsInChildren<Collider>()) Destroy(c);
+        health.MaskBroken -= DropMask;
+        health.MaskBroken += DropMask;
+    }
+
+    void DropMask(EnemyHealth _)
+    {
+        if (mask == null) return;
+        var m = mask;
+        mask = null;
+        m.transform.SetParent(null, true);
+        var rb = m.AddComponent<Rigidbody>();
+        rb.linearVelocity = transform.forward * 2.5f + Vector3.up * 3f + transform.right * Random.Range(-1.5f, 1.5f);
+        rb.angularVelocity = Random.insideUnitSphere * 12f;
+        Destroy(m, 2.5f);
+    }
+
     // Called by the RoundManager right after spawning.
     public void Configure(EnemyVariant variant, float maxHealth)
     {
         Variant = variant;
         health.Init(maxHealth);
         if (variant == null) return;
+        if (variant.maskHits > 0) { health.SetMask(variant.maskHits, variant.maskShare); WearMask(variant.maskPrefab); }
         health.PointsMultiplier = variant.pointsMultiplier;
         damage = variant.damage;
         agent.speed = variant.moveSpeed * RunModifiers.Get(Stat.EnemySpeed);

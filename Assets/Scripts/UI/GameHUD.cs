@@ -130,8 +130,21 @@ public class GameHUD : MonoBehaviour
             remainingText.color = rm.IsNight ? new Color(0.55f, 1f, 0.55f) : Color.white;
         }
 
-        string objective = BoatMission.Instance != null ? BoatMission.Instance.Objective() : "";
+        var mission = BoatMission.Instance;
+        string objective = mission != null ? mission.Objective() : "";
         objectiveText.text = objective.Length > 0 ? "Objetivo: " + objective : "";
+        // task-list maps (La Serenisima), one screen: the whole list with its checks, top left under the health
+        if (mission != null && mission.HasTasks && !toastSplit && !(GameManager.Instance != null && GameManager.Instance.BossDefeated))
+        {
+            objectiveText.supportRichText = true;
+            objectiveText.verticalOverflow = VerticalWrapMode.Overflow;
+            objectiveText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var sb = new System.Text.StringBuilder("<b>PARA QUE VENGA EL VAPORETTO</b>");
+            foreach (var (text, done) in mission.TaskList())
+                sb.Append(done ? "\n<color=#7CFC7C>[X] " + text + "</color>" : "\n[  ] " + text);
+            if (mission.Called || mission.Complete) sb.Append("\n<color=#FFE680>> " + objective + "</color>");
+            objectiveText.text = sb.ToString();
+        }
         buffText.text = PowerUpManager.Instance != null ? PowerUpManager.Instance.Status() : "";
 
         var egg = EasterEgg.Instance;

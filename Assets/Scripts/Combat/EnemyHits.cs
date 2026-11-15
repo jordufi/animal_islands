@@ -33,7 +33,7 @@ public static class EnemyHits
         }
         // Siesta fulminante (insta-kill power-up): anything but the boss dies from one hit
         if (PowerUpManager.InstaKill && enemy.GetComponent<BossAI>() == null) amount = Mathf.Max(amount, enemy.Current + 1f);
-        var info = enemy.TakeDamage(amount, head);
+        var info = enemy.TakeDamage(amount, head, PowerUpManager.InstaKill && enemy.GetComponent<BossAI>() == null);
         if (ai != null && kind == HitKind.Melee && !info.killed)
         {
             if (stun > 0f) ai.Stun(stun);

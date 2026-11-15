@@ -31,5 +31,12 @@ public class EnemyVariant : ScriptableObject
     public int throwDamage = 15;
     public float throwSpeed = 13f;
 
+    [Header("Carnival mask (La Serenisima)")]
+    [Tooltip("Hits that break the mask (0 = no mask). While he wears it every hit only chips the mask and there are no headshots.")]
+    public int maskHits = 0;
+    [Tooltip("Part of his health that is the mask.")]
+    public float maskShare = 0.3f;
+    public GameObject maskPrefab;
+
     public float ChanceAt(int round) => round < firstRound ? 0f : Mathf.Min(maxChance, baseChance + chancePerRound * (round - firstRound));
 }

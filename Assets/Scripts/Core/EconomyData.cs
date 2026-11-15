@@ -27,6 +27,8 @@ public class EconomyData : ScriptableObject
     public float bossMinHealth = 30000f;
     [Header("Prices")]
     public int packAPunchCost = 5000;
+    public int shovelCost = 500;         // La Serenisima: the shovel to dig up Giuseppe
+    public int gondolaCost = 250;        // La Serenisima: a gondola ride to the next open stop
 
     // Conchas for a non-lethal gun hit with a weapon that fires every `fireInterval` seconds.
     public int HitPointsFor(float fireInterval) =>

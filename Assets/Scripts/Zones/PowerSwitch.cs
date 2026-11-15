@@ -7,6 +7,7 @@ public class PowerSwitch : Interactable
     [SerializeField] Renderer lamp;        // turns green with the light on
     [SerializeField] Transform lever;      // flips down
     [SerializeField] TextMesh worldLabel;
+    [SerializeField] string action = "Dar la luz";   // the bell of La Serenisima: "Tocar la campana"
 
     bool shown;
 
@@ -24,7 +25,7 @@ public class PowerSwitch : Interactable
         if (worldLabel != null) worldLabel.text = on ? "CUADRO ELÉCTRICO\n(con luz)" : "CUADRO ELÉCTRICO\nDAR LA LUZ";
     }
 
-    public override string Prompt(PlayerInteractor player) => BoatMission.Instance != null && !BoatMission.Instance.Power ? "□  Dar la luz" : "";
+    public override string Prompt(PlayerInteractor player) => BoatMission.Instance != null && !BoatMission.Instance.Power ? "□  " + action : "";
     public override bool CanInteract(PlayerInteractor player) => BoatMission.Instance != null && !BoatMission.Instance.Power;
 
     public override void Interact(PlayerInteractor player)

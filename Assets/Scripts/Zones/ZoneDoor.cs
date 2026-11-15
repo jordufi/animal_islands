@@ -37,7 +37,7 @@ public class ZoneDoor : Interactable
     public override bool CanInteract(PlayerInteractor player) => !Locked;
 
     public override string Prompt(PlayerInteractor player) => Locked ? "Muelle cerrado. " + BoatMission.Instance.Objective()
-        : Free ? "□  Abrir hacia " + Destination()
+        : Free ? (BoatMission.Instance.DoorNeedsKey && !MasterKey.Instance.IsHeldBy(player) ? "Hace falta la LLAVE del vaporetto" : "□  Abrir hacia " + Destination())
         : HasKey(player)
         ?"□  Abrir hacia " + Destination() + " con la LLAVE MAESTRA (gratis)"
         : "□  Abrir hacia " + Destination() + " (" + CostText(Cost) + ")";
@@ -46,7 +46,12 @@ public class ZoneDoor : Interactable
     {
         if (!Net.Authority) return;   // online client: PlayerInteractor asks the host instead
         if (Locked) return;
-        if (Free) { }
+        if (Free)
+        {
+            // task-list maps: the last door also wants the key in the opener's pocket
+            var bm = BoatMission.Instance;
+            if (bm != null && bm.DoorNeedsKey && !MasterKey.Instance.Use(player)) { Game.ShowMessageTo(player, "Hace falta la LLAVE del vaporetto"); return; }
+        }
         else if (HasKey(player)) MasterKey.Instance.Use(player);
         else if (!Pay(Cost, player)) return;
         bool newZone = false;
