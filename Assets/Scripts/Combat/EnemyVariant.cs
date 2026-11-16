@@ -42,5 +42,15 @@ public class EnemyVariant : ScriptableObject
     public float deathCloudSeconds = 5f;
     public float deathCloudDps = 12f;
 
+    [Header("Villajubilada")]
+    [Tooltip("El del bombo: old men within this radius walk faster while he lives (0 = no aura).")]
+    public float auraRadius = 0f;
+    public float auraSpeedFactor = 1.3f;
+    public GameObject wornPrefab;        // the drum, hung on the belly
+    [Tooltip("La de los petardos: what she throws leaves a burning patch where it lands (0 = a plain chancla).")]
+    public float throwCloudRadius = 0f;
+    public float throwCloudSeconds = 3f;
+    public float throwCloudDps = 15f;
+
     public float ChanceAt(int round) => round < firstRound ? 0f : Mathf.Min(maxChance, baseChance + chancePerRound * (round - firstRound));
 }

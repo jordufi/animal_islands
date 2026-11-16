@@ -29,6 +29,11 @@ public class EconomyData : ScriptableObject
     public int packAPunchCost = 5000;
     public int shovelCost = 500;         // La Serenisima: the shovel to dig up Giuseppe
     public int gondolaCost = 250;        // La Serenisima: a gondola ride to the next open stop
+    [Header("Villajubilada: the traca (buyable trap)")]
+    public int tracaCost = 750;
+    public float tracaBurnSeconds = 3f;
+    public float tracaCooldown = 90f;
+    public int tracaPlayerDamage = 25;
 
     // Conchas for a non-lethal gun hit with a weapon that fires every `fireInterval` seconds.
     public int HitPointsFor(float fireInterval) =>

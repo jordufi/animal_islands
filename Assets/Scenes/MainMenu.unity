@@ -889,6 +889,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f23d25253c220a340a3dd978be13c116, type: 2}
   - {fileID: 11400000, guid: b4f65fa75549e1240b675281e351f76f, type: 2}
   - {fileID: 11400000, guid: bd1313e52b9754e49a8d785d5f9c4e15, type: 2}
+  - {fileID: 11400000, guid: d06a6cdb5b276f64aa6c62150b9d0653, type: 2}
   gameScene: IslaZombie
   stepForward: 0.9
 --- !u!4 &1757856281

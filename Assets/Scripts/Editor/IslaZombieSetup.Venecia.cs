@@ -22,7 +22,7 @@ public static partial class IslaZombieSetup
     static bool Ven => cfg.theme == "venecia";
     const string VnModels = "Assets/Maps/Venecia/Models/";
     const float CanalY = -0.8f;
-    static GameObject VN(string name) => Model(VnModels + name + ".fbx");
+    static GameObject VN(string name) => Model((name.StartsWith("VJ_") ? VjModels : VnModels) + name + ".fbx");   // VJ_ = the village kit
     static readonly HashSet<(Vector2Int wall, Vector2Int dir)> venDoorFaces = new HashSet<(Vector2Int, Vector2Int)>();   // faces with a spawn doorway
 
     [MenuItem("Tools/Island/Setup La Serenisima")]
@@ -142,6 +142,15 @@ public static partial class IslaZombieSetup
         var marble = M("VN_Marmol", new Color(0.82f, 0.82f, 0.8f));
         var istria = M("VN_Istria", new Color(0.9f, 0.88f, 0.82f));
         string[] strips = { "VN_Fachada_A", "VN_Fachada_C", "VN_Fachada_D", "VN_Fachada_A", "VN_Fachada_C", "VN_Fachada_B" };
+        if (Pue)   // two-floor whitewashed houses
+        {
+            plaster = new[]
+            {
+                M("VJ_Cal", new Color(0.93f, 0.92f, 0.88f)), M("VJ_Cal_Hueso", new Color(0.9f, 0.87f, 0.78f)), M("VJ_Cal_Ocre", new Color(0.88f, 0.76f, 0.52f)),
+                M("VJ_Cal", new Color(0.93f, 0.92f, 0.88f)), M("VJ_Cal_Rosa", new Color(0.9f, 0.78f, 0.72f)), M("VJ_Cal_Gris", new Color(0.82f, 0.82f, 0.8f)),
+            };
+            strips = new[] { "VJ_Fachada_A", "VJ_Fachada_C", "VJ_Fachada_D", "VJ_Fachada_A", "VJ_Fachada_D", "VJ_Fachada_B" };
+        }
         System.Func<int, int, int> top = (c, row) => Mathf.RoundToInt(SolidBase(L, c, row) * 100f);
         int n = 0;
 
@@ -155,14 +164,16 @@ public static partial class IslaZombieSetup
         foreach (var r in Rects(L, (c, row) => L.At(c, row) == '#', top))
         {
             float baseY = SolidBase(L, r.x, r.y);
-            float h = 7.9f + Mathf.Floor(Hash(r.x, r.y, 21) * 3f) * 0.8f;
+            float h = Pue ? 5.85f + Mathf.Floor(Hash(r.x, r.y, 21) * 3f) * 0.5f : 7.9f + Mathf.Floor(Hash(r.x, r.y, 21) * 3f) * 0.8f;
             var paint = plaster[(int)(Hash(r.x, r.y, 22) * 97f) % plaster.Length];
             WallBox(sr, "Casa" + (n++), Flat(RectCenter(r)), RectSize(r, baseY + h), tile, paint);
-            TexBox(roofs, "Alero", Flat(RectCenter(r)), new Vector3(r.width * Cell + 0.5f, 0.22f, r.height * Cell + 0.5f), tile, tile, baseY + h, false);
+            // the eaves overhang 25 cm: two touching houses of the same height had their roofs in one plane (flicker)
+            float eave = 0.006f * (n % 25);
+            TexBox(roofs, "Alero", Flat(RectCenter(r)), new Vector3(r.width * Cell + 0.5f, 0.22f, r.height * Cell + 0.5f), tile, tile, baseY + h + eave, false);
             for (int k = 0; k < 1 + r.width * r.height / 6; k++)
             {
                 var cc = new Vector2Int(r.x + (int)(Hash(r.x, r.y, 23 + k) * r.width), r.y + (int)(Hash(r.x, r.y, 33 + k) * r.height));
-                VenPlace(roofs, VN("VN_Chimenea"), Flat(World(cc.x, cc.y)) + Vector3.up * (baseY + h + 0.2f) + new Vector3(Hash(cc.x, cc.y, 24) - 0.5f, 0f, Hash(cc.x, cc.y, 25) - 0.5f), Hash(cc.x, cc.y, 26) * 90f);
+                VenPlace(roofs, VN(Pue ? "VJ_Chimenea" : "VN_Chimenea"), Flat(World(cc.x, cc.y)) + Vector3.up * (baseY + h + 0.2f) + new Vector3(Hash(cc.x, cc.y, 24) - 0.5f, 0f, Hash(cc.x, cc.y, 25) - 0.5f), Hash(cc.x, cc.y, 26) * 90f);
             }
             foreach (var cell in Cells(r))
                 foreach (var d in Dirs)
@@ -178,6 +189,9 @@ public static partial class IslaZombieSetup
                     bool wide = !water && VenWalk(L, nc + d.x, nr + d.y);
                     int pick = (int)(Hash(cell.x * 7 + d.x, cell.y * 5 + d.y, 27) * 97f) % (wide ? strips.Length : strips.Length - 1);
                     var strip = VenPlace(fac, VN(strips[pick]), Flat(World(cell.x, cell.y)) + wd * (Cell / 2f) + Vector3.up * y, Yaw(wd));
+                    // at a corner two strips meet: their cornice / plinth / string course tops were in one plane (flicker);
+                    // the east / west ones are 1 % taller (cornice 7.6 cm, plinth 4.5 mm)
+                    if (strip != null && Mathf.Abs(wd.x) > 0.5f) strip.transform.localScale = Vector3.Scale(strip.transform.localScale, new Vector3(1f, 1.01f, 1f));
                     Repaint(strip, "VN_AwningPaint", awnings[(int)(Hash(cell.x, cell.y, 28) * 97f) % awnings.Length]);
                 }
         }
@@ -188,7 +202,26 @@ public static partial class IslaZombieSetup
             char z = L.cellZone[r.x, r.y];
             Vector3 centre = Flat(RectCenter(r));
             float side = Mathf.Min(r.width, r.height) * Cell;
-            if (z == 'e')        // the campanile
+            if (Pue)             // the church: a stone block with the front (door, rose window, espadana) on every side with floor
+            {
+                var stone = M("VJ_Piedra", new Color(0.66f, 0.62f, 0.55f));
+                WallBox(sr, "Iglesia" + (n++), centre, RectSize(r, baseY + 9.4f), tile, stone);
+                foreach (var d in Dirs)
+                {
+                    bool alongX = d.y != 0;
+                    int len = alongX ? r.width : r.height, open = 0;
+                    float y = 0f;
+                    for (int i = 0; i < len; i++)
+                    {
+                        int c = alongX ? r.x + i : (d.x > 0 ? r.xMax : r.x - 1), row = alongX ? (d.y > 0 ? r.yMax : r.y - 1) : r.y + i;
+                        if (VenWalk(L, c, row)) { open++; y = Mathf.Max(y, L.Y(c, row)); }
+                    }
+                    if (open == 0) continue;
+                    Vector3 wd = GridDir(d);
+                    VenPlace(fac, VN("VJ_FrenteTemplo"), centre + wd * ((alongX ? r.height : r.width) * Cell / 2f) + Vector3.up * y, Yaw(wd), len * Cell / 12f);
+                }
+            }
+            else if (z == 'e')   // the campanile
             {
                 WallBox(sr, "Campanile", centre, RectSize(r, baseY + 16f), istria, brick);
                 VenPlace(roofs, VN("VN_CampanileTop"), centre + Vector3.up * (baseY + 16f - 0.5f * side / 6f), 0f, side / 6f);   // its floor slab flush with the shaft top (you walk on it)
@@ -259,7 +292,7 @@ public static partial class IslaZombieSetup
             var b = col.bounds;
             var cell = CellOf(b.center);
             bool inside = cell.x >= 0 && cell.y >= 0 && cell.x < L.W && cell.y < L.H;
-            if (Ven && inside && L.At(cell.x, cell.y) == 'x' && b.max.y - World(cell.x, cell.y).y > LowCoverTop + 0.02f)
+            if (Urb && inside && L.At(cell.x, cell.y) == 'x' && b.max.y - World(cell.x, cell.y).y > LowCoverTop + 0.02f)
             { tall++; rep.Add($"ERROR: low cover at {cell} can't be jumped ({col.name}, {b.max.y - World(cell.x, cell.y).y:0.00} m)"); }
             // floating: nothing under the bottom of the collider within 0.2 m (probe the centre and four inner corners)
             bool rests = false;
@@ -273,7 +306,7 @@ public static partial class IslaZombieSetup
             }
             if (!rests && b.min.y > GroundAt(b.center) + 0.2f) floating.Add($"{col.transform.parent?.name}/{col.name} {cell} +{b.min.y - GroundAt(b.center):0.0} m");
         }
-        if (Ven) rep.Add(tall == 0 ? "OK  low cover: every 'x' can be jumped (<= 0.9 m)" : $"ERROR: {tall} low-cover colliders too tall");
+        if (Urb) rep.Add(tall == 0 ? "OK  low cover: every 'x' can be jumped (<= 0.9 m)" : $"ERROR: {tall} low-cover colliders too tall");
         // A4: sweep the gondola hull (5.6 x 0.8 m) along every route and over every mooring: it must touch nothing solid
         int gMask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << NavAgents.PropLayer);
         var half = new Vector3(0.33f, 0.28f, GondolaHalfLength - 0.15f);

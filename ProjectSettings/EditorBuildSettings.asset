@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Venecia.unity
     guid: 77529c386badaca4bb906c9c14699cab
+  - enabled: 1
+    path: Assets/Scenes/Villajubilada.unity
+    guid: 9cd0c53c9c512014eb2cf7663c5636fc
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

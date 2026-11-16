@@ -18,6 +18,7 @@ public class ZoneDoor : Interactable
     public bool AcceptsMasterKey => acceptsMasterKey;
     public bool RequiresMission => requiresMission;
     bool Locked => requiresMission && !BoatMission.DockOpen;
+    static bool Pueblo => BoatMission.Instance != null && BoatMission.Instance.Pueblo;
     bool Free => requiresMission && BoatMission.Instance != null && BoatMission.Instance.HasMission;
 
     string Destination()
@@ -31,13 +32,13 @@ public class ZoneDoor : Interactable
     void Update()
     {
         if (worldLabel != null)
-            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + (Locked ? "CERRADO: falta el barco" : Free ? "ABRIR" : Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : ""));
+            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + (Locked ? (Pueblo ? "CERRADO: falta el tractor" : "CERRADO: falta el barco") : Free ? "ABRIR" : Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : ""));
     }
 
     public override bool CanInteract(PlayerInteractor player) => !Locked;
 
-    public override string Prompt(PlayerInteractor player) => Locked ? "Muelle cerrado. " + BoatMission.Instance.Objective()
-        : Free ? (BoatMission.Instance.DoorNeedsKey && !MasterKey.Instance.IsHeldBy(player) ? "Hace falta la LLAVE del vaporetto" : "□  Abrir hacia " + Destination())
+    public override string Prompt(PlayerInteractor player) => Locked ? (Pueblo ? "Cerrado. " : "Muelle cerrado. ") + BoatMission.Instance.Objective()
+        : Free ? (BoatMission.Instance.DoorNeedsKey && !MasterKey.Instance.IsHeldBy(player) ? (Pueblo ? "Hace falta la LLAVE del tractor" : "Hace falta la LLAVE del vaporetto") : "□  Abrir hacia " + Destination())
         : HasKey(player)
         ?"□  Abrir hacia " + Destination() + " con la LLAVE MAESTRA (gratis)"
         : "□  Abrir hacia " + Destination() + " (" + CostText(Cost) + ")";
@@ -50,7 +51,7 @@ public class ZoneDoor : Interactable
         {
             // task-list maps: the last door also wants the key in the opener's pocket
             var bm = BoatMission.Instance;
-            if (bm != null && bm.DoorNeedsKey && !MasterKey.Instance.Use(player)) { Game.ShowMessageTo(player, "Hace falta la LLAVE del vaporetto"); return; }
+            if (bm != null && bm.DoorNeedsKey && !MasterKey.Instance.Use(player)) { Game.ShowMessageTo(player, (Pueblo ? "Hace falta la LLAVE del tractor" : "Hace falta la LLAVE del vaporetto")); return; }
         }
         else if (HasKey(player)) MasterKey.Instance.Use(player);
         else if (!Pay(Cost, player)) return;

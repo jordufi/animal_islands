@@ -92,6 +92,8 @@ public class NetGame : MonoBehaviour
         On(NetMsg.CardChosen, (s, r) => { if (Net.IsClient) Replay(() => { var cm = CardManager.Instance; if (cm != null) cm.NetChosen(FindAsset<CardData>(r.Str())); }); });
         On(NetMsg.BossDefeated, (s, r) => { if (Net.IsClient && BossEncounter.Instance != null) BossEncounter.Instance.NetBossDefeated(); });
         On(NetMsg.WorldInit, (s, r) => { if (Net.IsClient) ApplyWorld(r); });
+        On(NetMsg.Encierro, (s, r) => { if (Net.IsClient && Encierro.Instance != null) Encierro.Instance.NetBegin(); });
+        On(NetMsg.Trap, (s, r) => { int i = r.UShort(); if (Net.IsClient && i >= 0 && i < things.Count && things[i] is TracaTrap t) t.NetFired(); });
         On(NetMsg.Quest, (s, r) => { if (Net.IsClient && BoatMission.Instance != null) BoatMission.Instance.ReadNet(r); });
         On(NetMsg.Buffs, (s, r) => { if (Net.IsClient) ApplyBuffs(r); });
     }
@@ -650,6 +652,13 @@ public class NetGame : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- boat mission, timed power-ups
+    public void EncierroStarted() => S.ToAll(NetBuf.Make(NetMsg.Encierro));
+
+    public void TrapFired(TracaTrap t)
+    {
+        if (thingIndex.TryGetValue(t, out var i)) S.ToAll(NetBuf.Make(NetMsg.Trap).UShort(i));
+    }
+
     public void QuestChanged()
     {
         var m = BoatMission.Instance;

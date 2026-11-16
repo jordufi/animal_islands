@@ -18,7 +18,9 @@ public class ChanclaProjectile : MonoBehaviour
     public static ChanclaProjectile Throw(Vector3 from, Vector3 target, float speed, int damage, Transform owner)
     {
         if (NetGame.H != null) NetGame.H.ChanclaThrown(from, target, speed);   // the others see it fly
-        return Create(from, target, speed, damage, owner);
+        var c = Create(from, target, speed, damage, owner);
+        c.TakeCloudFrom(owner, from);
+        return c;
     }
 
     // Online client: the same flip-flop, harmless (the host decides who it hits).
@@ -26,10 +28,40 @@ public class ChanclaProjectile : MonoBehaviour
     {
         var c = Create(from, target, speed, 0, null);
         c.visualOnly = true;
+        c.TakeCloudFrom(null, from);
         return c;
     }
 
     bool visualOnly;
+    float cloudRadius, cloudSeconds, cloudDps;
+    public static readonly Color PetardoColour = new Color(1f, 0.45f, 0.1f);
+
+    // The thrower's variant decides whether it bursts (EnemyVariant.throwCloudRadius). On a client the thrower is
+    // the puppet nearest to where it left the hand.
+    void TakeCloudFrom(Transform thrower, Vector3 from)
+    {
+        EnemyAI ai = thrower != null ? thrower.GetComponent<EnemyAI>() : null;
+        if (ai == null)
+        {
+            float best = 2.5f * 2.5f;
+            foreach (var e in FindObjectsByType<EnemyAI>())
+            {
+                float d = (e.transform.position - from).sqrMagnitude;
+                if (d < best) { best = d; ai = e; }
+            }
+        }
+        var v = ai != null ? ai.Variant : null;
+        if (v == null || v.throwCloudRadius <= 0f) return;
+        cloudRadius = v.throwCloudRadius; cloudSeconds = v.throwCloudSeconds; cloudDps = v.throwCloudDps;
+    }
+
+    void Burst(Vector3 at)
+    {
+        if (cloudRadius <= 0f) return;
+        if (Physics.Raycast(at + Vector3.up * 0.3f, Vector3.down, out var g, 4f, mask, QueryTriggerInteraction.Ignore)) at = g.point;
+        GasCloud.Spawn(at, cloudRadius, cloudSeconds, cloudDps, PetardoColour);
+        cloudRadius = 0f;
+    }
     public static int Created { get; private set; }   // tests
 
     static ChanclaProjectile Create(Vector3 from, Vector3 target, float speed, int damage, Transform owner)
@@ -76,10 +108,12 @@ public class ChanclaProjectile : MonoBehaviour
             if (player != null)
             {
                 if (!player.IgnoredByEnemies && !visualOnly) player.TakeDamage(Mathf.RoundToInt(damage * RunModifiers.Get(Stat.EnemyDamage)));
+                Burst(transform.position);
                 Destroy(gameObject);
                 return;
             }
             // hit scenery: drop there
+            Burst(hit.point);
             transform.position = hit.point + hit.normal * Radius;
             spent = true;
             dieAt = Time.time + 2.5f;

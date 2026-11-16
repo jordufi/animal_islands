@@ -214,6 +214,23 @@ public class NetTestBot : MonoBehaviour
         if (bm != null && bm.HasTasks) Kv("tasks", "S" + (bm.Shovel ? 1 : 0) + "G" + (bm.Giuseppe ? 1 : 0) + "O" + (bm.Gondolier ? 1 : 0) + "B" + (bm.Power ? 1 : 0) + "@" + bm.GondolierSpot);
         var fences = Object.FindObjectsByType<ZoneFence>(FindObjectsInactive.Include);
         if (fences.Length > 0) Kv("fences", fences.Count(f => f.Up) + "/" + fences.Length);
+        var enc = Encierro.Instance;
+        if (enc != null)
+        {
+            var night = Object.FindAnyObjectByType<DayNightCycle>();
+            var gate = Object.FindAnyObjectByType<EncierroGate>();
+            Kv("enc", (enc.ActOne ? "act1" : "act2") + "," + (enc.Running ? "run" : enc.Warning ? "warn" : "idle") + "," + enc.Done);
+            Kv("enchits", enc.PlayersHit.ToString());
+            Kv("gate", gate != null && gate.Blocked ? "shut" : "open");
+            Kv("dark", night != null && night.IsDark ? "1" : "0");
+            Kv("lit", BoatMission.Instance != null ? BoatMission.Instance.LitZones + "/" + BoatMission.Instance.ZonesToLight : "?");
+            Kv("lighter", BoatMission.Instance != null && BoatMission.Instance.Shovel ? "1" : "0");
+            Kv("open", ZoneManager.Instance != null ? ZoneManager.Instance.OpenCount.ToString() : "?");
+            int burning = 0; foreach (var t in Object.FindObjectsByType<TracaTrap>()) if (t.Burning) burning++;
+            Kv("tracas", burning.ToString());
+            int glow = 0; foreach (var f in Object.FindObjectsByType<FiestaLights>()) if (f.On) glow++;
+            Kv("glow", glow.ToString());
+        }
         var tide = AcquaAlta.Instance;
         if (tide != null) Kv("tide", (tide.Flooding ? "up" : "down") + (tide.SwimActive ? ",swim" : "") + "," + tide.WaterY.ToString("0.00", CultureInfo.InvariantCulture));
         var stops = Object.FindObjectsByType<GondolaStop>();

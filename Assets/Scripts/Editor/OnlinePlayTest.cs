@@ -88,7 +88,16 @@ public static class OnlinePlayTest
         Run();
     }
 
+    // Fiestas de Villajubilada from a client: act 1, the first encierro seen from both machines, light, traca.
+    [MenuItem("Tools/Island/Play Test Online (Villajubilada)")]
+    public static void RunDirectVillajubilada()
+    {
+        relay = false; matchScene = "Villajubilada"; matchMap = "villajubilada";
+        Run();
+    }
+
     static bool IsVenecia => matchScene == "Venecia";
+    static bool IsVilla => matchScene == "Villajubilada";
 
     static void Run()
     {
@@ -128,7 +137,7 @@ public static class OnlinePlayTest
         EditorApplication.QueuePlayerLoopUpdate();
         try
         {
-            if (!startedScript) { startedScript = true; script.Push(IsVenecia ? VeneciaScript() : Script()); }
+            if (!startedScript) { startedScript = true; script.Push(IsVenecia ? VeneciaScript() : IsVilla ? VillaScript() : Script()); }
             while (script.Count > 0)
             {
                 var top = script.Peek();
@@ -230,6 +239,138 @@ public static class OnlinePlayTest
     {
         if (c == null) return "?";
         return c.GetComponentsInChildren<Renderer>().SelectMany(r => r.sharedMaterials).Where(m => m != null && m.name.StartsWith("VN_MaskPaint_")).Select(m => m.name.Substring(13)).FirstOrDefault() ?? "?";
+    }
+
+    static void Move(PlayerHealth p, Vector3 pos)
+    {
+        var cc = p.GetComponent<CharacterController>();
+        cc.enabled = false; p.transform.position = pos + Vector3.up * 0.1f; cc.enabled = true;
+    }
+
+    static IEnumerator VillaScript()
+    {
+        yield return Wait(1.5f);
+        NetSession.On(NetMsg.TestReport, (s, r) =>
+        {
+            string t = r.Str();
+            int bar = t.IndexOf('|');
+            if (bar > 0) reports[t.Substring(0, bar)] = t.Substring(bar + 1);
+        });
+        var ns = NetSession.Ensure();
+        ns.HostDirect(NetSession.DefaultPort, true);
+        yield return Wait(0.5f);
+        Check(ns.Active && ns.IsHost, "host opened a room (direct IP)");
+        var mm = Object.FindAnyObjectByType<MainMenu>();
+        if (mm != null) mm.OpenRoom();
+        string log = Path.Combine(Project, ClientFolder, "client.log");
+        client = Process.Start(new ProcessStartInfo(ClientExe,
+            "-netjoin 127.0.0.1 -netanimal Toucan -netbot -netprofile testclient -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -logFile \"" + log + "\"") { UseShellExecute = false });
+        yield return Until(() => ns.Roster.Count >= 2, 60f);
+        Check(ns.Roster.Count == 2, "the client joined the room");
+        if (ns.Roster.Count < 2) yield break;
+
+        ns.SetSettings(Difficulty.Normal, false, matchMap);
+        ns.StartMatch(matchScene);
+        yield return Until(() => NetGame.Instance != null && NetGame.Instance.Ready, 90f);
+        var net = NetGame.Instance;
+        Check(net != null && net.Ready && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Villajubilada", "both loaded Villajubilada: match started");
+        if (net == null) yield break;
+        var gm = GameManager.Instance;
+        var me = gm.Player;
+        var inter = me.GetComponent<PlayerInteractor>();
+        me.GodMode = true;
+        Cmd("god on");
+        yield return Wait(2f);
+        var enc = Encierro.Instance;
+        var bm = BoatMission.Instance;
+        var gate = Object.FindAnyObjectByType<EncierroGate>();
+        var rm = RoundManager.Instance;
+        yield return Ask("start");
+        Check(V("scene") == "Villajubilada" && I("players") == 2 && V("ready") == "True", "client: in Villajubilada, 2 players, ready");
+        Check(enc != null && enc.ActOne && V("enc") == "act1,idle,0" && V("gate") == "shut" && V("dark") == "0", "act 1 on both: the Porton shut, still evening (client " + V("enc") + ", gate " + V("gate") + ")");
+        if (enc == null || bm == null) yield break;
+        yield return Until(() => rm.Round >= 1, 30f);
+
+        // the host opens the two start zones; the client finds the lighter in the second one
+        gm.AddPoints(50000, PointSource.Debug);
+        foreach (string dn in new[] { "Door1_", "Door2_" })
+        {
+            var d = Object.FindObjectsByType<ZoneDoor>().First(x => x.name.StartsWith(dn));
+            d.Interact(inter);
+            yield return Wait(0.5f);
+            var cm = CardManager.Instance;
+            if (cm != null && cm.CurrentOffer != null) cm.Choose(cm.CurrentOffer[0]);
+            yield return Wait(0.5f);
+        }
+        yield return Ask("doors");
+        Check(V("open") == ZoneManager.Instance.OpenCount.ToString() && ZoneManager.Instance.OpenCount == 3, "both start zones open on host and client (" + V("open") + ")");
+        var lighter = Object.FindObjectsByType<MissionTask>().FirstOrDefault(t => t.name.StartsWith("Mechero_") && t.Here);
+        Check(lighter != null && lighter.name == "Mechero_Corrales", "the lighter lies in the zone opened second (" + (lighter != null ? lighter.name : "none") + ")");
+        if (lighter != null)
+        {
+            Tp(lighter.transform.position);
+            yield return Wait(0.8f);
+            Cmd("use");
+            yield return Until(() => bm.Shovel, 5f);
+            yield return Ask("lighter");
+            Check(bm.Shovel && V("lighter") == "1", "the client picks up the lighter: host and client have it");
+        }
+        var bar = ZoneManager.Instance.Zones.First(z => z.displayName == "El Bar");
+        var box = Object.FindObjectsByType<PowerSwitch>().First(s => s.Zone == bar);
+        Tp(box.InteractPoint);
+        yield return Wait(0.8f);
+        Cmd("use");
+        yield return Until(() => bm.ZoneLit(bar), 5f);
+        yield return Wait(1f);
+        yield return Ask("bar");
+        Check(bm.ZoneLit(bar) && I("glow") >= 1, "the client switches on the bar's fuse box: lit on the host, its lights on at the client (" + V("glow") + ")");
+
+        // the first encierro: the client stays in La Parada, the host waits in a doorway up the street
+        Tp(new Vector3(-4f, 0f, -46f));          // cell (26, 53)
+        Move(me, enc.Route[enc.GateIndex + 28] + new Vector3(4f, 0f, 0f));   // the doorway (31, 42)... or beside it: god mode anyway
+        foreach (var e in Object.FindObjectsByType<EnemyHealth>()) if (!e.IsDead) e.TakeDamage(999999f, false, true);
+        enc.ForceNext = true;
+        rm.DebugEndRound();
+        yield return Until(() => enc.Warning || enc.Running, 40f);
+        yield return Wait(1f);
+        yield return Ask("rocket");
+        Check(enc.FirstRun && !gate.Blocked && V("gate") == "open" && V("enc").StartsWith("act1,"), "rocket on both: the Porton is open at the client too (" + V("enc") + ")");
+        yield return Until(() => !enc.ActOne, 60f);
+        yield return Wait(2.5f);
+        yield return Ask("act2");
+        Vector3 cp = ClientPos();
+        Check(!enc.ActOne && V("enc").StartsWith("act2,") && V("gate") == "shut", "act 1 over on both machines, the Porton shut at the client (" + V("enc") + ")");
+        Check(!enc.InActOneArea(cp) && I("enchits") >= 1, "the client who stayed behind was dragged through by its own herd (z " + F(cp.z) + ", hits " + V("enchits") + ")");
+        Check(V("open") == ZoneManager.Instance.OpenCount.ToString(), "same open zones on both after the start zones closed (" + V("open") + ")");
+        Cmd("shot " + ClientShot("Online_villajubilada_encierro_client.png"));
+        Tp(new Vector3(-8f, 0f, 4f));            // a doorway of the Calle Mayor
+        Move(me, new Vector3(10f, 0f, 4f));      // another one
+        yield return Until(() => !enc.Running, 150f);
+        yield return Wait(12f);
+        yield return Ask("after");
+        Check(enc.Done == 1 && V("enc") == "act2,idle,1" && V("dark") == "1", "the herd finished on both and it is night at the client (" + V("enc") + ", dark " + V("dark") + ")");
+
+        // the client lights a traca: the host charges and kills, the client sees it burn
+        var trap = Object.FindObjectsByType<TracaTrap>().OrderBy(t => (t.transform.position - new Vector3(16f, 0f, 2f)).sqrMagnitude).First();
+        for (int i = 0; i < 2; i++)
+        {
+            var e = rm.SpawnEnemy(null, (trap.From + trap.To) / 2f);
+            var ag = e != null ? e.GetComponent<UnityEngine.AI.NavMeshAgent>() : null;
+            if (ag != null && ag.isOnNavMesh) ag.Warp(Vector3.Lerp(trap.From, trap.To, 0.4f + 0.2f * i));
+        }
+        Tp(trap.InteractPoint + Vector3.forward * 0.6f);
+        yield return Wait(1.5f);
+        int pot = gm.Points;
+        Cmd("use");
+        yield return Until(() => trap.Burning, 5f);
+        yield return Wait(0.6f);
+        yield return Ask("traca");
+        Check(trap.Burning && V("tracas") == "1", "the client lights the traca: it burns on the host and at the client (" + V("tracas") + ")");
+        yield return Until(() => !trap.Burning, 10f);
+        Check(trap.Kills >= 2 && gm.Points > pot - gm.Economy.tracaCost, "the host charged " + gm.Economy.tracaCost + " and the traca's " + trap.Kills + " kills paid the pot");
+        CoopPlayTest.ShotAll("Renders/Online_villajubilada_host.png");
+        Cmd("quit");
+        yield return Wait(1f);
     }
 
     static IEnumerator VeneciaScript()

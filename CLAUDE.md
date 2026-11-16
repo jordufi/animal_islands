@@ -90,6 +90,7 @@ pause (timer 15 s, chooser frozen); online pause menu doesn't stop the world.
 | `Assets/Scenes/IslaZombie.unity` | **Isla del Faro** (build index 1) + `IslaZombie_NavMesh.asset` and `IslaZombie_NavMesh_Saltador.asset` |
 | `Assets/Scenes/BeachIsland.unity` | The original small test map, **"Original"** in the map selector (build index 3; build order follows the `Data/Maps` asset names) |
 | `Assets/Scenes/IslaFaroAlturas.unity` | **"Isla del Faro (alturas)"** (build index 2): Phase 3 copy with heights, from `Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Layout.txt` |
+| `Assets/Scenes/Villajubilada.unity` | **"Fiestas de Villajubilada"** (map 5 in the selector): a village in two acts, see its section |
 | `Assets/Scenes/Venecia.unity` | **"La Serenísima"** (map 4 in the selector): Venice + cemetery, see its section |
 | `Assets/Data/` | ScriptableObjects — **all balance numbers live here**: `Weapons/` (+ `Ukulele.asset` = `MeleeData`, `LentosPeta.asset` = wall buy), `AnselmoCagon.asset` (`TunnelData`), `Drinks/`, `Cards/`, `Animals/`, `Enemies/` (Jubilado, JubiladoChandal, AbueloCulturista, **AbueloSenderista**), `Maps/` (`MapData` for the map selector), `Economy.asset`, `Materials/` |
 | `Assets/Scripts/` | Game code (see Architecture) |
@@ -262,6 +263,8 @@ Camping→Templo 5000 (also opens Lago) · Faro↔Lago 1500 · Lago→Mercadillo
   16/519 "safe" cells (single direction), mostly dead ends (pier tip).
 
 ## How to work on this project (lessons learned)
+- **Making a new map from scratch: read `Docs/GUIA_NUEVO_MAPA.md` first** (design slots, files, step by step, every
+  test to run and when, how to make a map fun, the mistakes already made). Villajubilada is the worked example.
 - **After changing the map or `IslaZombieSetup*`:** run `IslaZombieSetup.Setup()` (idempotent: replaces the
   `IslaZombie` root, rebakes both NavMeshes, re-checks, points the menu at the scene, sets build scenes), read
   `IslaZombieSetup.LastReport`, then the play tests.
@@ -468,9 +471,67 @@ than the Isla props but not final; barrios delivered already dressed with object
     SERENÍSIMA" here.
   - Regression after these changes: `VeneciaPlayTest` 56 OK, Smoke Venecia 15, Smoke Isla 15, Online RunDirect 69 / 0
     (client rebuilt), Coop (Isla) 39 OK. `MainMenu.unity` was not modified by any of these runs. Captures `Renders/Arco_*`.
+- **Flicker fix (2026-11-16, user: "faces overlap and flicker when you move", z-fighting):** two faces in one plane.
+  Roofs: touching houses of the same height had their 25 cm eaves (`Alero`) in one plane (16 pairs) -> each eave is
+  raised 0.006 m x (house index % 25), 0 pairs now. Corners: the cornice / plinth / string course of two strips met in
+  one plane -> east / west facing strips are 1 % taller. Models (`make_venecia_props.py`): window arch / gothic top 2 cm
+  behind the frame face, sill underside below the frame's, door lunette 2.5 cm in front of the arch, balcony windows start
+  inside the slab, barred-window and cross bars of different depths, Arsenale corner merlons not doubled, balustrade
+  base / rail end inside the posts, gondola / water taxi decks, Giuseppe's ribs, parasol pole. A mesh check (same normal,
+  same plane within 1.5 mm, overlapping triangles) went from 273 to 43 pairs, and the 43 left are faces resting on or
+  inside another piece (never seen). Rule for new props: no two faces of different pieces in one plane, >= 1.5 cm apart.
+  Verified: `VeneciaPlayTest` 56 OK, Smoke Venecia 15 OK.
 - **Not done / not verified:** small bridges are still solid, no balance pass (mask chances, tide, gondola price are
   first guesses), what rewrote
   `MainMenu.unity` on 2026-11-15 is still unknown (it did not happen again in these runs).
+
+## Fiestas de Villajubilada (fourth map, files: Villajubilada) — first playable version 2026-11-16 (Fable), NOT committed
+Decided with the user (don't re-ask): an inland village during its fiestas, in **two acts**.
+- **Act 1 (sunset):** La Parada (start) + two small zones you pay for (El Bar 750, Los Corrales 750). The way out, the
+  **Portón del encierro** (`Q`), is shut. A mission item (the lighter) lies in whichever paid zone you open **second**.
+- **Round 5, fixed: the first encierro.** Rocket, the Portón opens by itself (never paid), night falls for good, the
+  Calle Mayor opens, you run up the Calle del Encierro ahead of the bulls while old ladies throw slow flowerpots from the
+  windows. The Portón shuts behind the herd: no way back, the start zones close, whoever stayed is dragged through.
+- **Act 2 (night):** a ring of 4 m streets round the Plaza Mayor (the wide one), Barrio de las Cuestas (the narrow one, two
+  levels), Calle de la Iglesia, Recinto ferial, Las Eras (boss + tractor). **Every zone has its own fuse box**: it lights that
+  zone (garlands of coloured bulbs coming on one after another, a few real lights, some ambient) and its machines only work
+  with it. Encierro every 5 rounds: only through open zones (ring closed = laps, else out and back along each open arm).
+- Bull kills pay nothing; **traca kills pay** like a normal kill. Size and first prices accepted until humans play it.
+- **Files:** layout from `Tools/Maps/make_villajubilada_layout.py` (58 x 60 cells, origin cell (28, 30), 9 zones, 9 doors, a
+  `[route]` line = the encierro in cell corners; `--check` writes nothing) -> `IslaZombieSetup.SetupVillajubilada()` (Tools >
+  Island > Setup Villajubilada). Theme `"pueblo"` in `IslaZombieSetup.Pueblo.cs`; `Urb` = Venecia or pueblo (shared facade /
+  doorway / low-cover code). Kit: 24 FBX in `Assets/Maps/Villajubilada/Models` from `Tools/Blender/make_villajubilada_props.py`
+  (it reuses the Builder of the Venice script). New layout characters: `%` traca post, `Q` Portón, `&` lighter spot, `V` the
+  cattle lorry. Zone letters must not be legend characters (`o`, `t`, `q`, `R`...): the Cuestas are `u`, Las Eras `l`.
+- **Runtime:** `Rounds/Encierro` + `EncierroData` (`Data/Encierro.asset`) + `EncierroGate`, `Combat/MacetaProjectile`,
+  `Zones/FiestaLights`, `Zones/TracaTrap` (`EconomyData.traca*`), `PowerSwitch.zone`, `BoatMission` flavor `"pueblo"`
+  (`ZoneLit / PowerOnFor(zone)`; Shovel = lighter, Giuseppe = chupinazo from the town hall balcony, Gondolier = golden
+  cabezudo), `MissionTask.SetFree`, `DayNightCycle.FallForGood / AddGlow`, `Zone.Close()`, variants `AbueloBombo`
+  (`auraRadius`: old men near him walk x1.3) and `AbuelaPetardos` (`throwCloud*`: her throw leaves a burning patch), the box is
+  "La Tómbola" here. The encierro is worked out by every machine from the round and the open zones (no message);
+  **protocol bumped to `animal-island-online-5`** (lit zones in the quest state, `NetMsg.Trap`): rebuild the online client.
+- **Second pass the same day** (user: "do everything that needs no feedback from me; sound later"): bulls with legs that
+  gallop (`VJ_Toro_Patas`, two pairs per bull) and faint dust; lit zones also light about half their house windows
+  (`FiestaLights.SetWindows`, 259 fronts) and get up to 12 small lights each (the PC renderer is Forward+); more stalls in the
+  ferial; the boss comes as the pregonero (`Boss/PregoneroLook`: red neckerchief and sash, rough); later-evening sun for act 1;
+  9 new lines in `QuickChecks`; body walks in the play test. **Online: the host now announces every encierro
+  (`NetMsg.Encierro`)** because a forced one never reached the client (found by the online test); protocol is still 5.
+- **Verified 2026-11-16 (final code, client rebuilt):** setup 0 errors (68 entrances, 998 cells, 134 m to the extraction;
+  warnings: 12 safe cells in Cuestas / Eras, 3 single-exit zones). `VillajubiladaPlayTest` **52 OK / 0** (incl. 8 walks with the
+  player's body over every ramp, the doorways and the alleys). `CoopPlayTest.RunVillajubilada()` **18 OK** (3 players: a standing
+  and a downed player left in La Parada are both dragged through, the downed one alive and revivable).
+  `OnlinePlayTest.RunDirectVillajubilada()` **16 OK** (client picks the lighter, switches a fuse box, sees the rocket, is dragged
+  by its own herd, night on the client, client lights a traca). Regression: QuickChecks 0 failures, Smoke Isla del Faro 15,
+  Smoke Venecia 15, `VeneciaPlayTest` 56, `Phase1PlayTest` 21, `BasePlayTest` 28, `FeedbackPlayTest` 26, `IslaZombiePlayTest` 13,
+  `CoopPlayTest` 39, `OnlinePlayTest.RunDirect` 69 / 0 (a first run had 1 intermittent FAIL: the dawn cooler did not refill the
+  client; fine on the rerun). Captures `Renders/Villajubilada_*.png`, `Renders/VillajubiladaTest_*.png`,
+  `Renders/Coop_villajubilada_split3.png`, `Renders/Online_villajubilada_*.png`.
+- **Not done / not verified:** audio (the user said later); humans have not played it, so the balance (bull speed 6.5 / 9,
+  damage 60, traca 750, four rounds shut in act 1) is a first guess; `RunRelay`, `RunDirectVenecia`, `RunDirectAlturas`,
+  `CoopPlayTest.RunVenecia`, Original / Alturas tests not re-run after these changes; no debug-menu entry to force an encierro;
+  the pregonero's sash barely shows; the bull's body is still one rigid piece; the online village test covers the first
+  encierro, light and traca, not the whole mission; 4 players not tried.
+  The earlier plan `Docs/VILLAJUBILADA_TRASPASO.md` describes the first design (no acts): this section wins.
 
 ## Phase 3 (heights) — DONE (2026-11-15, Opus): tooling + all zone layouts of "Isla del Faro (alturas)", not committed yet
 Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3

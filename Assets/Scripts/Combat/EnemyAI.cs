@@ -188,8 +188,45 @@ public class EnemyAI : MonoBehaviour
     {
         if (agent == null || on == wading) return;
         wading = on;
-        if (baseSpeed < 0f) baseSpeed = agent.speed;
-        agent.speed = on ? baseSpeed * factor : baseSpeed;
+        if (baseSpeed < 0f) baseSpeed = agent.speed / auraFactor;
+        agent.speed = (on ? baseSpeed * factor : baseSpeed) * auraFactor;
+    }
+
+    // ---- Villajubilada: el del bombo. While a drummer lives, the old men around him walk faster.
+    static readonly System.Collections.Generic.List<EnemyAI> drummers = new System.Collections.Generic.List<EnemyAI>();
+    float auraFactor = 1f, nextAuraCheck;
+    GameObject worn;
+    public float AuraFactor => auraFactor;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetDrummers() => drummers.Clear();
+
+    void UpdateAura()
+    {
+        if (Time.time < nextAuraCheck || agent == null) return;
+        nextAuraCheck = Time.time + 0.5f;
+        float f = 1f;
+        for (int i = drummers.Count - 1; i >= 0; i--)
+        {
+            var d = drummers[i];
+            if (d == null || d.health == null || d.health.IsDead) { drummers.RemoveAt(i); continue; }
+            if (d == this || d.Variant == null) continue;
+            if ((d.transform.position - transform.position).sqrMagnitude <= d.Variant.auraRadius * d.Variant.auraRadius) f = Mathf.Max(f, d.Variant.auraSpeedFactor);
+        }
+        if (Mathf.Approximately(f, auraFactor)) return;
+        agent.speed = agent.speed / auraFactor * f;
+        auraFactor = f;
+        if (animator != null) animator.SetFloat(WalkSpeedHash, agent.speed / walkClipSpeed);
+    }
+
+    void WearProp(GameObject prefab)
+    {
+        if (worn != null) Destroy(worn);
+        if (prefab == null) return;
+        Transform bone = spine != null ? spine : transform;
+        float k = transform.lossyScale.y;
+        worn = Instantiate(prefab, bone.position + transform.forward * 0.45f * k + Vector3.down * 0.05f * k, transform.rotation, bone);
+        foreach (var c in worn.GetComponentsInChildren<Collider>()) Destroy(c);
     }
 
 
@@ -200,6 +237,8 @@ public class EnemyAI : MonoBehaviour
         health.Init(maxHealth);
         if (variant == null) return;
         if (variant.maskHits > 0) { health.SetMask(variant.maskHits, variant.maskShare); WearMask(variant.maskPrefab); }
+        if (variant.wornPrefab != null) WearProp(variant.wornPrefab);
+        if (variant.auraRadius > 0f && !drummers.Contains(this)) drummers.Add(this);
         health.PointsMultiplier = variant.pointsMultiplier;
         damage = variant.damage;
         agent.speed = variant.moveSpeed * RunModifiers.Get(Stat.EnemySpeed);
@@ -303,6 +342,7 @@ public class EnemyAI : MonoBehaviour
     void Update()
     {
         if (health.IsDead || emerging || IsPuppet) return;
+        UpdateAura();
         if (onLink) return;
         if (agent.enabled && agent.isOnOffMeshLink) { StartCoroutine(TraverseLink()); return; }
         if (Variant != null && Variant.jumper) UpdateHop();
@@ -632,6 +672,7 @@ public class EnemyAI : MonoBehaviour
 
     void OnDied(EnemyHealth _, DamageInfo __)
     {
+        drummers.Remove(this);
         if (Variant != null && Variant.deathCloudRadius > 0f) GasCloud.Spawn(transform.position, Variant.deathCloudRadius, Variant.deathCloudSeconds, Variant.deathCloudDps);
         StopAllCoroutines();
         attacking = false;

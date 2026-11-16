@@ -34,7 +34,7 @@ public static partial class IslaZombieSetup
         {
             case 'W': return 7;                                    // bus del Imserso
             case 'h': return 6;                                    // beach hut / tiki bar
-            case 'o': return Ven ? (zone == 'n' || zone == 'i' ? 5 : 1) : zone == 'k' || zone == 'm' || zone == 'd' ? 5 : zone == 'f' ? 3 : 1;   // tent / stall / container, faro rocks
+            case 'o': return Urb ? (zone == 'n' || zone == 'i' ? 5 : 1) : zone == 'k' || zone == 'm' || zone == 'd' ? 5 : zone == 'f' ? 3 : 1;   // tent / stall / container, faro rocks
             case '#': return 4;
             case 'R': case 'Z': return 3;
             case '.': return 2;
@@ -63,8 +63,8 @@ public static partial class IslaZombieSetup
                 }
                 if (best == null) { plain++; report.Add($"WARNING spawn at cell ({c},{r}) has nothing solid next to it: plain spawn point (no entrance)"); continue; }
                 plans.Add(best);
-                if (best.kind == '#' && !Ven) L.cabins.Add(best.n);
-                if (Ven) venDoorFaces.Add((best.n, best.cell - best.n));   // no facade strip over the doorway
+                if (best.kind == '#' && !Urb) L.cabins.Add(best.n);
+                if (Urb) venDoorFaces.Add((best.n, best.cell - best.n));   // no facade strip over the doorway
             }
         report.Add($"OK  {plans.Count} spawn entrances: " + string.Join(", ", plans.GroupBy(p => KindName(p)).Select(g => g.Key + " " + g.Count())) + (plain > 0 ? $" ({plain} plain spawn points)" : ""));
         return plans;
@@ -106,7 +106,7 @@ public static partial class IslaZombieSetup
     {
         var cabinRoot = Child(root, "Cabinas", Vector3.zero).transform;
         // every cabin is built once, with a doorway on each face that has an entrance
-        foreach (var g in plans.Where(p => p.kind == '#' && !Ven).GroupBy(p => p.n))
+        foreach (var g in plans.Where(p => p.kind == '#' && !Urb).GroupBy(p => p.n))
             BuildCabin(cabinRoot, World(g.Key.x, g.Key.y), g.First().zone, g.Select(p => Flat(World(p.cell.x, p.cell.y) - World(p.n.x, p.n.y))).Select(v => v.normalized).ToList());
         var black = M("Oscuridad", new Color(0.02f, 0.02f, 0.025f));
         var rock = Shared("M_Rock", new Color(0.45f, 0.41f, 0.37f));
@@ -131,7 +131,7 @@ public static partial class IslaZombieSetup
             float barrierHeight = 0.6f, walkTime = 0.45f, climbTime = 0.55f;
             SpawnEntrance.Kind kind;
 
-            switch (Ven && pl.kind == '#' ? 'Z' : pl.kind)   // Venice: a dark doorway in the facade instead of a cabin
+            switch (Urb && pl.kind == '#' ? 'Z' : pl.kind)   // Venice: a dark doorway in the facade instead of a cabin
             {
                 case '#':
                 {
@@ -161,7 +161,7 @@ public static partial class IslaZombieSetup
                 {
                     // comes out of the rock face, then climbs the rubble (~0.9 s in sight)
                     kind = SpawnEntrance.Kind.Grieta;
-                    var frame = Ven ? M("VN_Istria", new Color(0.9f, 0.88f, 0.82f)) : pl.kind == 'Z' ? temple : rock;
+                    var frame = Urb ? M("VN_Istria", new Color(0.9f, 0.88f, 0.82f)) : pl.kind == 'Z' ? temple : rock;
                     inside = Child(t, "Inside", B + d * 0.35f).transform;
                     barrier = Child(t, "Barrier", B - d * 0.2f).transform;
                     barrierHeight = 0.45f; walkTime = 0.5f; climbTime = 0.7f;
@@ -169,7 +169,7 @@ public static partial class IslaZombieSetup
                     foreach (float side in new[] { -1f, 1f })
                         TexBox(t, "Marco", B + right * side * 0.72f - d * 0.08f, new Vector3(0.32f, 2.2f, 0.18f), frame, frame, 0f, false);
                     TexBox(t, "Dintel", B - d * 0.08f, new Vector3(1.8f, 0.35f, 0.2f), frame, frame, 1.95f, false);
-                    if (Ven)   // B5: a Venetian doorway: flood board (paratia) to climb over and a metal shutter half up, in the spawn colour
+                    if (Urb)   // B5: a Venetian doorway: flood board (paratia) to climb over and a metal shutter half up, in the spawn colour
                     {
                         Box(t, "Paratia", B - d * 0.2f, new Vector3(1.12f, 0.45f, 0.06f), paint, 0f, false);
                         foreach (float side in new[] { -1f, 1f }) Box(t, "Guia", B - d * 0.2f + right * side * 0.58f, new Vector3(0.06f, 0.55f, 0.1f), inox, 0f, false);

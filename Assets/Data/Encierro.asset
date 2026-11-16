@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae652ad3455eb5940b04fd3d9fa2ace5, type: 3}
+  m_Name: Encierro
+  m_EditorClassIdentifier: Assembly-CSharp::EncierroData
+  every: 5
+  laps: 3
+  partialPasses: 2
+  bulls: 6
+  speed: 9
+  firstRunSpeed: 6.5
+  warning: 6
+  playerDamage: 60
+  playerImmunity: 1
+  hitRadius: 1.1
+  gateCloseDelay: 1.5
+  nightFall: 10
+  throwRange: 12
+  throwInterval: 2.4
+  throwSpeed: 6
+  throwDamage: 15
+  throwRadius: 1.1

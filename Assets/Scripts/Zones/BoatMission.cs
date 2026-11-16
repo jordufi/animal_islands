@@ -32,6 +32,23 @@ public class BoatMission : MonoBehaviour
     public bool Gondolier { get; private set; }
     public int GondolierSpot { get; private set; } = -1;   // which of the possible spots has him (host picks, B2)
     public bool DebugSkipped { get; private set; }
+
+    // ---- Villajubilada: the same task list with other words (flavor "pueblo": Shovel = the lighter, Giuseppe = the
+    // chupinazo, Gondolier = the golden cabezudo) and one fuse box per zone instead of a single switch.
+    [SerializeField] string flavor = "";
+    public bool Pueblo => flavor == "pueblo";
+    PowerSwitch[] zoneSwitches = new PowerSwitch[0];   // sorted by zone name: the same order on every machine
+    int litMask;
+    public bool HasZonePower => zoneSwitches.Length > 0;
+    public bool ZoneLit(Zone z)
+    {
+        for (int i = 0; i < zoneSwitches.Length; i++) if (zoneSwitches[i].Zone == z) return (litMask & (1 << i)) != 0;
+        return Power;
+    }
+    public int LitZones { get { int n = 0; for (int i = 0; i < zoneSwitches.Length; i++) if (zoneSwitches[i].Counts && (litMask & (1 << i)) != 0) n++; return n; } }
+    public int ZonesToLight { get { int n = 0; foreach (var s in zoneSwitches) if (s.Counts) n++; return n; } }
+    // May the machines of this zone be used? (null zone, or a map with a single switch = the old rule)
+    public static bool PowerOnFor(Zone z) => Instance == null || z == null || !Instance.HasZonePower ? PowerOn : Instance.ZoneLit(z);
     public bool DiscsDone => EasterEgg.Instance != null && EasterEgg.Instance.Completed;
     public bool KeyDone => MasterKey.Instance != null && (MasterKey.Instance.Holder != null || MasterKey.Instance.Used);
     // The last door also wants the key (not after the debug skip).
@@ -40,6 +57,15 @@ public class BoatMission : MonoBehaviour
     public System.Collections.Generic.List<(string text, bool done)> TaskList()
     {
         var egg = EasterEgg.Instance;
+        if (Pueblo)
+            return new System.Collections.Generic.List<(string, bool)>
+            {
+                ("Discos de Julio al karaoke del templete" + (egg != null && !egg.Completed ? " (" + Mathf.Min(egg.DiscsFound, egg.DiscsNeeded) + "/" + egg.DiscsNeeded + ")" : ""), DiscsDone),
+                ("Encender todo el pueblo" + (Power ? "" : " (" + LitZones + "/" + ZonesToLight + ")"), Power),
+                ("Encontrar al cabezudo de oro", Gondolier),
+                (Shovel ? "Tirar el chupinazo desde el ayuntamiento (tienes el mechero)" : "Tirar el chupinazo (falta el mechero)", Giuseppe),
+                ("Encontrar la llave del tractor", KeyDone),
+            };
         return new System.Collections.Generic.List<(string, bool)>
         {
             ("Discos de Julio al karaoke" + (egg != null && !egg.Completed ? " (" + Mathf.Min(egg.DiscsFound, egg.DiscsNeeded) + "/" + egg.DiscsNeeded + ")" : ""), DiscsDone),
@@ -55,7 +81,7 @@ public class BoatMission : MonoBehaviour
         if (!Net.Authority || Shovel) return;
         Shovel = true;
         RunLog.Note("PALA");
-        Game.ShowMessage("¡Tenéis la PALA! Hay alguien esperando bajo tierra en el Cimitero");
+        Game.ShowMessage(Pueblo ? "¡Tenéis el MECHERO! El chupinazo se tira desde el balcón del ayuntamiento" : "¡Tenéis la PALA! Hay alguien esperando bajo tierra en el Cimitero");
         Notify();
     }
 
@@ -64,7 +90,7 @@ public class BoatMission : MonoBehaviour
         if (!Net.Authority || Giuseppe || !Shovel) return;
         Giuseppe = true;
         RunLog.Note("GIUSEPPE");
-        Game.ShowMessage("¡GIUSEPPE desenterrado! Llevaba cuarenta años esperando el vaporetto");
+        Game.ShowMessage(Pueblo ? "¡CHUPINAZO! ¡Viva Villajubilada! El del tractor lo ha oído seguro" : "¡GIUSEPPE desenterrado! Llevaba cuarenta años esperando el vaporetto");
         Notify();
     }
 
@@ -73,7 +99,7 @@ public class BoatMission : MonoBehaviour
         if (!Net.Authority || Gondolier) return;
         Gondolier = true;
         RunLog.Note("GONDOLERO");
-        Game.ShowMessage("¡El GONDOLERO DE ORO! Dice que él avisa al vaporetto, que hagáis lo demás");
+        Game.ShowMessage(Pueblo ? "¡El CABEZUDO DE ORO! Dice que él avisa al del tractor, que hagáis lo demás" : "¡El GONDOLERO DE ORO! Dice que él avisa al vaporetto, que hagáis lo demás");
         Notify();
     }
 
@@ -84,7 +110,7 @@ public class BoatMission : MonoBehaviour
         RunLog.Note("TAREAS COMPLETAS");
         var rm = RoundManager.Instance;
         DefenseUntilRound = Mathf.Max(1, (rm != null ? rm.Round : 0) + DefenseRounds);
-        Game.ShowMessage("¡Todo listo! El vaporetto viene de camino: aguantad hasta el final de la ronda " + DefenseUntilRound);
+        Game.ShowMessage("¡Todo listo! " + (Pueblo ? "El tractor" : "El vaporetto") + " viene de camino: aguantad hasta el final de la ronda " + DefenseUntilRound);
         Notify();
     }
 
@@ -97,6 +123,10 @@ public class BoatMission : MonoBehaviour
     {
         Instance = this;
         HasSwitch = FindAnyObjectByType<PowerSwitch>() != null;
+        var zoned = new System.Collections.Generic.List<PowerSwitch>();
+        foreach (var s in FindObjectsByType<PowerSwitch>()) if (s.Zone != null) zoned.Add(s);
+        zoned.Sort((a, b) => string.CompareOrdinal(a.Zone.name, b.Zone.name));
+        zoneSwitches = zoned.ToArray();
         HasTasks = FindAnyObjectByType<MissionTask>() != null;
         HasMission = HasTasks || FindAnyObjectByType<CallStation>() != null;
     }
@@ -119,9 +149,22 @@ public class BoatMission : MonoBehaviour
     int DefenseRounds => Game != null && Game.Economy != null ? Mathf.Max(1, Game.Economy.missionDefenseRounds) : 1;
 
     // ---------------------------------------------------------------- steps (offline / host)
-    public void TurnPowerOn()
+    public void TurnPowerOn(Zone zone = null)
     {
-        if (!Net.Authority || Power) return;
+        if (!Net.Authority) return;
+        if (zone != null && HasZonePower)   // one zone: its lights and machines; the whole village lit = the task
+        {
+            int i = System.Array.FindIndex(zoneSwitches, s => s.Zone == zone);
+            if (i < 0 || (litMask & (1 << i)) != 0) return;
+            litMask |= 1 << i;
+            RunLog.Note("LUZ " + zone.displayName);
+            bool all = LitZones >= ZonesToLight;
+            if (all && !Power) { Power = true; RunLog.Note("LUZ"); }
+            Game.ShowMessage(all && zoneSwitches[i].Counts ? "¡TODO EL PUEBLO ENCENDIDO! Que empiecen las fiestas" : "¡Luces en " + zone.displayName + "! Sus máquinas ya funcionan");
+            Notify();
+            return;
+        }
+        if (Power) return;
         Power = true;
         RunLog.Note("LUZ");
         Game.ShowMessage(HasTasks ? "¡DONG! Suenan las campanas: hay luz, las bebidas y el Microondas ya funcionan" : "¡HAY LUZ! Las bebidas y el Microondas ya funcionan");
@@ -181,7 +224,7 @@ public class BoatMission : MonoBehaviour
     {
         Complete = true;
         RunLog.Note("BARCO");
-        Game.ShowMessage(HasTasks ? "¡EL VAPORETTO HA LLEGADO! Abrid la puerta con la llave... si Don Anselmo os deja" : "¡EL BARCO ESTÁ EN EL MUELLE! Abrid el muelle... si Don Anselmo os deja");
+        Game.ShowMessage(Pueblo ? "¡EL TRACTOR ESTÁ EN LAS ERAS! Abrid la barricada con la llave... si Don Anselmo os deja" : HasTasks ? "¡EL VAPORETTO HA LLEGADO! Abrid la puerta con la llave... si Don Anselmo os deja" : "¡EL BARCO ESTÁ EN EL MUELLE! Abrid el muelle... si Don Anselmo os deja");
         Notify();
     }
 
@@ -190,6 +233,7 @@ public class BoatMission : MonoBehaviour
     {
         if (!Net.Authority) return;
         Power = Gas = Radio = Called = true;
+        litMask = (1 << zoneSwitches.Length) - 1;
         Shovel = Giuseppe = Gondolier = DebugSkipped = true;
         if (!Complete) Finish(); else Notify();
     }
@@ -201,29 +245,32 @@ public class BoatMission : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- online
-    public void WriteNet(NetBuf b) => b.Bool(Power).Bool(Gas).Bool(Radio).Bool(Called).Bool(Complete).Int(DefenseUntilRound).Bool(Shovel).Bool(Giuseppe).Bool(Gondolier).Bool(DebugSkipped).Byte((byte)(GondolierSpot + 1));
+    public void WriteNet(NetBuf b) => b.Bool(Power).Bool(Gas).Bool(Radio).Bool(Called).Bool(Complete).Int(DefenseUntilRound).Bool(Shovel).Bool(Giuseppe).Bool(Gondolier).Bool(DebugSkipped).Byte((byte)(GondolierSpot + 1)).Int(litMask);
 
     public void ReadNet(NetRead r)
     {
         Power = r.Bool(); Gas = r.Bool(); Radio = r.Bool(); Called = r.Bool(); Complete = r.Bool(); DefenseUntilRound = r.Int();
         Shovel = r.Bool(); Giuseppe = r.Bool(); Gondolier = r.Bool(); DebugSkipped = r.Bool();
         GondolierSpot = r.Byte() - 1;
+        litMask = r.Int();
         Changed?.Invoke();
     }
 
     // ---------------------------------------------------------------- HUD
     public string Objective()
     {
-        if (Game != null && Game.BossDefeated) return "Sube al barco al final del muelle";
+        if (Game != null && Game.BossDefeated) return Pueblo ? "Sube al remolque del tractor" : "Sube al barco al final del muelle";
         if (!HasMission) return HasSwitch && !Power ? "Da la luz" : "";
         if (HasTasks)
         {
-            if (Complete) return BossEncounter.Instance != null && BossEncounter.Instance.Boss != null ? "Acaba con Don Anselmo" : DoorNeedsKey ? "Abre la puerta del vaporetto con la llave" : "Abre la puerta del vaporetto";
+            if (Complete) return BossEncounter.Instance != null && BossEncounter.Instance.Boss != null ? "Acaba con Don Anselmo"
+                : Pueblo ? (DoorNeedsKey ? "Abre la barricada de Las Eras con la llave" : "Abre la barricada de Las Eras")
+                : DoorNeedsKey ? "Abre la puerta del vaporetto con la llave" : "Abre la puerta del vaporetto";
             if (Called) return "Aguanta hasta el final de la ronda " + DefenseUntilRound;
             var list = TaskList();
             int done = 0;
             foreach (var t in list) if (t.done) done++;
-            return "Tareas del vaporetto " + done + "/" + list.Count;
+            return (Pueblo ? "Tareas del pregón " : "Tareas del vaporetto ") + done + "/" + list.Count;
         }
         if (Complete) return BossEncounter.Instance != null && BossEncounter.Instance.Boss != null ? "Acaba con Don Anselmo" : "Abre el muelle";
         if (Called) return "Aguanta hasta el final de la ronda " + DefenseUntilRound;

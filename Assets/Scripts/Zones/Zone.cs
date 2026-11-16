@@ -16,6 +16,7 @@ public class Zone : MonoBehaviour
     void Awake() => IsOpen = openAtStart;
 
     public void Open() => IsOpen = true;
+    public void Close() => IsOpen = false;   // Villajubilada: the start zones are lost after the first encierro
 
     IEnumerable<Transform> Children(string group)
     {

@@ -31,4 +31,5 @@ public enum NetMsg : byte
     DoorOpened, BoxState, KeyState, DiscPicked, KaraokeState, CarryState,
     PowerUpSpawn, PowerUpTaken, CardOffer, CardSelect, CardPick, CardChosen, BossDefeated, WorldInit,
     Quest, Buffs,   // boat mission + light; timed power-ups
+    Trap, Encierro, // Villajubilada: a traca was lit; an encierro starts
 }

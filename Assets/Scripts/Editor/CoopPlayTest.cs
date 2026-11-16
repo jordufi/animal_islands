@@ -32,6 +32,9 @@ public static class CoopPlayTest
     [MenuItem("Tools/Island/Play Test Coop (La Serenisima)")]
     public static void RunVenecia() { mapId = "la-serenisima"; Start(); }
 
+    [MenuItem("Tools/Island/Play Test Coop (Villajubilada)")]
+    public static void RunVillajubilada() { mapId = "villajubilada"; Start(); }
+
     [MenuItem("Tools/Island/Play Test Coop")]
     public static void Run() { mapId = "isla-del-faro"; Start(); }
 
@@ -247,6 +250,39 @@ public static class CoopPlayTest
                     "J2 lands at the next stop (" + Vector3.Distance(j2.transform.position, dest).ToString("F1") + " m) and can move again");
                 ShotAll("Renders/Coop_venecia_split3.png");
             }
+        }
+
+        // ---------------------------------------------------------- 2c. Villajubilada: the first encierro with three players
+        if (mapId == "villajubilada")
+        {
+            var enc = Encierro.Instance;
+            var gate = Object.FindAnyObjectByType<EncierroGate>();
+            if (enc == null || gate == null) { Write("FAIL no Encierro in the scene"); yield break; }
+            players[0].GodMode = true; players[1].GodMode = true;
+            Teleport(players[0], enc.PastTheGate + Vector3.forward * 8f);   // J1 already up the street (through the shut Porton: test only)
+            Teleport(players[1], players[1].transform.position);            // J2 stays in La Parada, standing
+            players[2].GodMode = false;
+            players[2].TakeDamage(99999);                                    // J3 goes down in La Parada
+            yield return WaitGame(0.5f);
+            Check(players[2].InLastStand && enc.InActOneArea(players[2].transform.position) && enc.InActOneArea(players[1].transform.position), "J2 standing and J3 downed in La Parada, J1 up the street");
+            enc.DebugStartNow();
+            float tv = Time.realtimeSinceStartup;
+            while (enc.ActOne && Time.realtimeSinceStartup - tv < 60f) yield return null;
+            yield return WaitGame(0.3f);
+            Check(!enc.ActOne && gate.Blocked, "split-screen: the herd went through and the Porton shut");
+            Check(players.All(p => !enc.InActOneArea(p.transform.position)), "nobody is left behind the Porton: J2 and the downed J3 were dragged through");
+            Check(players[2].InLastStand && !players[2].IsDead, "J3 is still downed (not killed by the drag) and can be revived on this side");
+            ShotAll("Renders/Coop_villajubilada_split3.png");
+            players[2].GodMode = true;
+            players[2].Revive();
+            tv = Time.realtimeSinceStartup;
+            while (players[2].IsDowned && Time.realtimeSinceStartup - tv < 6f) yield return null;   // he takes a moment to get up
+            Check(!players[2].IsDowned, "J3 revived past the Porton");
+            foreach (var p in players) { p.GodMode = true; Teleport(p, new Vector3(-8f, 0.1f, 4f)); }   // a doorway of the Calle Mayor
+            tv = Time.realtimeSinceStartup;
+            while (enc.Running && Time.realtimeSinceStartup - tv < 120f) yield return null;
+            Check(!enc.Running && enc.Done == 1, "the encierro ended with three players");
+            yield break;
         }
 
         // ---------------------------------------------------------- 3. shared pot + the opener chooses the card (game paused)

@@ -136,19 +136,20 @@ def window(b, x, z, w, h, arch="round", shutter="VN_Shutter", open_shutters=True
     """Window with stone frame at wall y = 0; (x, z) = centre of the sill."""
     b.box((w + 0.24, 0.1, h + 0.2), (x, -0.05, z + h / 2), "VN_Istria")           # frame
     b.box((w, 0.06, h), (x, -0.1, z + h / 2), "VN_Glass")
-    b.box((w + 0.4, 0.22, 0.1), (x, -0.11, z - 0.05), "VN_Istria")                # sill
+    # no two faces in one plane (they flicker when the camera moves): every piece is >= 1.5 cm off its neighbours
+    b.box((w + 0.4, 0.22, 0.13), (x, -0.11, z - 0.065), "VN_Istria")              # sill (its underside below the frame's)
     if arch == "round":
-        b.half_disc(w / 2 + 0.12, 0.1, (x, -0.05, z + h), "VN_Istria")
+        b.half_disc(w / 2 + 0.12, 0.08, (x, -0.04, z + h), "VN_Istria")           # 2 cm behind the frame's face
         b.half_disc(w / 2, 0.1, (x, -0.08, z + h), "VN_Glass")
     elif arch == "gothic":
-        b.box((w * 0.75 + 0.2, 0.1, w * 0.75 + 0.2), (x, -0.05, z + h), "VN_Istria", rot=[('Y', 45)])
-        b.box((w * 0.72, 0.14, w * 0.72), (x, -0.06, z + h), "VN_Glass", rot=[('Y', 45)])
-    b.box((0.05, 0.08, h), (x, -0.14, z + h / 2), "VN_Istria")                    # mullion
+        b.box((w * 0.75 + 0.2, 0.08, w * 0.75 + 0.2), (x, -0.04, z + h), "VN_Istria", rot=[('Y', 45)])
+        b.box((w * 0.72, 0.1, w * 0.72), (x, -0.06, z + h), "VN_Glass", rot=[('Y', 45)])   # 2 cm behind the glass
+    b.box((0.05, 0.08, h - 0.03), (x, -0.14, z + h / 2 - 0.015), "VN_Istria")      # mullion
     if shutter:
         sw = w / 2 + 0.02
         for s in (-1, 1):
-            if open_shutters: b.box((sw, 0.05, h), (x + s * (w / 2 + sw / 2 + 0.12), -0.07, z + h / 2), shutter)
-            else: b.box((sw, 0.05, h), (x + s * sw / 2, -0.17, z + h / 2), shutter)
+            if open_shutters: b.box((sw, 0.05, h - 0.04), (x + s * (w / 2 + sw / 2 + 0.12), -0.07, z + h / 2), shutter)
+            else: b.box((sw, 0.05, h - 0.04), (x + s * sw / 2, -0.2, z + h / 2), shutter)
 
 def facade_base(b):
     b.box((2.0, 0.12, 0.45), (0, -0.06, 0.225), "VN_Istria")                      # stone plinth
@@ -163,7 +164,7 @@ def fachada_a():   # door + two floors of arched windows with green shutters
     b.half_disc(0.6, 0.14, (0, -0.07, 2.2), "VN_Istria")
     b.box((0.94, 0.1, 2.2), (0, -0.13, 1.1), "M_Wood")
     b.box((1.02, 0.18, 0.1), (0, -0.14, 2.25), "VN_Istria")                       # stone transom
-    b.half_disc(0.45, 0.08, (0, -0.11, 2.3), "VN_Dark")                           # lunette, 2 cm behind the frame
+    b.half_disc(0.45, 0.08, (0, -0.125, 2.3), "VN_Dark")                          # lunette: its face 2.5 cm in front of the frame arch
     b.ball(0.05, (0.3, -0.2, 1.05), "VN_Gold")
     b.box((1.5, 0.4, 0.14), (0, -0.2, 0.07), "VN_Istria")                         # step
     window(b, 0, FLOOR[1] + 0.3, 0.8, 1.3)
@@ -185,7 +186,7 @@ def fachada_b():   # shop with awning, balcony with two tall windows, square win
     for s in (-1, 1):
         b.box((0.07, 0.07, 0.86), (s * 0.92, -0.55, FLOOR[1] + 0.5), "VN_Istria")
         b.box((0.07, 0.5, 0.08), (s * 0.92, -0.3, FLOOR[1] + 0.88), "VN_Istria")
-        window(b, s * 0.45, FLOOR[1] + 0.1, 0.55, 1.7, shutter=None)
+        window(b, s * 0.45, FLOOR[1] + 0.16, 0.55, 1.7, shutter=None)            # frame and sill start inside the slab
     for s in (-1, 1): window(b, s * 0.45, FLOOR[2] + 0.45, 0.55, 0.9, arch="none", shutter="VN_ShutterBrown", open_shutters=False)
     return b.build()
 
@@ -195,7 +196,7 @@ def fachada_c():   # barred low window, gothic window with white trim, round ocu
     b.box((0.9, 0.1, 0.9), (0, -0.05, 1.5), "VN_Istria")
     b.box((0.74, 0.06, 0.74), (0, -0.09, 1.5), "VN_Dark")
     for i in range(4): b.box((0.035, 0.035, 0.8), (-0.27 + i * 0.18, -0.13, 1.5), "M_Iron")
-    for i in range(2): b.box((0.8, 0.035, 0.035), (0, -0.13, 1.3 + i * 0.4), "M_Iron")
+    for i in range(2): b.box((0.8, 0.05, 0.035), (0, -0.13, 1.3 + i * 0.4), "M_Iron")
     window(b, 0, FLOOR[1] + 0.25, 0.9, 1.4, arch="gothic", shutter=None)
     for s in (-1, 1): b.cyl(0.07, 0.07, 1.5, (s * 0.6, -0.12, FLOOR[1] + 0.95), "VN_Istria", seg=6)
     b.disc(0.42, 0.1, (0, -0.05, FLOOR[2] + 1.0), "VN_Istria")
@@ -234,7 +235,7 @@ def frente_templo():   # 4 m wide classical front for the mausoleums: columns, p
     b.box((1.0, 0.1, 2.7), (0, -0.1, 1.65), "VN_Bronze")
     b.box((0.04, 0.12, 2.7), (0, -0.12, 1.65), "VN_Dark")
     b.box((0.1, 0.1, 0.9), (0, -0.3, 6.2), "VN_Marble")                            # cross
-    b.box((0.5, 0.1, 0.1), (0, -0.3, 6.35), "VN_Marble")
+    b.box((0.5, 0.13, 0.1), (0, -0.3, 6.35), "VN_Marble")
     return b.build()
 
 # ================================================================== rooftops
@@ -257,7 +258,7 @@ def cupula():   # green copper dome with lantern, 4 m across (on top of a mausol
     b.cyl(0.55, 0.0, 0.7, (0, 0, 4.4), "VN_Copper", seg=8)
     b.ball(0.12, (0, 0, 4.85), "VN_Gold")
     b.box((0.06, 0.06, 0.6), (0, 0, 5.2), "VN_Gold")
-    b.box((0.36, 0.06, 0.06), (0, 0, 5.3), "VN_Gold")
+    b.box((0.36, 0.08, 0.06), (0, 0, 5.3), "VN_Gold")
     return b.build()
 
 def campanile_top():   # belfry + spire for the 6 x 6 m brick shaft; its 0.5 m floor slab is sunk into the shaft top
@@ -284,9 +285,10 @@ def almenas():   # crenellated crown for the 4 x 4 m Arsenale gate towers
         t = -1.9 + i * 0.95
         for s in (-1, 1):
             b.box((0.5, 0.4, 0.9), (t, s * 2.0, 0.95), "VN_Brick")
-            b.box((0.4, 0.5, 0.9), (s * 2.0, t, 0.95), "VN_Brick")
             b.box((0.6, 0.5, 0.12), (t, s * 2.0, 1.46), "VN_Istria")
-            b.box((0.5, 0.6, 0.12), (s * 2.0, t, 1.46), "VN_Istria")
+            if 0 < i < 4:   # the corner merlons are already there (two in one place flickered)
+                b.box((0.4, 0.5, 0.9), (s * 2.0, t, 0.95), "VN_Brick")
+                b.box((0.5, 0.6, 0.12), (s * 2.0, t, 1.46), "VN_Istria")
     b.cyl(0.05, 0.05, 2.6, (0, 0, 1.8), "M_Iron", seg=6)
     b.box((1.1, 0.04, 0.7), (0.58, 0, 2.7), "VN_Red")                              # flag
     return b.build()
@@ -294,11 +296,11 @@ def almenas():   # crenellated crown for the 4 x 4 m Arsenale gate towers
 # ================================================================== street furniture
 def balaustrada():   # 2 m of bridge / quay balustrade, 0.95 m tall, along X
     b = Builder("VN_Balaustrada")
-    b.box((2.0, 0.3, 0.16), (0, 0, 0.08), "VN_Istria")
+    b.box((1.96, 0.3, 0.16), (0, 0, 0.08), "VN_Istria")                          # base and rail end inside the posts
     for i in range(7): b.cyl(0.075, 0.05, 0.62, (-0.75 + i * 0.25, 0, 0.47), "VN_Istria", seg=6)
     for i in range(7): b.ball(0.085, (-0.75 + i * 0.25, 0, 0.36), "VN_Istria", seg=6)
-    b.box((2.0, 0.26, 0.14), (0, 0, 0.86), "VN_Istria")
-    for s in (-1, 1): b.box((0.2, 0.3, 0.95), (s * 0.9, 0, 0.475), "VN_Istria")
+    b.box((1.96, 0.26, 0.14), (0, 0, 0.86), "VN_Istria")
+    for s in (-1, 1): b.box((0.2, 0.33, 0.95), (s * 0.9, 0, 0.475), "VN_Istria")   # posts 1.5 cm proud of the base
     return b.build()
 
 def farola():   # three-armed street lamp with pink glass, 3.4 m
@@ -331,7 +333,7 @@ def gondola():   # 9 m gondola, origin at the waterline, bow towards -Y
         w = 1.3 * math.sin(math.pi * (0.08 + 0.84 * t)) ** 0.7
         lift = 0.9 * abs(t - 0.5) ** 2.2 * 4
         b.box((w, 8.4 / n + 0.02, 0.5), (0, y, 0.12 + lift), "VN_Black")
-        if 0.12 < t < 0.88: b.box((w * 0.82, 8.4 / n + 0.02, 0.06), (0, y, 0.36 + lift), "M_Wood")
+        if 0.12 < t < 0.88: b.box((w * 0.82, 8.4 / n, 0.06), (0, y, 0.36 + lift), "M_Wood")   # its ends inside the hull piece's
     b.box((0.06, 0.5, 1.0), (0, -4.45, 1.15), "M_Iron", rot=[('X', -12)])           # ferro
     for i in range(5): b.box((0.07, 0.22, 0.07), (0, -4.62, 0.95 + i * 0.13), "M_Iron")
     b.box((0.06, 0.3, 0.6), (0, 4.4, 1.2), "M_Iron", rot=[('X', 20)])
@@ -346,12 +348,12 @@ def lancha():   # water taxi, 6.5 m, origin at the waterline
     b = Builder("VN_Lancha")
     b.box((1.9, 5.0, 0.8), (0, 0.4, 0.15), "VN_White")
     b.box((1.35, 1.6, 0.8), (0, -2.5, 0.2), "VN_White", rot=[('Z', 45)])
-    b.box((1.92, 5.0, 0.12), (0, 0.4, 0.5), "M_Wood")
+    b.box((1.92, 5.04, 0.12), (0, 0.4, 0.5), "M_Wood")
     b.box((1.6, 2.4, 0.75), (0, 1.0, 0.9), "M_Wood")
     b.box((1.62, 2.0, 0.35), (0, 1.0, 1.0), "VN_Glass")
     b.box((1.7, 2.6, 0.08), (0, 1.0, 1.3), "VN_White")
     b.box((1.4, 0.08, 0.5), (0, -0.9, 0.85), "VN_Glass", rot=[('X', -25)])
-    b.box((0.5, 0.4, 0.5), (0, 3.0, 0.3), "VN_Dark")
+    b.box((0.5, 0.4, 0.46), (0, 3.0, 0.28), "VN_Dark")
     return b.build()
 
 def pozzo():   # wellhead on two octagonal steps (vera da pozzo)
@@ -399,7 +401,7 @@ def mesa():   # cafe table, two chairs and a closed parasol
         b.box((0.05, 0.42, 0.5), (s * 0.92, 0, 0.72), "M_Wood")
         for dx in (-0.17, 0.17):
             for dy in (-0.17, 0.17): b.box((0.04, 0.04, 0.45), (s * 0.72 + dx, dy, 0.225), "M_Iron")
-    b.cyl(0.03, 0.03, 2.3, (0, 0.62, 1.15), "M_Wood", seg=6)
+    b.cyl(0.03, 0.03, 2.25, (0, 0.62, 1.125), "M_Wood", seg=6)                     # ends inside the parasol
     b.cyl(0.05, 0.16, 1.2, (0, 0.62, 1.7), "VN_AwningPaint", seg=8)
     b.cyl(0.06, 0.04, 0.2, (0.12, -0.1, 0.87), "VN_Glass", seg=6)                   # spritz
     return b.build()
@@ -442,7 +444,7 @@ def tumba_a():   # slab + low headstone with a cross: low cover you can jump (0.
     b.box((0.95, 0.2, 0.35), (0, 0.82, 0.575), "VN_Marble")
     b.half_disc(0.15, 0.2, (0, 0.82, 0.75), "VN_Marble", seg=8)
     b.box((0.06, 0.05, 0.26), (0, 0.7, 0.62), "VN_Bronze")
-    b.box((0.2, 0.05, 0.06), (0, 0.7, 0.68), "VN_Bronze")
+    b.box((0.2, 0.08, 0.06), (0, 0.7, 0.68), "VN_Bronze")
     b.cyl(0.1, 0.13, 0.25, (0.3, -0.6, 0.52), "VN_Bronze", seg=6)                   # vase
     for i in range(3): b.ball(0.09, (0.3 + (i - 1) * 0.08, -0.6, 0.72), "VN_Flower")
     b.box((0.16, 0.16, 0.26), (-0.3, -0.6, 0.53), "VN_Dark")                        # lantern
@@ -492,7 +494,7 @@ def mausoleo():   # small family chapel, 1.95 x 1.95 x 3.6 m, door on the front
     b.box((1.95, 1.95, 0.2), (0, 0, 2.65), "VN_Marble")
     b.pyramid(1.9, 1.9, 0.9, (0, 0, 2.75), "VN_Copper")
     b.box((0.08, 0.08, 0.5), (0, 0, 3.85), "VN_Gold")
-    b.box((0.3, 0.08, 0.08), (0, 0, 3.95), "VN_Gold")
+    b.box((0.3, 0.11, 0.08), (0, 0, 3.95), "VN_Gold")
     b.box((0.9, 0.08, 1.7), (0, -0.86, 1.1), "VN_Dark")
     b.box((1.0, 0.12, 0.08), (0, -0.87, 1.99), "VN_Granite")                      # lintel
     b.half_disc(0.43, 0.06, (0, -0.85, 2.03), "VN_Dark")
@@ -600,7 +602,7 @@ def giuseppe():   # skeleton with a beret and a cane climbing out of the grave, 
     b = Builder("VN_Giuseppe")
     b.box((0.9, 1.7, 0.08), (0, 0.25, 0.04), "VN_Dark")                                  # the hole
     b.box((0.26, 0.14, 0.42), (0, 0, 0.5), "VN_Bone")                                     # rib cage
-    for z in (0.38, 0.5, 0.62): b.box((0.3, 0.16, 0.03), (0, -0.01, z), "VN_Bone")
+    for z in (0.38, 0.5, 0.62): b.box((0.3, 0.17, 0.03), (0, -0.005, z), "VN_Bone")
     b.cyl(0.03, 0.03, 0.3, (0, 0.02, 0.18), "VN_Bone", seg=6)                             # spine
     b.ball(0.12, (0, -0.02, 0.86), "VN_Bone", scale=(1, 1.1, 1.1))                         # skull
     for s in (-1, 1): b.ball(0.03, (s * 0.045, -0.13, 0.88), "VN_Dark")

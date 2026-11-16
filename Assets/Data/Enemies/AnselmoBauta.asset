@@ -37,3 +37,9 @@ MonoBehaviour:
   deathCloudRadius: 0
   deathCloudSeconds: 5
   deathCloudDps: 12
+  auraRadius: 0
+  auraSpeedFactor: 1.3
+  wornPrefab: {fileID: 0}
+  throwCloudRadius: 0
+  throwCloudSeconds: 3
+  throwCloudDps: 15

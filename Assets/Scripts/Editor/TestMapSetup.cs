@@ -310,7 +310,7 @@ public static class TestMapSetup
         public CoopData coop;           // co-op: down / revive, scaling, cards
     }
 
-    static T Asset<T>(string path, System.Action<T> init) where T : ScriptableObject
+    internal static T Asset<T>(string path, System.Action<T> init) where T : ScriptableObject
     {
         var a = AssetDatabase.LoadAssetAtPath<T>(path);
         if (a != null) return a;
@@ -485,11 +485,14 @@ public static class TestMapSetup
                 m.description = "La Isla del Faro con alturas: terrazas, rampas, caídas, toboganes y la cripta del Templo."; }),
             Asset<MapData>(DataRoot + "/Maps/Venecia.asset", m => { m.id = "la-serenisima"; m.displayName = "La Serenísima"; m.sceneName = "Venecia";
                 m.description = "Canales, puentes de pago y un cementerio monumental en medio. Cuidado con el acqua alta."; }),
+            Asset<MapData>(DataRoot + "/Maps/Villajubilada.asset", m => { m.id = "villajubilada"; m.displayName = "Fiestas de Villajubilada"; m.sceneName = "Villajubilada";
+                m.description = "Un pueblo en fiestas. En la ronda 5 sueltan los toros: corre calle arriba, que ya no hay vuelta atrás."; }),
         };
         d.maps[0].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         d.maps[1].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
         d.maps[2].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Map.png");
         d.maps[3].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/Venecia/Venecia_Map.png");
+        d.maps[4].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/Villajubilada/Villajubilada_Map.png");
         foreach (var m in d.maps) EditorUtility.SetDirty(m);
         AssetDatabase.SaveAssets();
         return d;

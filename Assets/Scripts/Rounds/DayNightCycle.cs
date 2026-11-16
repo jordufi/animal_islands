@@ -31,6 +31,19 @@ public class DayNightCycle : MonoBehaviour
     Coroutine routine;
 
     public bool IsDark => night > 0.5f;
+    float glow;   // Villajubilada: every zone whose fiesta lights are on takes some of the dark away
+    public void AddGlow(float amount) { glow += amount; Apply(night); }
+    public bool HoldNight { get; private set; }   // Villajubilada: it never dawns again
+
+    // Night falls in `seconds` and stays for the rest of the run (no senderistas, no dawn reward).
+    public void FallForGood(float seconds)
+    {
+        HoldNight = true;
+        EnsureTorch();
+        if (routine != null) StopCoroutine(routine);
+        transitionTime = Mathf.Max(0.1f, seconds);
+        routine = StartCoroutine(Transition(1f));
+    }
     public float Darkness => night;
 
     void Start()
@@ -71,7 +84,7 @@ public class DayNightCycle : MonoBehaviour
         if (rm != null)
         {
             rm.RoundStarted += r => { if (rm.IsNight) Go(true); };
-            rm.RoundEnded += r => { if (night > 0f) { Go(false); Reward(); } };
+            rm.RoundEnded += r => { if (night > 0f && !HoldNight) { Go(false); Reward(); } };
         }
     }
 
@@ -135,7 +148,7 @@ public class DayNightCycle : MonoBehaviour
             sun.color = Color.Lerp(daySunColor, nightSunColor, k);
             sun.intensity = Mathf.Lerp(daySunIntensity, nightSunIntensity, k);
         }
-        RenderSettings.ambientIntensity = Mathf.Lerp(dayAmbient, nightAmbient, k);
+        RenderSettings.ambientIntensity = Mathf.Lerp(dayAmbient, nightAmbient + glow, k);
         RenderSettings.reflectionIntensity = Mathf.Lerp(dayReflection, 0.2f, k);
         if (sky != null) sky.SetFloat("_Exposure", Mathf.Lerp(daySkyExposure, nightSkyExposure, k));
         RenderSettings.fog = dayFog || k > 0.01f;

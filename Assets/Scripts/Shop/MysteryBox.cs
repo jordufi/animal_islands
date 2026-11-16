@@ -65,9 +65,11 @@ public class MysteryBox : Interactable
         if (ZoneManager.Instance != null) ZoneManager.Instance.ZoneOpened -= OnZoneOpened;
     }
 
+    static bool Tombola => BoatMission.Instance != null && BoatMission.Instance.Pueblo;   // Villajubilada: same box, fiesta name
+
     void Update()
     {
-        if (worldLabel != null) worldLabel.text = state == State.Ready ? "MÁQUINA DE GRANIZADOS\n" + Cost + " conchas" : "";
+        if (worldLabel != null) worldLabel.text = state == State.Ready ? (Tombola ? "LA TÓMBOLA\n" : "MÁQUINA DE GRANIZADOS\n") + Cost + " conchas" : "";
     }
 
     void OnZoneOpened(Zone zone)
@@ -82,7 +84,7 @@ public class MysteryBox : Interactable
             transform.SetPositionAndRotation(currentSpot.position, currentSpot.rotation);
             state = State.Ready;
             SetVisible(true);
-            if (Game != null) Game.ShowMessage("¡La Máquina de Granizados ha aparecido en " + zone.displayName + "!");
+            if (Game != null) Game.ShowMessage((Tombola ? "¡La Tómbola ha aparecido en " : "¡La Máquina de Granizados ha aparecido en ") + zone.displayName + "!");
             Sync();
             return;
         }
@@ -90,7 +92,7 @@ public class MysteryBox : Interactable
         MoveToRandomSpot();
         state = State.Ready;
         SetVisible(true);
-        if (Game != null) Game.ShowMessage("La Máquina de Granizados ha reaparecido en algún sitio de la isla...");
+        if (Game != null) Game.ShowMessage((Tombola ? "La Tómbola ha reaparecido en algún sitio del pueblo..." : "La Máquina de Granizados ha reaparecido en algún sitio de la isla..."));
         Sync();
     }
 
@@ -117,7 +119,7 @@ public class MysteryBox : Interactable
     {
         switch (state)
         {
-            case State.Ready: return "□  Máquina de Granizados: arma aleatoria (" + CostText(Cost) + ")";
+            case State.Ready: return (Tombola ? "□  La Tómbola: arma aleatoria (" : "□  Máquina de Granizados: arma aleatoria (") + CostText(Cost) + ")";
             case State.Offering: return "□  Coger " + offered.displayName;
             default: return "";
         }

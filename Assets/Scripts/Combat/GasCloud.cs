@@ -13,12 +13,17 @@ public class GasCloud : MonoBehaviour
 
     public static int Alive { get; private set; }   // tests
 
-    public static GasCloud Spawn(Vector3 position, float radius, float seconds, float dps)
+    Color tint = new Color(0.45f, 0.75f, 0.2f);
+
+    public static GasCloud Spawn(Vector3 position, float radius, float seconds, float dps) => Spawn(position, radius, seconds, dps, new Color(0.45f, 0.75f, 0.2f));
+
+    public static GasCloud Spawn(Vector3 position, float radius, float seconds, float dps, Color colour)
     {
         var go = new GameObject("NubePeste");
         go.transform.position = position;
         var c = go.AddComponent<GasCloud>();
         c.radius = radius;
+        c.tint = colour;
         c.total = seconds;
         c.until = Time.time + seconds;
         c.damagePerTick = Mathf.Max(1, Mathf.RoundToInt(dps * Tick));
@@ -37,7 +42,7 @@ public class GasCloud : MonoBehaviour
         var shader = Shader.Find("Sprites/Default");   // unlit, alpha blended, always in the build (UI uses it)
         if (shader != null)
         {
-            mat = new Material(shader) { color = new Color(0.45f, 0.75f, 0.2f, 0.4f) };
+            mat = new Material(shader) { color = new Color(tint.r, tint.g, tint.b, 0.4f) };
             s.GetComponent<Renderer>().sharedMaterial = mat;
         }
         s.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -54,7 +59,7 @@ public class GasCloud : MonoBehaviour
         {
             float pulse = 1f + 0.06f * Mathf.Sin(Time.time * 5f);
             visual.localScale = new Vector3(radius * 2f * pulse, 1.6f, radius * 2f * pulse);
-            if (mat != null) mat.color = new Color(0.45f, 0.75f, 0.2f, 0.4f * Mathf.Clamp01(left / Mathf.Min(1f, total)));
+            if (mat != null) mat.color = new Color(tint.r, tint.g, tint.b, 0.4f * Mathf.Clamp01(left / Mathf.Min(1f, total)));
         }
         if (Time.time < nextTick) return;
         nextTick = Time.time + Tick;

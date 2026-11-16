@@ -94,6 +94,28 @@ public static class QuickChecks
             Check(pu.maxPerRound >= 1 && pu.maxActive >= 1, $"power-up caps are set (per round {pu.maxPerRound}, active {pu.maxActive})");
             Check(pu.ammoDropChance + pu.otherDropChance < 0.2f, "power-ups stay rare (under 20 % of kills)");
         }
+
+        // ---- Villajubilada: the encierro, the traca, the fiesta old men
+        var enc = Load<EncierroData>("Encierro.asset");
+        if (enc != null)
+        {
+            const float sprint = IslaZombieSetup.SprintSpeed;
+            Check(enc.speed > sprint * 1.3f, $"the herd can't be outrun ({enc.speed} m/s vs sprint {sprint})");
+            Check(enc.firstRunSpeed > sprint && enc.firstRunSpeed < enc.speed, $"the first run is slower but still faster than a sprint ({enc.firstRunSpeed} m/s)");
+            Check(enc.warning >= 4f, $"the rocket warns at least 4 s before the lorry opens ({enc.warning} s)");
+            Check(enc.playerDamage >= 35 && enc.playerDamage < 100, $"a bull hurts more than an old man and never kills from full health ({enc.playerDamage})");
+            Check(enc.playerImmunity >= 0.5f, $"the same pass can't hit twice in a row ({enc.playerImmunity} s)");
+            Check(enc.throwSpeed <= 8f && enc.throwDamage <= 25, $"flowerpots are slow and light: you dodge them ({enc.throwSpeed} m/s, {enc.throwDamage})");
+            Check(enc.every == 5, $"encierro every 5 rounds ({enc.every})");
+            Check(eco.tracaCost >= eco.killPoints * 6, $"a traca costs more than six kills pay ({eco.tracaCost}): it is for surviving, not for farming");
+            Check(eco.tracaCooldown >= 30f && eco.tracaPlayerDamage < enc.playerDamage, $"traca: cooldown {eco.tracaCooldown} s, burns the player {eco.tracaPlayerDamage}");
+        }
+        var bombo = Load<EnemyVariant>("Enemies/AbueloBombo.asset");
+        var petardos = Load<EnemyVariant>("Enemies/AbuelaPetardos.asset");
+        if (bombo != null) Check(bombo.auraRadius > 0f && bombo.auraSpeedFactor > 1f && bombo.auraSpeedFactor <= 1.5f && bombo.moveSpeed < old.moveSpeed,
+            $"el del bombo is slow himself and speeds the others up a little (x{bombo.auraSpeedFactor} within {bombo.auraRadius} m)");
+        if (petardos != null) Check(petardos.throwsChanclas && petardos.throwCloudRadius > 0f && petardos.throwCloudDps * petardos.throwCloudSeconds < 60f,
+            $"la de los petardos: her patch denies a spot, it doesn't kill ({petardos.throwCloudDps * petardos.throwCloudSeconds:F0} damage if you stand in it)");
         Finish();
     }
 

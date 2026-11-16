@@ -15,10 +15,15 @@ public class MissionTask : Interactable
     [SerializeField] TextMesh worldLabel;
     [SerializeField] int spot;            // Gondolier: index among the possible spots (BoatMission.GondolierSpot)
     [SerializeField] GameObject spotRoot; // Gondolier: figure + blocker, hidden unless this spot was picked
+    [SerializeField] bool free;           // Villajubilada: the lighter lying on the ground (the stall sells it otherwise)
+    [SerializeField] Zone liesIn;         // ... only in the start zone that was opened second (Encierro.SecondZone)
 
     public Kind TaskKind => kind;
     public int Spot => spot;
-    public bool Here => kind != Kind.Gondolier || Mission == null || Mission.GondolierSpot < 0 || Mission.GondolierSpot == spot;
+    public bool Here => liesIn != null ? Encierro.Instance != null && Encierro.Instance.SecondZone == liesIn && Encierro.Instance.ActOne
+        : kind != Kind.Gondolier || Mission == null || Mission.GondolierSpot < 0 || Mission.GondolierSpot == spot;
+    public void SetFree(Zone zone) { free = true; liesIn = zone; }
+    static bool Pueblo => Mission != null && Mission.Pueblo;
 
     public void SetSpot(int index, GameObject root) { spot = index; spotRoot = root; }
 
@@ -44,13 +49,14 @@ public class MissionTask : Interactable
     {
         bool done = Done;
         if (spotRoot != null && spotRoot.activeSelf != Here) spotRoot.SetActive(Here);
+        if (liesIn != null) { if (before != null && before.activeSelf != (Here && !done)) before.SetActive(Here && !done); if (worldLabel != null) worldLabel.text = Here && !done ? "MECHERO" : ""; return; }
         if (before != null && before.activeSelf == done) before.SetActive(!done);
         if (after != null && after.activeSelf != done) after.SetActive(done);
         if (worldLabel == null) return;
         switch (kind)
         {
-            case Kind.Shovel: worldLabel.text = done ? "" : "PALAS\n" + ShovelCost + " conchas"; break;
-            case Kind.Grave: worldLabel.text = done ? "GIUSEPPE\n(desenterrado)" : "AQUÍ YACE\nGIUSEPPE"; break;
+            case Kind.Shovel: worldLabel.text = done ? "" : (Pueblo ? "MECHEROS\n" : "PALAS\n") + ShovelCost + " conchas"; break;
+            case Kind.Grave: worldLabel.text = Pueblo ? (done ? "CHUPINAZO\n(tirado)" : "BALCÓN DEL\nAYUNTAMIENTO") : done ? "GIUSEPPE\n(desenterrado)" : "AQUÍ YACE\nGIUSEPPE"; break;
             default: worldLabel.text = ""; break;
         }
     }
@@ -60,9 +66,9 @@ public class MissionTask : Interactable
         if (Mission == null || Done || !Here) return "";
         switch (kind)
         {
-            case Kind.Shovel: return "□  Comprar la pala (" + CostText(ShovelCost) + ")";
-            case Kind.Grave: return Mission.Shovel ? "□  Desenterrar a Giuseppe" : "Para cavar hace falta una pala (se vende en el Mercato)";
-            default: return "□  Hablar con el gondolero de oro";
+            case Kind.Shovel: return free ? "□  Coger el mechero" : Pueblo ? "□  Comprar un mechero (" + CostText(ShovelCost) + ")" : "□  Comprar la pala (" + CostText(ShovelCost) + ")";
+            case Kind.Grave: return Pueblo ? (Mission.Shovel ? "□  Tirar el chupinazo" : "Para el chupinazo hace falta un mechero") : Mission.Shovel ? "□  Desenterrar a Giuseppe" : "Para cavar hace falta una pala (se vende en el Mercato)";
+            default: return Pueblo ? "□  Hablar con el cabezudo de oro" : "□  Hablar con el gondolero de oro";
         }
     }
 
@@ -73,7 +79,7 @@ public class MissionTask : Interactable
         if (!Net.Authority || Mission == null || Done || !Here) return;   // online client: PlayerInteractor asks the host
         switch (kind)
         {
-            case Kind.Shovel: if (Pay(ShovelCost, player)) Mission.BuyShovel(); break;
+            case Kind.Shovel: if (free || Pay(ShovelCost, player)) Mission.BuyShovel(); break;
             case Kind.Grave: Mission.Dig(); break;
             default: Mission.MeetGondolier(); break;
         }
