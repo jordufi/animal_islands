@@ -66,7 +66,7 @@ level(5, 20, 7, 27, 1)                       # loggia terrace
 ramp([(8, 20), (9, 20)], '<')
 ramp([(8, 27), (9, 27)], '<')
 marks('G', (5, 24)); marks('D', (13, 27)); marks('B', (16, 23))
-marks('s', (8, 18), (20, 20), (20, 27), (5, 17), (15, 30), (5, 21), (5, 26), (14, 22), (19, 25))
+marks('s', (8, 18), (20, 20), (20, 27), (5, 17), (15, 30), (5, 21), (5, 26), (16, 22), (19, 25))
 
 # ---------------------------------------------------------------- g: Cannaregio (maze), NW
 fill(2, 2, 26, 14, 'g')
@@ -128,7 +128,7 @@ marks('s', (33, 35), (33, 42), (40, 33), (55, 33), (38, 34), (45, 42), (53, 39),
 fill(23, 17, 36, 30, 'i')
 blocks('Z', (24, 18, 25, 19), (34, 18, 35, 19), (24, 28, 25, 29), (34, 28, 35, 29))   # corner mausoleums
 marks('o', (24, 21), (24, 26), (35, 21), (35, 26), (27, 18), (32, 18), (27, 29), (32, 29))
-marks('x', (24, 23), (35, 24), (30, 17), (29, 30))
+marks('x', (24, 23), (35, 24), (30, 17))   # no low cover in the 1-cell south aisle (row 30): the user could not jump it
 level(26, 20, 33, 27, 1)                     # the terrace of the monuments
 level(29, 23, 30, 24, 2)                     # tower top
 ramp([(29, 18), (29, 19)], 'v')
@@ -157,7 +157,7 @@ marks('s', (61, 22), (64, 25), (66, 22))
 # ---------------------------------------------------------------- vaporetto task list (BoatMission.HasTasks)
 # S = the stall that sells the shovel (Mercato), F = Giuseppe's grave (Cimitero terrace), O = the golden gondolier
 # (dead end of the Carnevale). The bell is on top of the campanile (Piazza); discs J, karaoke K and key L as usual.
-marks('S', (12, 22)); marks('F', (33, 25)); marks('O', (57, 42))
+marks('S', (12, 22)); marks('F', (33, 25)); marks('O', (57, 42), (57, 3), (57, 36))   # golden gondolier: the host picks one of these dead ends (B2)
 
 # ---------------------------------------------------------------- gondola stops (N): a quay cell beside the water
 marks('N', (26, 44), (33, 44), (39, 24), (33, 13), (26, 13), (20, 29), (31, 30))

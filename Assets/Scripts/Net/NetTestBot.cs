@@ -210,6 +210,20 @@ public class NetTestBot : MonoBehaviour
         if (key != null) Kv("key", key.Used ? "used" : key.Holder != null ? "J" + (NetGame.IndexOf(key.Holder) + 1) : "floor");
         var bm = BoatMission.Instance;
         if (bm != null) Kv("quest", "P" + (bm.Power ? 1 : 0) + "G" + (bm.Gas ? 1 : 0) + "R" + (bm.Radio ? 1 : 0) + "C" + (bm.Called ? 1 : 0) + "D" + (bm.Complete ? 1 : 0));
+        // La Serenisima
+        if (bm != null && bm.HasTasks) Kv("tasks", "S" + (bm.Shovel ? 1 : 0) + "G" + (bm.Giuseppe ? 1 : 0) + "O" + (bm.Gondolier ? 1 : 0) + "B" + (bm.Power ? 1 : 0) + "@" + bm.GondolierSpot);
+        var fences = Object.FindObjectsByType<ZoneFence>(FindObjectsInactive.Include);
+        if (fences.Length > 0) Kv("fences", fences.Count(f => f.Up) + "/" + fences.Length);
+        var tide = AcquaAlta.Instance;
+        if (tide != null) Kv("tide", (tide.Flooding ? "up" : "down") + (tide.SwimActive ? ",swim" : "") + "," + tide.WaterY.ToString("0.00", CultureInfo.InvariantCulture));
+        var stops = Object.FindObjectsByType<GondolaStop>();
+        if (stops.Length > 0) Kv("gondolasBusy", stops.Count(s => s.Busy));
+        foreach (var look in Object.FindObjectsByType<MaskLook>())
+        {
+            var owner = look.GetComponentInParent<EnemyHealth>();
+            string paint = look.GetComponentsInChildren<Renderer>().SelectMany(r => r.sharedMaterials).Where(m => m != null && m.name.StartsWith("VN_MaskPaint_")).Select(m => m.name.Substring(13)).FirstOrDefault() ?? "?";
+            if (owner != null && owner.NetId > 0) Kv("m" + owner.NetId, paint);
+        }
         if (gm != null)
             foreach (var p in gm.Players)
             {

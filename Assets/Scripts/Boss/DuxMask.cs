@@ -38,7 +38,7 @@ public class DuxMask : MonoBehaviour
             foreach (var r in mask.GetComponentsInChildren<Renderer>())
             {
                 var ms = r.sharedMaterials;
-                for (int i = 0; i < ms.Length; i++) if (ms[i] != null && ms[i].name.StartsWith("VN_White")) ms[i] = gold;
+                for (int i = 0; i < ms.Length; i++) if (ms[i] != null && (ms[i].name.StartsWith("VN_White") || ms[i].name.StartsWith("VN_Gold"))) ms[i] = gold;
                 r.sharedMaterials = ms;
             }
         if (Net.Authority && GameManager.Instance != null) GameManager.Instance.ShowMessage("¡EL DUX ANSELMO! Rompedle la máscara dorada: hasta entonces no hay tiros a la cabeza");
@@ -51,10 +51,6 @@ public class DuxMask : MonoBehaviour
         if (mask == null) return;
         var m = mask;
         mask = null;
-        m.transform.SetParent(null, true);
-        var rb = m.AddComponent<Rigidbody>();
-        rb.linearVelocity = Vector3.up * 5f + Random.insideUnitSphere * 2f;
-        rb.angularVelocity = Random.insideUnitSphere * 10f;
-        Destroy(m, 3f);
+        MaskLook.Shatter(m, (masked != null ? masked.transform.forward : Vector3.forward) * 3f);
     }
 }

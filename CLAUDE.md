@@ -329,7 +329,7 @@ window resizable. Verified: `Builds/AnimalIsland_2026-11-02_1312` opens 2560×14
 exe was launched and showed the title screen correctly (Player.log: only URP depth-of-field / panini shaders
 stripped, unused). The PowerShell path was only tested up to the "Unity is open" check (the editor was open).
 
-## La Serenísima (third map, files: Venecia) — first playable version 2026-11-15 (Fable), NOT committed yet
+## La Serenísima (third map, files: Venecia) — first playable version 2026-11-15 (Fable), fixes from the first real game 2026-11-16 (Opus)
 Decided with the user (don't re-ask): Venice + Milan's Monumental cemetery; ~30 % bigger than Isla del Faro; **paid bridges**
 are the doors; **acqua alta instead of night rounds**; the boat mission reused with other names (campanas = dar la luz,
 vaporetto = barco); gondolas and falling into canals are a trial ("si no, serán barrera"); models 30-50 % more detailed
@@ -357,10 +357,10 @@ than the Isla props but not final; barrios delivered already dressed with object
   - Carnival masks: `EnemyVariant.maskHits / maskShare / maskPrefab`; `EnemyHealth.Masked` = the top share of the health bar,
     each hit takes exactly one mask segment and is never a headshot (`TakeDamage(.., pierce)` for insta-kill / nuke / NetKill).
     Variants `Data/Enemies/AnselmoBauta` (2 hits, from round 2) and `AnselmoPeste` (3 hits, faster, from round 6), only in this
-    scene's `specialVariants`. The plague doctor's gas cloud is NOT done.
+    scene's `specialVariants`. The plague doctor leaves a gas cloud where he dies (`Combat/GasCloud`, `EnemyVariant.deathCloud*`).
   - `Zones/GondolaStop` (layout marker `N`, 7 stops, `EconomyData.gondolaCost` 250): carries to the next stop round the map
-    whose zone is open, along baked canal paths (BFS; passes under bridge decks, the hull clips the solid bridge). **Online
-    clients cannot ride yet** (host and local players only): it needs a host -> owner message.
+    whose zone is open, along baked canal paths. Online clients ride too (`NetGame.Fwd.Gondola`: the host charges, the owner
+    rides). Since 2026-11-16 the routes only sail open water (see the fixes below).
 - **Verified 2026-11-15:** setup 0 errors (9 doors join their groups, 71 entrances, 1376 cells walkable without drops, 123 m to
   the extraction; coverage 52/1376 safe cells, warning in Cimitero); `VeneciaPlayTest` (Tools > Island > Play Test La Serenisima)
   26 OK incl. 8 walks over every bridge / ramp with the player's body; `SmokePlayTest.RunVenecia()` 15 OK; regression on Isla
@@ -376,22 +376,101 @@ than the Isla props but not final; barrios delivered already dressed with object
 - **Vaporetto task list** (user, same day; replaces gasolina / radio / emisora on this map, don't re-ask): 5 jobs in different
   barrios, shown top-left with checks (`GameHUD`, solo screen; split-screen shows "Tareas del vaporetto n/5" in the strip):
   1 the 3 Julio records to the karaoke (Ferrovia), 2 ring the bell on top of the campanile (= dar la luz, Piazza), 3 find the
-  golden gondolier (dead end of the Carnevale, fixed spot), 4 dig up Giuseppe in the Cimitero (needs the shovel: stall in the
+  golden gondolier (one of 3 dead ends, picked by the host since 2026-11-16), 4 dig up Giuseppe in the Cimitero (needs the shovel: stall in the
   Mercato, `EconomyData.shovelCost` 500), 5 find the key. Jobs 1-4 done -> vaporetto on its way, arrives at the end of the next
   round (`missionDefenseRounds`) -> the last door is free but wants the key in the opener's pocket (`BoatMission.DoorNeedsKey`).
   Code: `BoatMission.HasTasks` (a map with `MissionTask` objects) + `Shovel / Giuseppe / Gondolier / TaskList()`,
   `Zones/MissionTask` (Shovel / Grave / Gondolier), `Zones/TowerClimb` (walk into the campanile door -> carried up to the
   belfry; jump off any side, the game has no fall damage; after 20 s up there you are thrown off, old men can't climb),
   the bell is a `PowerSwitch` with `action` "Tocar la campana". Layout markers `S` shovel stall, `F` grave, `O` gondolier
-  (`VenBuildTasks`); `E Y T C` are gone from this layout. **Protocol bumped to `animal-island-online-3`** (the Quest message
+  (`VenBuildTasks`); `E Y T C` are gone from this layout. **Protocol bumped to `animal-island-online-3`, now `-4`** (the Quest message
   carries the three new flags): rebuild the online test client before any online test.
   Verified: `VeneciaPlayTest` 42 OK (list, shovel, grave refused without shovel, gondolier, climb, bell, 16 m jump without damage,
   thrown off, records, key, vaporetto after the round, last door with the key, plus everything from before),
   `SmokePlayTest.RunVenecia` 15 OK, `Phase1PlayTest` 21 OK on Isla del Faro. The karaoke song itself is skipped in that test
   (`EasterEgg.Completed` set by hand). Captures `Renders/Venecia_Tarea_*.png`. Giuseppe and the gondolier are primitive figures.
-- **Not done / not verified:** online on this map (not run; gondolas for clients missing), split-screen, Base / Coop / Online
-  tests after the EnemyHealth change, boss as Dux with mask, sunset look (DayNight still looks like noon), bridges are solid
-  blocks (no arch underneath), no balance pass (mask chances, tide, gondola price are first guesses), humans have not played it.
+- Later on 2026-11-15 (Fable, commits `5a97f23`, `480e098`): gas cloud, the boss as the Dux with a golden mask (`Boss/DuxMask`,
+  10 hits, share 0.3), gondolas for online clients, sunset light (warm low sun + haze), colonnades in the Piazza, and the
+  editor tool `Editor/WallpaperShots.cs` (Open / Animal / OldMan / Render / Close: posed characters, phone-size renders in
+  `Renders/Wallpaper_*`; used for the phone wallpapers in `Renders/Wallpapers/` and for quick visual checks).
+- **Fixes after the user's first real game (2026-11-16, plan `Docs/VENECIA_FALLOS_TRASPASO.md`, Fable planned, Opus built):**
+  - **Design rule (user, all maps, don't re-ask): the old men must always be able to follow the player's route, except the
+    gondola and the campanile** (old men don't climb it; its 20 s limit stays). New traversals need their enemy side.
+  - A1 floating crates: the top crate of a stack added its height twice (`CrateStack` in `IslaZombieSetup.cs`, all maps).
+    Setup check `CheckProps`: no prop collider floats (all maps).
+  - A2 door tops: the dark lunette over doors was a full disc overlapping the door (z-fighting). `Builder.half_disc` in the
+    Blender script, stone transom; same for round windows and mausoleums.
+  - A3 every `x` (low cover) can be jumped: graves rebuilt to 0.9 / 0.85 m, colliders capped at 0.9 m (`CapColliders`, the
+    cafe parasol has none), no `x` in 1-cell aisles; setup check (Venice only: on Isla del Faro `x` is something else).
+  - A4 gondola: passenger gondola at scale 0.5 (4.7 m), moored along the quay if there is room, else bow out; poles outside
+    the hull; routes only through open water (the bridges are solid down to the canal bed, B4 not done), centred in the
+    canal, Chaikin-rounded, trimmed where the hull would hit a quay (stops facing each other across a canal); decoration
+    boats removed from routes and moorings. The 7 stops form 3 canal networks. Setup sweeps the hull along every route
+    (4/298 samples still graze a corner) and `VeneciaPlayTest` samples it during a ride (0 hits).
+  - A5 market: stalls are no longer spawn entrances in the Mercato; the spawn at (14,22) moved to (16,22) (a facade doorway);
+    the shovel stays at (12,22). NavMesh islands nobody can reach (stall counters, roofs, the tops of tall props) are cut
+    with Not Walkable `NavMeshModifierVolume`s (`CutNavIslands`, 168 on this map; **the volume's default `center` is (0,1,0)**,
+    set it to zero) and re-baked; setup check "none left".
+  - A6 masks: new bauta (wedge jaw, brows, gold filigree, tricorn with a feather), plague doctor (curved beak, brass-ringed
+    lenses, wide hat, leather collar) and a Dux mask (gold, corno ducale, gems). `Combat/MaskLook`: the `VN_MaskPaint` slot
+    gets ivory / black / red per old man (seed = `EnemyHealth.NetId`, same on every machine); a broken mask flies off in
+    4 shards.
+  - A7 acqua alta: posts with red tops on every low quay edge (`Balizas`, 2 combined meshes). While it floods the canals can
+    be swum: a hidden floor (`SueloNado`, top at -0.25 m, 0.25 under the quays so you walk out) is switched on, baked as
+    NavMesh area 14 "Canal" (cost 3, `NavAgents.CanalArea`), which old men only get while it floods (`NavAgents.SwimOpen`,
+    `EnemyAI.SetCanalAccess`; `NavAgents.Filter` excludes it otherwise). Players and old men move x0.5 in a canal (x0.6
+    wading in the street). When the tide drops: players still in a canal go back to the quay without damage
+    (`CanalRescue.ToShore`), old men are warped to dry NavMesh, the Nevera lands on dry ground. Setup checks ignore area 14.
+  - A8 closed barrios have a 3.2 m iron fence (`VN_Verja`, group `Vallas/Valla_<zone>`, `Zones/ZoneFence`) on every edge
+    with the water; its collider is 6 m (the Frog jumps 4 m) and each straight run also carves the NavMesh (old men ignore
+    colliders). Not baked; gone when the zone opens (clients too, through `ZoneDoor.NetOpened`). `CanalRescue` stays as
+    the safety net.
+  - B1 sun raised to 22 degrees (shorter shadows). B2 golden gondolier at one of 3 dead ends (57,42), (57,3), (57,36) picked by the
+    host, sent in the quest state: **protocol `animal-island-online-4`** (rebuild the test client). B3 real models
+    `VN_Giuseppe` (skeleton with beret and cane) and `VN_Gondolero` (gold, boater, striped shirt, oar). B5 Venetian spawn
+    doorways: flood board (paratia) to climb + half-raised shutter, same spawn colour.
+  - Verified 2026-11-16: setup 0 errors (1372 cells walkable, 123 m to the extraction, 168 islands cut, no floating props,
+    every `x` jumpable); `VeneciaPlayTest` 56 OK / 0 FAIL (fences up / gone, 4 m jump stopped, swimming, an old man follows
+    into the canal and reaches the player, walk out of the canal, the Carnevale fence keeps him in the water, tide down
+    without damage, gondola ride with 0 hull hits, 3 gondolier spots); `SmokePlayTest.RunVenecia` 15 OK; Isla del Faro
+    rebuilt (same report: 69 entrances, routes 97 / 123 m) + Alturas rebuilt (crates); Smoke Isla 15 OK, Feedback 26 OK,
+    Coop 39 OK, Online RunDirect 69 / 0 with protocol 4. Captures `Renders/VeneciaTest_*.png`, `Renders/Wallpaper_Check_*`.
+- **Low-poly water (2026-11-16, user: "not realistic, but I don't like it; better, still optimised and low poly"):** the sea
+  plane is now one mesh built from the layout (`VenBuildWater`, under `Ground/Sea`, which AcquaAlta still moves): a vertex
+  every metre (jittered away from the quays), a strip to the horizon, ~14k vertices / 21k triangles, 1 draw call, no
+  depth / opaque texture, no reflections, casts no shadow. Shader `Resources/Shaders/LowPolyWater.shader` (material
+  `Data/Materials/VN_Agua.mat`): small vertex waves, flat facet normals from ddx/ddy exaggerated x6, sun glints on some
+  facets, foam band + a lapping line along every quay (vertex colour R = distance to the quay / 3 m), and over a street
+  (G) the flood is light turquoise and see-through (alpha 0.5), so in the acqua alta you see where the canal is. Isla del
+  Faro keeps its old water. Also fixed: the acqua alta Nevera could land on the edge of a closed barrio's quay (now rings
+  round the player, open zone, 0.6 m from water). Verified: `VeneciaPlayTest` 56 OK / 0 FAIL, `SmokePlayTest.RunVenecia`
+  15 OK; captures `Renders/Agua_*.png`.
+- **Arched bridges, one canal network, online + split-screen tests (2026-11-16 night, Opus; user: "finish this map"):**
+  - B4: the top cells (level >= 1, flat, over a canal) of the two big humped bridges (doors 3 and 7, col 30) are open
+    arches (`VenArched` / `VenWet` / `VenBuildArches`): no ground block, a 0.3 m deck slab + a brick barrel vault with a white
+    stone face (`VaultMesh`, no collider). The water mesh, the swim floor and the gondola routes treat them as water;
+    `CanalRescue` ignores the zone check while swimming below y -0.1 (under a bridge of a closed barrio). Small level-0
+    bridges stay solid (0.8 m over the water: no room).
+  - Gondolas: with the two arches the 7 stops are ONE canal network (before: 3). Routes: Dijkstra over wet cells (a cell
+    beside a quay costs more), pulled taut (straight to the farthest point the hull reaches with a 0.65 m margin), corners
+    rounded only where the hull fits (`RoundCorners`), then a point every metre (`Densify`). Some routes go round half the
+    map (up to ~250 m): `GondolaStop.maxRide` 10 s, long routes go faster. The passenger ducks into the hull when a bridge
+    is low over him (`Room` raycasts, the acqua alta lifts the boat). Setup sweep: 4/6528 samples graze one tight T
+    junction at (21, 31) (a 4.7 m hull turning out of a 4 m canal); the play test ride had 0/1536 hits. The sweep now skips
+    the jump between two routes.
+  - `OnlinePlayTest.RunDirectVenecia()` (Tools > Island > Play Test Online (La Serenisima), its own script `VeneciaScript`):
+    gondolier spot, fences, bauta paint on both machines, client hits break the mask, client opens bridge 1 (fence gone on
+    both), shovel / Giuseppe / gondolier / campanile + bell by the client, gondola ride by the client, acqua alta (round 5:
+    `ForceNext` is host-only, the client works the tide out from the round number), swim, tide down. **22 OK / 0 FAIL.**
+    `NetTestBot` reports `tasks`, `fences`, `tide`, `gondolasBusy`, `m<id>` (mask paint).
+  - `CoopPlayTest.RunVenecia()` (3 players from the lobby on this map + J2 rides a gondola while J1 moves): **42 OK / 0 FAIL**,
+    193 FPS on the test machine, `Renders/Coop_venecia_*.png`. The spare quarter / pause map title says "MAPA DE LA
+    SERENÍSIMA" here.
+  - Regression after these changes: `VeneciaPlayTest` 56 OK, Smoke Venecia 15, Smoke Isla 15, Online RunDirect 69 / 0
+    (client rebuilt), Coop (Isla) 39 OK. `MainMenu.unity` was not modified by any of these runs. Captures `Renders/Arco_*`.
+- **Not done / not verified:** small bridges are still solid, no balance pass (mask chances, tide, gondola price are
+  first guesses), what rewrote
+  `MainMenu.unity` on 2026-11-15 is still unknown (it did not happen again in these runs).
 
 ## Phase 3 (heights) — DONE (2026-11-15, Opus): tooling + all zone layouts of "Isla del Faro (alturas)", not committed yet
 Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3

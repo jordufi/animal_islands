@@ -26,6 +26,10 @@ public static class VeneciaPlayTest
     static int climbed, thrown;
     static float endRoundAt;
     static Vector3 before;
+    static EnemyAI swimmer;
+    static int hullClips, hullSamples;
+    static bool dryCooler;
+    static float swimStartDist;
 
     static VeneciaPlayTest()
     {
@@ -197,6 +201,16 @@ public static class VeneciaPlayTest
                 if (rescuedZone == 0) { if (rt > 5f) { Write("FAIL stood in a closed barrio and stayed there"); Finish("failed"); } return; }
                 if (rt < 1.5f) return;
                 Check(rescue.ZoneAt(player.transform.position) != null && rescue.ZoneAt(player.transform.position).IsOpen, "closed barrio: sent back to an open zone (" + rescue.ZoneAt(player.transform.position).displayName + ")");
+            {
+                var fences = Object.FindObjectsByType<ZoneFence>(FindObjectsInactive.Include);
+                var merc = fences.FirstOrDefault(f => f.Zone != null && f.Zone.displayName.StartsWith("Mercato"));
+                Check(fences.Length >= 6 && merc != null && merc.Up, $"closed barrios have their fence up ({fences.Length} fences, Mercato {(merc != null && merc.Up ? "up" : "missing")})");
+                // a Frog super jump from the Ferrovia quay towards the Mercato: 4 m up, the fence collider is 6 m
+                var from = Cell(9f, 33f, 4.2f);
+                bool blocked = Physics.Raycast(from, Vector3.forward, out var fh, 6f, 1 << 11, QueryTriggerInteraction.Ignore) && fh.collider.transform.parent != null && fh.collider.transform.parent.name == "Tramos";
+                Check(blocked || Physics.Raycast(Cell(5f, 33f, 4.2f), Vector3.forward, 6f, 1 << 11), "the fence stops a 4 m jump into the closed Mercato");
+                Shot("valla_mercato", Cell(14f, 34.5f, 1.7f), Cell(14f, 30.5f, 1.5f));
+            }
                 Next();
                 break;
 
@@ -219,6 +233,10 @@ public static class VeneciaPlayTest
             case 7:
                 if (rt < 2f) return;
                 Check(rescuedZone == 0 && rescue.ZoneAt(player.transform.position).displayName.StartsWith("Mercato"), "bridge open: he stays in the Mercato");
+            {
+                var merc = Object.FindObjectsByType<ZoneFence>(FindObjectsInactive.Include).FirstOrDefault(f => f.Zone != null && f.Zone.displayName.StartsWith("Mercato"));
+                Check(merc != null && !merc.Up, "bridge 1 open: the Mercato fence is gone");
+            }
                 Next();
                 break;
 
@@ -287,10 +305,78 @@ public static class VeneciaPlayTest
                 Check(pc.ExternalSpeedFactor < 0.9f, $"wading on level 0: speed x{pc.ExternalSpeedFactor:F2}");
                 Check(rescuedWater == 1, "wading is not falling into the canal (no rescue)");
                 Shot("acqua_alta", Cell(11f, 42f, 3.5f), Cell(17f, 38f, 0.5f));
-                Teleport(player, Cell(5f, 40f, 2.4f));   // station terrace, level 1
+                Check(tide.SwimActive && NavAgents.SwimOpen, "acqua alta: the canals can be swum (floor on, old men get the Canal area)");
+                // into the canal between Ferrovia and the (closed) Carnevale
+                rescuedWater = 0;
+                Teleport(player, Cell(29f, 34f, 0.3f));
+                step = 100; stepTime = Time.time; realTime = Time.realtimeSinceStartup;
+                break;
+            }
+
+            case 100:
+            {
+                if (rt < 2f) return;
+                var pc = player.GetComponent<PlayerController>();
+                Check(rescuedWater == 0 && rescue.InWater(player.transform.position) && player.transform.position.y > tide.SwimY - 0.3f,
+                    $"swimming in the canal: no rescue, y {player.transform.position.y:F2}, speed x{pc.ExternalSpeedFactor:F2}");
+                Check(pc.ExternalSpeedFactor <= 0.55f, $"slower in the canal than wading (x{pc.ExternalSpeedFactor:F2})");
+                Shot("nadando", Cell(24f, 36f, 2.6f), Cell(29.5f, 33.5f, 0f));
+                swimmer = rm.SpawnEnemy(null, Cell(24f, 34f, 0f));
+                if (swimmer != null) { var ag = swimmer.GetComponent<NavMeshAgent>(); if (ag != null && ag.isOnNavMesh) ag.Warp(Cell(24f, 34f, 0f)); }
+                swimStartDist = swimmer != null ? Vector3.Distance(swimmer.transform.position, player.transform.position) : 0f;
                 Next();
                 break;
             }
+
+            case 101:
+            {
+                if (swimmer == null) { Write("FAIL could not spawn an old man on the Ferrovia quay"); step = 103; break; }
+                var ag = swimmer.GetComponent<NavMeshAgent>();
+                float d = Vector3.Distance(swimmer.transform.position, player.transform.position);
+                if (d > 2.2f && rt < 14f) return;
+                Check(d <= 2.2f && rescue.InWater(swimmer.transform.position), $"an old man follows into the canal: {swimStartDist:F1} m -> {d:F1} m in {rt:F1} s (in water: {rescue.InWater(swimmer.transform.position)}, speed {ag.speed:F2})");
+                Next();
+                break;
+            }
+
+            case 102:   // swim out onto the Ferrovia quay without jumping
+            {
+                if (swimmer != null) { swimmer.GetComponent<EnemyHealth>().TakeDamage(999999f, false, true); swimmer = null; }
+                Teleport(player, Cell(29f, 34f, 0.3f));
+                var cc = player.GetComponent<CharacterController>();
+                for (int i = 0; i < 60; i++) cc.Move(Vector3.left * 0.15f + Vector3.down * 0.2f);
+                Check(!rescue.InWater(player.transform.position) && player.transform.position.y > -0.05f && rescuedWater == 0,
+                    $"walked out of the canal onto the quay (y {player.transform.position.y:F2}, cell {(rescue.ZoneAt(player.transform.position) != null ? rescue.ZoneAt(player.transform.position).displayName : "?")})");
+                // and towards the closed Carnevale: the fence keeps him in the water
+                Teleport(player, Cell(31f, 34f, 0.3f));
+                for (int i = 0; i < 60; i++) cc.Move(Vector3.right * 0.15f + Vector3.down * 0.2f);
+                Check(rescue.InWater(player.transform.position) && rescuedZone == 0, $"the Carnevale fence keeps him out of the closed barrio (x {player.transform.position.x:F1})");
+                Next();
+                break;
+            }
+
+            case 103:   // the tide goes down with him in the canal: back on a quay, no damage, no bath
+            {
+                Teleport(player, Cell(29f, 34f, 0.3f));
+                hp0 = player.CurrentHealth;
+                dryCooler = false;
+                foreach (var a in Object.FindObjectsByType<AmmoPickup>()) Object.Destroy(a.gameObject);   // only count the tide's
+                if (swimmer != null) swimmer.GetComponent<EnemyHealth>().TakeDamage(999999f, false, true);
+                rm.DebugEndRound();
+                step = 104; stepTime = Time.time; realTime = Time.realtimeSinceStartup;
+                break;
+            }
+
+            case 104:
+                foreach (var a in Object.FindObjectsByType<AmmoPickup>()) if (!rescue.InWater(a.transform.position)) dryCooler = true;   // he may grab it at once
+                if (tide.Flooding) { if (rt > 20f) { Write("FAIL the tide never went down"); Finish("failed"); } return; }
+                if (rt < 2f) return;
+                Check(!rescue.InWater(player.transform.position) && player.CurrentHealth == hp0 && !tide.SwimActive && !NavAgents.SwimOpen,
+                    $"tide down: back on the quay without damage ({player.CurrentHealth}/{hp0}), canals closed again");
+                Check(dryCooler, "the tide leaves a Nevera de munición on dry ground ("
+                    + string.Join(", ", Object.FindObjectsByType<AmmoPickup>().Select(a => a.name + " " + a.transform.position.ToString("F1") + (rescue.InWater(a.transform.position) ? " water" : " dry"))) + ")");
+                step = 15; stepTime = Time.time; realTime = Time.realtimeSinceStartup;
+                break;
 
             case 13:
             {
@@ -312,7 +398,14 @@ public static class VeneciaPlayTest
             case 15:   // gondola (if the map has one): both ends open -> pays and carries
             {
                 var g = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(s => s.CanRide);
-                if (g == null) { Write("INFO no gondola stop with both ends open (skipped)"); step = 17; break; }
+                if (g == null)   // the gondolas only sail open water: open the Cimitero (door 4) for the Mercato <-> Cimitero canal
+                {
+                    var d4 = Object.FindObjectsByType<ZoneDoor>().FirstOrDefault(d => d.name.StartsWith("Door4_"));
+                    if (d4 != null) d4.DebugOpen();
+                    g = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(s => s.CanRide);
+                }
+                if (g == null) { Write("FAIL no gondola stop with both ends open"); step = 17; break; }
+                hullClips = 0; hullSamples = 0;
                 Teleport(player, g.transform.position + Vector3.up * 0.3f);
                 before = g.Destination;
                 hp0 = gm.Points;
@@ -323,8 +416,17 @@ public static class VeneciaPlayTest
             }
 
             case 16:
+                if (stop.Busy && stop.Boat != null)   // A4: the hull (4.7 x 0.65 m) must not go through quays, bridges or props
+                {
+                    hullSamples++;
+                    var b = stop.Boat;
+                    var hits = Physics.OverlapBox(b.position + Vector3.up * 0.35f, new Vector3(0.3f, 0.25f, 2.2f), b.rotation, (1 << 0) | (1 << 11) | (1 << 12), QueryTriggerInteraction.Ignore);
+                    if (hits.Any(h => h.transform.parent == null || h.transform.parent.name != "SueloNado")) hullClips++;
+                    if (hullSamples == 40) Shot("gondola_viaje", b.position + b.right * 4f + Vector3.up * 2.5f, b.position);
+                }
                 if (stop.Busy) { if (rt > 60f) { Write("FAIL the gondola never arrived"); Finish("failed"); } return; }
                 if (rt < 0.5f) return;
+                Check(hullClips <= hullSamples / 20, $"gondola hull touched something in {hullClips}/{hullSamples} frames of the ride");
                 Check(Vector3.Distance(player.transform.position, before) < 2.5f && hp0 - gm.Points > 0,
                     $"gondola: paid {hp0 - gm.Points}, {rt:F1} s ride, landed {Vector3.Distance(player.transform.position, before):F1} m from the other stop ({rescue.ZoneAt(player.transform.position).displayName})");
                 Next();
@@ -352,7 +454,12 @@ public static class VeneciaPlayTest
                 Check(m.Shovel && p0 - gm.Points == gm.Economy.shovelCost, $"shovel bought for {p0 - gm.Points} (expected {gm.Economy.shovelCost})");
                 grave.Interact(inter);
                 Check(m.Giuseppe, "Giuseppe dug up");
-                gond.Interact(inter);
+                var spots = tasks.Where(t => t.TaskKind == MissionTask.Kind.Gondolier).ToList();
+                var here = spots.Where(t => t.Here).ToList();
+                var wrong = spots.FirstOrDefault(t => !t.Here);
+                Check(spots.Count >= 3 && here.Count == 1 && m.GondolierSpot >= 0, $"golden gondolier: {spots.Count} possible spots, only spot {m.GondolierSpot} has him");
+                if (wrong != null) { wrong.Interact(inter); Check(!m.Gondolier && !wrong.CanInteract(inter), "an empty spot does nothing"); }
+                if (here.Count > 0) here[0].Interact(inter);
                 Check(m.Gondolier, "the golden gondolier found");
                 Next();
                 break;

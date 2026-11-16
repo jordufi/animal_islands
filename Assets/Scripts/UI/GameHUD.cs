@@ -36,6 +36,9 @@ public class GameHUD : MonoBehaviour
     readonly List<Popup> popups = new List<Popup>();
     const float PopupLife = 1.1f;
 
+    // La Serenisima is a city, not an island
+    static string MapTitle => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Venecia" ? "MAPA DE LA SERENÍSIMA" : "MAPA DE LA ISLA";
+
     void Start()
     {
         gm = GameManager.Instance;
@@ -316,7 +319,7 @@ public class GameHUD : MonoBehaviour
         }
         var map = UIKit.Anchored("Map", quarter, new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(440, 440));
         map.gameObject.AddComponent<RawImage>().texture = info.Texture;
-        UIKit.Label("Title", quarter, new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(600, 40), "MAPA DE LA ISLA", 30, TextAnchor.MiddleCenter, UIKit.Accent);
+        UIKit.Label("Title", quarter, new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(600, 40), MapTitle, 30, TextAnchor.MiddleCenter, UIKit.Accent);
         spareMapRect = map;
     }
 
@@ -392,7 +395,7 @@ public class GameHUD : MonoBehaviour
         UIKit.Image(frame, new Color(0f, 0f, 0f, 0.8f));
         var map = UIKit.Rect("Image", frame, Vector2.zero, Vector2.one, new Vector2(6, 6), new Vector2(-6, -6));
         map.gameObject.AddComponent<RawImage>().texture = info.Texture;
-        UIKit.Label("MapTitle", frame, new Vector2(0.5f, 1f), new Vector2(0, 30), new Vector2(size, 40), "MAPA DE LA ISLA", 30, TextAnchor.MiddleCenter, UIKit.Accent);
+        UIKit.Label("MapTitle", frame, new Vector2(0.5f, 1f), new Vector2(0, 30), new Vector2(size, 40), MapTitle, 30, TextAnchor.MiddleCenter, UIKit.Accent);
         foreach (var p in gm.Players)
         {
             if (p == null || p.IsDead) continue;

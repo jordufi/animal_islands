@@ -80,6 +80,16 @@ public static class OnlinePlayTest
         Run();
     }
 
+    // La Serenisima from a client (own script: the Isla del Faro steps don't apply). Rebuild the client first.
+    [MenuItem("Tools/Island/Play Test Online (La Serenisima)")]
+    public static void RunDirectVenecia()
+    {
+        relay = false; matchScene = "Venecia"; matchMap = "la-serenisima";
+        Run();
+    }
+
+    static bool IsVenecia => matchScene == "Venecia";
+
     static void Run()
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }
@@ -118,7 +128,7 @@ public static class OnlinePlayTest
         EditorApplication.QueuePlayerLoopUpdate();
         try
         {
-            if (!startedScript) { startedScript = true; script.Push(Script()); }
+            if (!startedScript) { startedScript = true; script.Push(IsVenecia ? VeneciaScript() : Script()); }
             while (script.Count > 0)
             {
                 var top = script.Peek();
@@ -206,6 +216,205 @@ public static class OnlinePlayTest
     }
 
     static string ClientShot(string name) => Path.Combine(Project, "Renders", name).Replace('\\', '/');
+
+    // ---------------------------------------------------------------- La Serenisima
+    static Vector3 VCell(float c, float r, float y) => new Vector3((c - 34f) * 2f, y, (24f - r) * 2f);
+
+    static Vector3 ClientPos()
+    {
+        var pos = V("pos").Split(',');
+        return pos.Length == 3 ? new Vector3(float.Parse(pos[0], CultureInfo.InvariantCulture), float.Parse(pos[1], CultureInfo.InvariantCulture), float.Parse(pos[2], CultureInfo.InvariantCulture)) : new Vector3(0f, -99f, 0f);
+    }
+
+    static string PaintOf(Component c)
+    {
+        if (c == null) return "?";
+        return c.GetComponentsInChildren<Renderer>().SelectMany(r => r.sharedMaterials).Where(m => m != null && m.name.StartsWith("VN_MaskPaint_")).Select(m => m.name.Substring(13)).FirstOrDefault() ?? "?";
+    }
+
+    static IEnumerator VeneciaScript()
+    {
+        yield return Wait(1.5f);
+        NetSession.On(NetMsg.TestReport, (s, r) =>
+        {
+            string t = r.Str();
+            int bar = t.IndexOf('|');
+            if (bar > 0) reports[t.Substring(0, bar)] = t.Substring(bar + 1);
+        });
+        var ns = NetSession.Ensure();
+        ns.HostDirect(NetSession.DefaultPort, true);
+        yield return Wait(0.5f);
+        Check(ns.Active && ns.IsHost, "host opened a room (direct IP)");
+        var mm = Object.FindAnyObjectByType<MainMenu>();
+        if (mm != null) mm.OpenRoom();
+        string log = Path.Combine(Project, ClientFolder, "client.log");
+        client = Process.Start(new ProcessStartInfo(ClientExe,
+            "-netjoin 127.0.0.1 -netanimal Toucan -netbot -netprofile testclient -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -logFile \"" + log + "\"") { UseShellExecute = false });
+        yield return Until(() => ns.Roster.Count >= 2, 60f);
+        Check(ns.Roster.Count == 2, "the client joined the room");
+        if (ns.Roster.Count < 2) yield break;
+
+        ns.SetSettings(Difficulty.Normal, false, matchMap);
+        ns.StartMatch(matchScene);
+        yield return Until(() => NetGame.Instance != null && NetGame.Instance.Ready, 90f);
+        var net = NetGame.Instance;
+        Check(net != null && net.Ready && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Venecia", "both loaded La Serenisima: match started");
+        if (net == null) yield break;
+        var gm = GameManager.Instance;
+        var me = gm.Player;
+        var proxy = net.PlayerAt(1);
+        me.GodMode = true;
+        Cmd("god on");
+        yield return Wait(2f);
+        yield return Ask("start");
+        Check(V("scene") == "Venecia" && I("players") == 2 && V("ready") == "True", "client: in Venecia, 2 players, ready");
+        var bm = BoatMission.Instance;
+        Check(bm != null && bm.HasTasks && bm.GondolierSpot >= 0 && V("tasks").EndsWith("@" + bm.GondolierSpot), "the host's golden gondolier spot reaches the client (host " + (bm != null ? bm.GondolierSpot : -9) + ", client " + V("tasks") + ")");
+        var fences = Object.FindObjectsByType<ZoneFence>(FindObjectsInactive.Include);
+        Check(V("fences") == fences.Count(f => f.Up) + "/" + fences.Length, "closed barrios fenced on both (host " + fences.Count(f => f.Up) + "/" + fences.Length + ", client " + V("fences") + ")");
+
+        // masks: an old man in a bauta, same paint on both machines; the client's hits break it on the host
+        var rm = RoundManager.Instance;
+        yield return Until(() => rm.Round >= 1, 30f);
+        foreach (var e in Object.FindObjectsByType<EnemyHealth>()) if (!e.IsDead) e.TakeDamage(999999f, false, true);
+        var bauta = AssetDatabase.LoadAssetAtPath<EnemyVariant>("Assets/Data/Enemies/AnselmoBauta.asset");
+        var masked = rm.SpawnEnemy(bauta, Near(me.transform.position, 6f));
+        yield return Wait(3f);
+        var mh = masked != null ? masked.GetComponent<EnemyHealth>() : null;
+        Check(mh != null && mh.Masked, "host: an old man in a bauta mask (" + (mh != null ? "id " + mh.NetId : "none") + ")");
+        if (mh != null)
+        {
+            string hostPaint = PaintOf(masked.GetComponentInChildren<MaskLook>());
+            yield return Ask("mask");
+            Check(hostPaint != "?" && V("m" + mh.NetId) == hostPaint, "the mask has the same paint on both machines (host " + hostPaint + ", client " + V("m" + mh.NetId) + ")");
+            Tp(Near(masked.transform.position, 2f));
+            yield return Wait(0.8f);
+            float hp0 = mh.Current;
+            for (int i = 0; i < 3 && mh != null && mh.Masked; i++) { Cmd("hit 50"); yield return Wait(0.6f); }
+            Check(mh != null && !mh.IsDead && !mh.Masked, "client hits break the bauta on the host (alive, health " + F(hp0) + " -> " + (mh != null ? F(mh.Current) : "-") + ")");
+            yield return Wait(1f);
+            yield return Ask("mask2");
+            Check(V("m" + mh.NetId) == "?", "the broken mask is gone on the client too (" + V("m" + mh.NetId) + ")");
+            mh.TakeDamage(999999f, false, true);
+        }
+
+        // bridge 1 opened by the client: the Mercato fence goes on both
+        gm.AddPoints(20000, PointSource.Debug);
+        var door = Object.FindObjectsByType<ZoneDoor>().OrderBy(d => d.Cost).FirstOrDefault();
+        var merc = fences.FirstOrDefault(f => f.Zone != null && f.Zone.displayName.StartsWith("Mercato"));
+        if (door != null)
+        {
+            Tp(Near(door.InteractPoint + (me.transform.position - door.InteractPoint).normalized * 1.2f, 0.3f));
+            yield return Wait(0.8f);
+            Cmd("use");
+            yield return Until(() => door == null, 3f);
+            yield return Until(() => CardManager.Instance.CurrentOffer != null, 2f);
+            if (CardManager.Instance.CurrentOffer != null) { Cmd("card 1"); yield return Until(() => CardManager.Instance.CurrentOffer == null, 3f); }
+            yield return Wait(0.8f);
+            yield return Ask("door");
+            Check(door == null && merc != null && !merc.Up && V("fences") == fences.Count(f => f.Up) + "/" + fences.Length,
+                "client opens bridge 1: the Mercato fence is gone on both (client fences " + V("fences") + ")");
+        }
+        // the rest open from the host (debug), except the vaporetto
+        foreach (var d in Object.FindObjectsByType<ZoneDoor>().ToList())
+            if (!d.RequiresMission) d.DebugOpen();
+        yield return Wait(1f);
+        if (CardManager.Instance.CurrentOffer != null) { Cmd("card 1"); yield return Wait(1f); }
+
+        // jobs done by the client: shovel, Giuseppe, golden gondolier, bell
+        var tasks = Object.FindObjectsByType<MissionTask>();
+        foreach (var kind in new[] { MissionTask.Kind.Shovel, MissionTask.Kind.Grave, MissionTask.Kind.Gondolier })
+        {
+            var t = tasks.FirstOrDefault(x => x.TaskKind == kind && x.Here);
+            if (t == null) { Write("FAIL no task " + kind); continue; }
+            int pot = gm.Points;
+            Vector3 stand = Near(t.InteractPoint, 1.1f);
+            Tp(stand, Quaternion.LookRotation(Flat(t.InteractPoint - stand) + Vector3.forward * 0.001f).eulerAngles.y);
+            yield return Wait(0.9f);
+            Cmd("use");
+            System.Func<bool> done = () => kind == MissionTask.Kind.Shovel ? bm.Shovel : kind == MissionTask.Kind.Grave ? bm.Giuseppe : bm.Gondolier;
+            yield return Until(done, 3f);
+            Check(done(), "client: " + kind + " done on the host" + (kind == MissionTask.Kind.Shovel ? " (paid " + (pot - gm.Points) + ")" : ""));
+        }
+        var climb = Object.FindAnyObjectByType<TowerClimb>();
+        var bell = Object.FindAnyObjectByType<PowerSwitch>();
+        if (climb != null && bell != null)
+        {
+            Tp(climb.Entry + Vector3.up * 0.1f);
+            yield return Wait(3f);
+            yield return Ask("climb");
+            float y = ClientPos().y;
+            Check(y > 15f, "client walks into the campanile door: carried up to the belfry (y " + F(y) + ")");
+            Cmd("use");
+            yield return Until(() => bm.Power, 3f);
+            Check(bm.Power, "client rings the bell: the host has the light on");
+        }
+        yield return Wait(1f);
+        yield return Ask("tasks");
+        Check(V("tasks").StartsWith("S1G1O1B1"), "client sees the 4 jobs done (" + V("tasks") + ")");
+        Cmd("shot " + ClientShot("Online_venecia_tasks_client.png"));
+        yield return Wait(22f);   // the campanile throws him off after 20 s
+
+        // gondola: the client pays at the Ferrovia stop, rides on its own machine, lands at another stop
+        var from = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia"));
+        if (from != null)
+        {
+            Vector3 dest = from.Destination;
+            int pot = gm.Points;
+            Tp(Near(from.InteractPoint, 1f));
+            yield return Wait(0.9f);
+            Cmd("use");
+            yield return Wait(1.5f);
+            yield return Ask("ride");
+            Check(gm.Points == pot - gm.Economy.gondolaCost && I("gondolasBusy") >= 1, "client takes the gondola: the host charges " + (pot - gm.Points) + ", the client rides (" + V("gondolasBusy") + " busy)");
+            Cmd("shot " + ClientShot("Online_venecia_gondola_client.png"));
+            yield return Until(() => Vector3.Distance(Flat(proxy.transform.position), Flat(dest)) < 1.5f, 16f);
+            yield return Wait(0.5f);
+            yield return Ask("landed");
+            float off = Vector3.Distance(Flat(proxy.transform.position), Flat(dest));
+            Check(off < 1.5f && I("gondolasBusy") == 0, "client lands at the next stop, the host sees it there (" + F(off) + " m)");
+        }
+
+        // acqua alta: both flood, the client swims a canal, the tide goes down without hurting him
+        var tide = AcquaAlta.Instance;
+        var rescue = CanalRescue.Instance;
+        if (tide != null && rescue != null)
+        {
+            Cmd("god off");
+            // a real flood round (every 5): the client works the tide out from the round number (ForceNext is host-only)
+            float until = Time.realtimeSinceStartup + 150f;
+            while (!tide.Flooding && Time.realtimeSinceStartup < until)
+            {
+                foreach (var e in Object.FindObjectsByType<EnemyHealth>()) if (!e.IsDead) e.TakeDamage(999999f, false, true);
+                if (!rm.InIntermission) rm.DebugEndRound();
+                yield return Wait(1f);
+            }
+            Write("   round " + rm.Round + ", flooding " + tide.Flooding);
+            yield return Wait(2f);
+            yield return Ask("tide");
+            Check(tide.Flooding && V("tide").StartsWith("up,swim"), "acqua alta on both (client " + V("tide") + ")");
+            Tp(VCell(29f, 34f, 0.3f));
+            yield return Wait(2.5f);
+            yield return Ask("swim");
+            Vector3 cp = ClientPos();
+            int hpSwim = I("hp");
+            Check(rescue.InWater(cp) && cp.y > tide.SwimY - 0.3f, "the client swims in the canal (y " + F(cp.y) + ")");
+            Cmd("shot " + ClientShot("Online_venecia_swim_client.png"));
+            foreach (var e in Object.FindObjectsByType<EnemyHealth>()) if (!e.IsDead) e.TakeDamage(999999f, false, true);
+            rm.DebugEndRound();
+            yield return Until(() => !tide.Flooding, 20f);
+            yield return Wait(2.5f);
+            yield return Ask("dry");
+            cp = ClientPos();
+            Check(V("tide").StartsWith("down") && !rescue.InWater(cp) && I("hp") >= hpSwim, "tide down: the client is back on a quay, no damage (hp " + V("hp") + "/" + hpSwim + ", " + V("tide") + ")");
+            Cmd("god on");
+        }
+        CoopPlayTest.ShotAll("Renders/Online_venecia_host.png");
+        Cmd("quit");
+        yield return Wait(1f);
+    }
+
+    static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
 
     // ---------------------------------------------------------------- the test
     static IEnumerator Script()

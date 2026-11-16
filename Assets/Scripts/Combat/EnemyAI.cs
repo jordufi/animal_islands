@@ -129,6 +129,7 @@ public class EnemyAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         agent.autoTraverseOffMeshLink = false;   // ledge drops / slides: jumped in an arc by TraverseLink
+        agent.areaMask = NavAgents.EnemyMask;    // no canal beds unless the acqua alta is on
         health = GetComponent<EnemyHealth>();
         animator = GetComponentInChildren<Animator>();
         if (animator != null) animator.applyRootMotion = false;
@@ -159,6 +160,7 @@ public class EnemyAI : MonoBehaviour
         mask = Instantiate(prefab, head.position + transform.forward * 0.3f * k + Vector3.up * 0.26f * k, transform.rotation, head);
         mask.transform.localScale *= 2.1f;
         foreach (var c in mask.GetComponentsInChildren<Collider>()) Destroy(c);
+        MaskLook.Dress(mask, health);
         health.MaskBroken -= DropMask;
         health.MaskBroken += DropMask;
     }
@@ -168,12 +170,28 @@ public class EnemyAI : MonoBehaviour
         if (mask == null) return;
         var m = mask;
         mask = null;
-        m.transform.SetParent(null, true);
-        var rb = m.AddComponent<Rigidbody>();
-        rb.linearVelocity = transform.forward * 2.5f + Vector3.up * 3f + transform.right * Random.Range(-1.5f, 1.5f);
-        rb.angularVelocity = Random.insideUnitSphere * 12f;
-        Destroy(m, 2.5f);
+        MaskLook.Shatter(m, transform.forward * 2.5f + transform.right * Random.Range(-1.5f, 1.5f));
     }
+
+    // La Serenisima acqua alta: old men can follow you into the flooded canals (area "Canal" only in their mask
+    // while it floods) and wade slower there. AcquaAlta drives both.
+    float baseSpeed = -1f;
+    bool wading;
+
+    public void SetCanalAccess(bool open)
+    {
+        if (agent == null) return;
+        agent.areaMask = open ? NavMesh.AllAreas : NavMesh.AllAreas & ~(1 << NavAgents.CanalArea);
+    }
+
+    public void SetWading(bool on, float factor)
+    {
+        if (agent == null || on == wading) return;
+        wading = on;
+        if (baseSpeed < 0f) baseSpeed = agent.speed;
+        agent.speed = on ? baseSpeed * factor : baseSpeed;
+    }
+
 
     // Called by the RoundManager right after spawning.
     public void Configure(EnemyVariant variant, float maxHealth)
@@ -185,6 +203,7 @@ public class EnemyAI : MonoBehaviour
         health.PointsMultiplier = variant.pointsMultiplier;
         damage = variant.damage;
         agent.speed = variant.moveSpeed * RunModifiers.Get(Stat.EnemySpeed);
+        baseSpeed = agent.speed;
         transform.localScale = Vector3.one * variant.scale;
         if (animator != null) animator.SetFloat(WalkSpeedHash, agent.speed / walkClipSpeed);
         if (variant.clothingColor.a > 0f) TintClothes(variant.clothingColor);

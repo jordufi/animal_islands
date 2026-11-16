@@ -34,7 +34,7 @@ public static partial class IslaZombieSetup
         {
             case 'W': return 7;                                    // bus del Imserso
             case 'h': return 6;                                    // beach hut / tiki bar
-            case 'o': return Ven ? (zone == 'r' || zone == 'n' || zone == 'i' ? 5 : 1) : zone == 'k' || zone == 'm' || zone == 'd' ? 5 : zone == 'f' ? 3 : 1;   // tent / stall / container, faro rocks
+            case 'o': return Ven ? (zone == 'n' || zone == 'i' ? 5 : 1) : zone == 'k' || zone == 'm' || zone == 'd' ? 5 : zone == 'f' ? 3 : 1;   // tent / stall / container, faro rocks
             case '#': return 4;
             case 'R': case 'Z': return 3;
             case '.': return 2;
@@ -169,6 +169,14 @@ public static partial class IslaZombieSetup
                     foreach (float side in new[] { -1f, 1f })
                         TexBox(t, "Marco", B + right * side * 0.72f - d * 0.08f, new Vector3(0.32f, 2.2f, 0.18f), frame, frame, 0f, false);
                     TexBox(t, "Dintel", B - d * 0.08f, new Vector3(1.8f, 0.35f, 0.2f), frame, frame, 1.95f, false);
+                    if (Ven)   // B5: a Venetian doorway: flood board (paratia) to climb over and a metal shutter half up, in the spawn colour
+                    {
+                        Box(t, "Paratia", B - d * 0.2f, new Vector3(1.12f, 0.45f, 0.06f), paint, 0f, false);
+                        foreach (float side in new[] { -1f, 1f }) Box(t, "Guia", B - d * 0.2f + right * side * 0.58f, new Vector3(0.06f, 0.55f, 0.1f), inox, 0f, false);
+                        Box(t, "Serranda", B - d * 0.05f, new Vector3(1.15f, 0.62f, 0.04f), doorMat, 1.33f, false);
+                        for (int k = 0; k < 4; k++) Box(t, "Serranda_Lama", B - d * 0.075f, new Vector3(1.15f, 0.025f, 0.02f), paint, 1.38f + k * 0.15f, false);
+                        break;
+                    }
                     for (int k = 0; k < 3; k++)   // rubble across the mouth
                         TexBox(t, "Escombro", B + right * (k - 1) * 0.38f - d * 0.12f, new Vector3(0.36f, 0.3f + Hash(pl.cell.x, pl.cell.y, k) * 0.2f, 0.3f), frame, frame, 0f, false);
                     Box(t, "Valla", B - d * 0.3f, new Vector3(1.1f, 0.1f, 0.05f), paint, 0.42f, false);   // the spawn colour on every entrance

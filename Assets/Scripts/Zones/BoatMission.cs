@@ -30,6 +30,7 @@ public class BoatMission : MonoBehaviour
     public bool Shovel { get; private set; }
     public bool Giuseppe { get; private set; }
     public bool Gondolier { get; private set; }
+    public int GondolierSpot { get; private set; } = -1;   // which of the possible spots has him (host picks, B2)
     public bool DebugSkipped { get; private set; }
     public bool DiscsDone => EasterEgg.Instance != null && EasterEgg.Instance.Completed;
     public bool KeyDone => MasterKey.Instance != null && (MasterKey.Instance.Holder != null || MasterKey.Instance.Used);
@@ -106,6 +107,12 @@ public class BoatMission : MonoBehaviour
     {
         var rm = RoundManager.Instance;
         if (rm != null) rm.RoundEnded += OnRoundEnded;
+        if (Net.Authority && HasTasks)
+        {
+            int spots = 0;
+            foreach (var t in FindObjectsByType<MissionTask>()) if (t.TaskKind == MissionTask.Kind.Gondolier) spots++;
+            GondolierSpot = spots > 0 ? UnityEngine.Random.Range(0, spots) : -1;
+        }
     }
 
     static GameManager Game => GameManager.Instance;
@@ -194,12 +201,13 @@ public class BoatMission : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- online
-    public void WriteNet(NetBuf b) => b.Bool(Power).Bool(Gas).Bool(Radio).Bool(Called).Bool(Complete).Int(DefenseUntilRound).Bool(Shovel).Bool(Giuseppe).Bool(Gondolier).Bool(DebugSkipped);
+    public void WriteNet(NetBuf b) => b.Bool(Power).Bool(Gas).Bool(Radio).Bool(Called).Bool(Complete).Int(DefenseUntilRound).Bool(Shovel).Bool(Giuseppe).Bool(Gondolier).Bool(DebugSkipped).Byte((byte)(GondolierSpot + 1));
 
     public void ReadNet(NetRead r)
     {
         Power = r.Bool(); Gas = r.Bool(); Radio = r.Bool(); Called = r.Bool(); Complete = r.Bool(); DefenseUntilRound = r.Int();
         Shovel = r.Bool(); Giuseppe = r.Bool(); Gondolier = r.Bool(); DebugSkipped = r.Bool();
+        GondolierSpot = r.Byte() - 1;
         Changed?.Invoke();
     }
 

@@ -9,17 +9,42 @@ Flujo de trabajo: `python Tools/Maps/make_venecia_layout.py` → `IslaZombieSetu
 `VeneciaPlayTest.Run()` + `SmokePlayTest.RunVenecia()`. Modelos: `Tools/Blender/make_venecia_props.py` (Blender en
 segundo plano). Capturas de comprobación: `WallpaperShots` (Open / Animal / OldMan / Render / Close sin guardar).
 
-## Preguntas abiertas para el usuario (preguntar antes de tocar A7 y A5)
-1. **"Con agua alta no debería haber barreras, porque no las ves"**: ¿qué barreras? Hipótesis de Fable (la más
-   probable): el borde del canal queda bajo el agua, no se ve dónde acaba el muelle y caes sin querer. Otras lecturas:
-   las barandillas de los puentes, los bordillos de las rampas, o el rebote de `CanalRescue` al entrar en un barrio
-   cerrado. La propuesta A7 asume la primera.
-2. **"En el mercado también se bugea"**: ¿qué pasa exactamente? En su captura hay dos abuelos metidos entre los puestos
-   (uno parece dentro de un puesto). Hipótesis en A5.
+## Estado (Opus, 16/11 tarde) — hecho y probado salvo lo marcado
+- **Hecho:** A1, A2, A3, A4 (con la ruta solo por agua abierta: 3 redes de canal), A5, A6, A7 (balizas + nado de jugador y
+  abuelos; el agua del canal NO se oscurece), A8, A9 (sin cambios), B1 (sol a 22°), B2 (protocolo 4), B3, B5 (mismo verde de
+  entrada: no se ha preguntado otro tono), B6, B7 en parte (Coop 39 OK leído; online solo en Isla del Faro).
+- **Hecho después (Opus, 16/11 noche):** agua low poly; B4 (los dos puentes grandes, 3 y 7, tienen el vano central abierto
+  con bóveda y la góndola pasa por debajo: las 7 paradas quedan en una sola red); `OnlinePlayTest.RunDirectVenecia()`
+  (22 OK); `CoopPlayTest.RunVenecia()` (42 OK). Ver `CLAUDE.md`.
+- **Pendiente:** los puentes pequeños (nivel 0) siguen macizos (no caben ni góndola ni pasajero); 4 muestras del casco
+  rozan un cruce en T estrecho (21, 31); origen del cambio de `MainMenu.unity` (no se repitió); equilibrio.
+- Resultados: `VeneciaPlayTest` 56 OK / 0 FAIL, Smoke Venecia 15, Smoke Isla 15, Feedback 26, Coop 39, Online RunDirect 69 / 0.
+  Detalle en `CLAUDE.md` (sección La Serenísima).
+
+## Preguntas al usuario (contestadas el 16/11)
+1. Agua alta: cayó al canal mientras "nadaba" por la calle inundada y la interacción fue rara → ver A7.
+2. Mercado: no recuerda el detalle; Fable lo investigó → ver A5.
+3. `Assets/Scenes/MainMenu.unity` aparece modificado sin que nadie lo pidiera (15/11 21:32, +132.000 líneas): la isla
+   de fondo del menú ha dejado de ser una instancia del prefab `IslandEnvironment` y está guardada como ~1.400 modelos
+   sueltos más sus colliders (`Huella`, `Tronco`, `Colision`). Se ve igual pero pesa mucho más. **No está en ningún
+   commit.** Opus: averiguar qué lo provoca (sospechosos: `CoopPlayTest`, que arranca en el menú, o
+   `TestMapSetup.SetupMenuMaps` / `BuildMenuScene` tras regenerar el prefab) y, salvo que el usuario diga otra cosa,
+   descartarlo con `git checkout -- Assets/Scenes/MainMenu.unity`. El cambio de `GB_Spawn_Puerta.mat` (modo de mezcla)
+   lo regenera el setup: descartarlo también.
+
+## Decisiones del usuario (16/11, segunda ronda) — mandan sobre lo demás
+- **Regla de diseño nueva (vale para todo el juego): los abuelos siempre deben poder seguir la misma ruta que el
+  jugador, salvo en la góndola y en el campanile** (con su límite de 20 s). No se crean más escapes donde no llegan.
+- **Los barrios cerrados llevan una valla alta** en su borde con el agua (se ve que no se puede entrar); desaparece al
+  abrir el barrio. Sustituye al rebote invisible como barrera normal.
+- Balizas en el borde del canal: sí.
+- Mercado: hacer lo propuesto en A5 **pero la pala se queda en (12, 22)**.
+- Cajas que flotan: arreglarlas en todo el mapa (vio varias).
+- Escena del menú: descartado el cambio (hecho por Fable con `git checkout`; falta averiguar qué lo provocó).
 
 ## A. Fallos de la partida del usuario
 
-### A1. Cajas que vuelan (comprobado)
+### A1. Cajas que vuelan (comprobado; el usuario vio varias: arreglar en todo el mapa)
 - Síntoma: en las pilas de cajas la tercera flota a ~2 m (captura 3; también en el muelle del Vaporetto).
 - Causa: `VenBuildProps`, rama `default` (pila de cajas): la tercera caja suma la altura dos veces, en la posición
   (`p + (…, 1.05, …)`) y en `baseY: 1.05f` de `PlaceInRect` (que ya suma `center.y + baseY`). El mismo código está en
@@ -68,16 +93,29 @@ segundo plano). Capturas de comprobación: `WallpaperShots` (Open / Animal / Old
 - Verificar: test: durante cada trayecto, muestrear el casco (caja orientada) contra colliders de Wall/Default cada
   0.2 s y exigir 0 solapes; captura de cada embarcadero.
 
-### A5. "En el mercado se bugea" (por confirmar con el usuario)
-- Lo que se ve en la captura 2: abuelos metidos entre los puestos, uno aparentemente dentro de uno.
-- Sospechas, por orden: (1) los puestos (`IZ_Puesto`, celdas `o` en zona `r`) son entradas de abuelos tipo "Objeto" y
-  el abuelo sale atravesando el mostrador; (2) el bloque central 4 × 2 de puestos deja huecos entre colliders por los
-  que el NavMesh pasa y el jugador no (o al revés); (3) la pala (`S` en (12, 22)) está en el pasillo de una casilla
-  entre la fila de puestos y el bloque central, y el `MissionTask` + los abuelos lo taponan.
-- Plan: reproducir con `WallpaperShots`/play test colocando al jugador en (12, 22); mirar con el visor de colliders del
-  menú de debug; comparar NavMesh y paseos del jugador por todos los pasillos del Mercato (añadir 4 paseos al test).
-  Arreglos probables: bloquear con un `Blocker` el interior de cada bloque de puestos, mover la pala a un puesto de
-  esquina con sitio (por ejemplo junto a (15, 26)), y que los puestos del bloque central no sean entradas.
+### A5. "En el mercado se bugea" (investigado por Fable el 16/11; el usuario no recuerda el detalle)
+Medido en la escena (rejilla de 0.5 m: NavMesh frente a cápsula del jugador, y lista de entradas del Mercato):
+- **Causa más probable de lo que vio:** el puesto de (14, 21) es una entrada de abuelos tipo "Objeto"
+  (`Entrada35_Objeto`, sale a (14, 22)). Está pegado a la pala (`S` en (12, 22)), en el mismo pasillo de una casilla.
+  El abuelo aparece dentro del puesto y atraviesa el mostrador para salir: en la captura 2 es el que asoma tras el
+  toldo rojo, con otro ya fuera a su lado. Parece un fallo aunque sea la animación de entrada.
+- **Segundo hallazgo:** hay islas de NavMesh encima de los mostradores del bloque central (celdas (10-13, 24)) y sobre
+  los tejados de los edificios del Mercato. Están aisladas, pero cualquier código que busque "el NavMesh más cercano"
+  (empujón, `SpawnEnemy(near)`, salida de un atajo) puede dejar a un abuelo subido o metido en un puesto.
+- Los pasillos están bien: el jugador y el NavMesh coinciden en todo el Mercato (la franja sin malla de la columna 7.5
+  es el borde de la logia, normal).
+- Arreglo:
+  1. En el tema Venecia los puestos no son entradas (`EntranceScore('o')` para la zona `r` = 1): los abuelos salen de
+     portales de fachada, escalerillas del canal y, en el Cimitero, de tumbas. Mover el `s` de (14, 22) a una celda con
+     fachada al lado.
+  2. Quitar las islas de NavMesh: `NavMeshModifier` "Not Walkable" no corta aquí (ya se probó en la fase 3), así que
+     hornear con un volumen de exclusión por altura o poner sobre cada puesto / tejado bajo un collider inclinado que no
+     deje superficie plana. Comprobación de setup nueva: ninguna isla de NavMesh inalcanzable desde el inicio con todas
+     las puertas abiertas (en los tres mapas).
+  3. **La pala se queda donde está** (decisión del usuario). Como el puesto vecino deja de ser entrada, el pasillo
+     queda libre.
+- Verificar: 4 paseos del jugador por los pasillos del Mercato en `VeneciaPlayTest`, la comprobación de islas, y una
+  captura del puesto de palas.
 
 ### A6. Las máscaras podrían estar más chulas (diseño)
 - Ahora son una elipse blanca con dos ojos y un sombrero plano.
@@ -88,15 +126,48 @@ segundo plano). Capturas de comprobación: `WallpaperShots` (Open / Animal / Old
   ducal y gemas. Al romperse: 3-4 trozos que saltan en vez de la máscara entera.
 - Verificar: capturas de cerca con `WallpaperShots.OldMan` de las tres; `VeneciaPlayTest` sigue en verde.
 
-### A7. Acqua alta: "no debería haber barreras porque no las ves" (pendiente de la respuesta 1)
-- Con la hipótesis del borde invisible: durante la marea el agua tapa el bordillo y el canal no se distingue de la
-  calle inundada.
-- Propuesta: (1) que el borde se vea siempre: los `Bordillo` blancos pasan a ser postes bajos/balizas que sobresalen
-  0.6 m del agua alta cada 2 m (o una línea de boyas que sube con `Flotantes`); (2) el agua del canal más oscura que la
-  de la calle (dos planos: canal y lámina de inundación clara y semitransparente); (3) durante la marea, caer al canal
-  no quita vida (solo te devuelve), porque no es culpa del jugador.
-- Si el usuario se refería a otra cosa (barandillas, rebote del barrio cerrado), replantear.
-- Verificar: captura en marea alta desde la Piazza y desde un puente; test: caída durante la marea = 0 daño.
+### A7. Acqua alta: caes al canal sin verlo (decidido con el usuario, 16/11)
+- Lo que pasó: con la marea alta iba por la calle inundada, no se ve dónde acaba el muelle, cayó al canal y el rescate
+  lo devolvió: "la interacción es rara".
+- Diseño cerrado:
+  1. **Balizas** en todos los bordes de muelle: postes cada 2 m que sobresalen del agua alta (suben con `Flotantes` o
+     miden lo bastante), y el agua del canal más oscura que la lámina sobre la calle (dos planos).
+  2. **Durante la marea el canal se cruza nadando, el jugador y los abuelos** (regla: ellos siguen tu ruta). Suelo de
+     nado a y = aguaAlta − 1.1 m en las celdas de agua interiores, activo solo con `AcquaAlta.Flooding`:
+     - jugador: velocidad ×0.5 en agua profunda (`ExternalSpeedFactor`), sale andando por cualquier muelle (hace falta
+       un escalón o rampa de salida: el muelle queda 0.65 m por encima del suelo de nado; resolver con un escalón
+       sumergido en el borde o subiendo el suelo de nado);
+     - abuelos: el fondo de nado se hornea como NavMesh con un área propia ("Canal", coste alto). Fuera de la marea esa
+       área está fuera de su `areaMask`; con la marea se añade. Nadan más lento (×0.6) y solo asoman de cintura para
+       arriba. Los `NavMeshLink` de entrada / salida del agua se crean en cada borde de muelle.
+     - Con la marea baja el canal sigue siendo una caída con rescate (`CanalRescue`), como ahora: ahí nadie nada.
+     - Al bajar la marea, jugadores y abuelos que sigan en el agua salen al muelle abierto más cercano (jugador sin
+       daño; abuelos recolocados sobre el NavMesh normal).
+  3. Online: como la marea, cada máquina lo activa sola por el número de ronda; los abuelos los mueve el anfitrión.
+- Verificar: test con marea forzada: entrar al Canal Grande desde Ferrovia = 0 rescates y 0 daño; un abuelo perseguidor
+  entra detrás y llega al jugador en el agua; salir por un muelle abierto; al acabar la ronda nadie queda en el agua.
+  Captura en marea alta desde la Piazza con las balizas.
+
+### A8. Vallas altas en los barrios cerrados (decisión del usuario)
+- Ahora un barrio cerrado solo se "defiende" con el rebote de `CanalRescue`, que no se ve.
+- Arreglo: `VenBuildRuntime` crea por cada zona un grupo `Valla_<zona>`: verja de hierro de 3.2 m (modelo nuevo
+  `VN_Verja`, tramo de 2 m, con pinchos) en cada borde zona-agua que no sea ya edificio, incluidos los lados de los
+  puentes que entran en la zona. El grupo se desactiva cuando la zona se abre (`ZoneManager.ZoneOpened`; en clientes
+  ya llega por `ZoneDoor.NetOpened`). La zona inicial no lleva valla.
+- El salto de la rana sube 4 m (`PlayerAbility.SuperJump` → `Launch(4f)`): el collider de la verja debe llegar a
+  ~6 m aunque el modelo mida 3.2 (decirlo en un comentario: es la única pared más alta que lo que se ve; alternativa,
+  verja visible de 5 m con remate). Capa Wall. No debe hornearse en el NavMesh de forma que corte pasillos: va en el
+  borde, sobre el bordillo.
+- `CanalRescue` se queda como red de seguridad (por si alguien acaba dentro igualmente).
+- Con la marea (A7): la verja también impide salir del agua hacia un barrio cerrado, que es lo que se quiere.
+- Verificar: test: desde Ferrovia, saltar con la rana hacia el Mercato cerrado = choca y cae al agua, 0 entradas;
+  al abrir el puente 1 las vallas del Mercato desaparecen en anfitrión y cliente. Captura de un barrio cerrado.
+
+### A9. El campanile se queda como está (decisión del usuario, 16/11)
+- Fable propuso que los abuelos subieran para cumplir la regla; el usuario dijo que no: **no deben seguirte al
+  campanile**. Es la segunda excepción aceptada a la regla, junto con la góndola.
+- No tocar: los abuelos no suben, el límite de 20 s (`TowerClimb.MaxStay`) sigue, se baja saltando.
+- Sí revisar con la regla el resto: tejados y mostradores de puestos (A5) y cualquier sitio nuevo que se cree.
 
 ## B. Pendiente del bloque anterior (el usuario ya lo pidió)
 
@@ -124,7 +195,8 @@ segundo plano). Capturas de comprobación: `WallpaperShots` (Open / Animal / Old
 
 ## Orden recomendado
 1. A1, A2, A3 (rápidos y muy visibles) → setup + tests + capturas.
-2. Preguntar 1 y 2 al usuario; mientras, A4 (góndola) y B4 (arcos), que van juntos.
-3. A5 y A7 con sus respuestas.
-4. A6 y B3 (Blender), B5.
-5. B2 (toca la red), B7, B6. Commit cuando el usuario lo diga.
+2. A5 (puestos sin entradas, islas de NavMesh) y A8 (vallas de barrios cerrados).
+3. A7 (balizas + nadar con marea, jugador y abuelos): toca NavMesh y enlaces. A9 no requiere cambios.
+4. A4 (góndola) con B4 (arcos de los puentes).
+5. A6 y B3 (Blender), B5.
+6. B2 (toca la red), B7, B6. Averiguar qué reescribe `MainMenu.unity`. Commit cuando el usuario lo diga.

@@ -334,14 +334,20 @@ public static partial class IslaZombieSetup
         BuildRamps(root, L, zones);
         BuildLedgeLips(root, L);
 
+        var vallas = root.Find("Vallas");   // La Serenisima fences: not baked (they go away), they carve instead
+        if (vallas != null) vallas.gameObject.SetActive(false);
         Physics.SyncTransforms();
         BakeNavMesh(root, L);
+        if (vallas != null) vallas.gameObject.SetActive(true);
         int links = BuildLinks(root, L, zones);
         if (links > 0) report.Add($"OK  {links} one-way links (ledges and slides)");
         report.AddRange(CheckMap(L, zones, points));
         report.AddRange(CheckHeightsNav(L, zones, points));
         report.AddRange(SpawnCoverage(L, zones));
+        report.AddRange(CheckProps(L, root));
+        if (Ven) report.Add(navIslandsLeft == 0 ? $"OK  NavMesh: {LastNavIslands} unreachable islands cut (stall counters, roofs, canal beds), none left" : $"ERROR: {navIslandsLeft} NavMesh islands still unreachable from the start");
         foreach (var d in doors) TestMapSetup.AddDoorObstacle(d.door.transform.Find("Barrier").gameObject, d.width);
+        if (Ven) VenFenceObstacles(root);
         report.Add(BuildMapAndSigns(root, L, points, doors));
         if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
 
@@ -378,7 +384,7 @@ public static partial class IslaZombieSetup
         sun.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
         if (Ven)   // sunset: low warm sun, long shadows, a little warm haze
         {
-            sun.color = new Color(1f, 0.68f, 0.42f); sun.intensity = 1.3f; sun.transform.rotation = Quaternion.Euler(17f, -62f, 0f);
+            sun.color = new Color(1f, 0.68f, 0.42f); sun.intensity = 1.3f; sun.transform.rotation = Quaternion.Euler(22f, -62f, 0f);
             RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Exponential; RenderSettings.fogDensity = 0.006f; RenderSettings.fogColor = new Color(0.95f, 0.66f, 0.5f);
         }
         RenderSettings.sun = sun;
@@ -510,6 +516,23 @@ public static partial class IslaZombieSetup
         go.transform.position = new Vector3(center.x, center.y + baseY, center.z) - rot * new Vector3(b.center.x * s, b.min.y * s, b.center.z * s);
         foreach (var col in go.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(col);
         return go;
+    }
+
+    // Crate stack (two on the floor, one on top, plus a barrel by the caller). The top crate is set on the
+    // real top of the crate below it: a fixed 1.05 m was added twice before and the crate floated (A1).
+    static void CrateStack(Transform pr, Vector3 p, float h)
+    {
+        var a = PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(-0.35f, 0f, -0.3f), 1.1f, 1.1f, h * 90f);
+        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(0.4f, 0f, 0.35f), 1.0f, 1.0f, h * 200f));
+        float top = p.y + 1.05f;
+        if (a != null)
+        {
+            var rs = a.GetComponentsInChildren<Renderer>();
+            if (rs.Length > 0) { var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds); top = b.max.y; }
+            PartColliders(a);
+        }
+        var c = PlaceInRect(pr, Island("Prop_Crate"), new Vector3(p.x - 0.3f, p.y, p.z - 0.25f), 0.9f, 0.9f, h * 300f, 0f, top - p.y);
+        PartColliders(c);
     }
 
     // Tree trunk collision: the models are centred on their canopy, so the trunk base is ~1 m off the
@@ -678,11 +701,19 @@ public static partial class IslaZombieSetup
             var mat = Ven ? VenGroundMaterial(zd) : GroundMaterial(zd);
             // one block per (zone, level) from y = -3 up to the floor: its sides are the coast cliffs and the slopes
             // between levels. Ramps stand on their low level; solids and slides on level 0 (their box covers the rest).
-            foreach (var r in Rects(L, (c, row) => L.cellZone[c, row] == zd.letter, (c, row) => GroundLevel(L, c, row)))
+            foreach (var r in Rects(L, (c, row) => L.cellZone[c, row] == zd.letter && !VenArched(L, c, row), (c, row) => GroundLevel(L, c, row)))
             {
                 int lv = GroundLevel(L, r.x, r.y);
                 TexBox(gr, "Ground_" + zd.id + (lv > 0 ? "_N" + lv : ""), Flat(RectCenter(r)), RectSize(r, 3f + lv * LevelH), mat, zd.letter == 'd' ? mat : cliff, -3f);
             }
+        }
+        if (Ven)   // stylised low-poly water mesh under an empty "Sea" (AcquaAlta moves it)
+        {
+            VenBuildArches(gr, L);
+            var vsea = Child(gr, "Sea", new Vector3(0f, -0.8f, 0f));
+            vsea.layer = WaterLayer;
+            VenBuildWater(vsea.transform, L);
+            return;
         }
         var sea = GameObject.CreatePrimitive(PrimitiveType.Plane);
         sea.name = "Sea";
@@ -849,9 +880,7 @@ public static partial class IslaZombieSetup
                         PartColliders(PlaceInRect(pr, Island(h < 0.5f ? "Rock_Large" : "Rock_Medium"), p, 2.3f, 2.3f, h * 360f, 2.8f));
                         break;
                     default:   // crate stacks (muelle, volley...)
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(-0.35f, 0f, -0.3f), 1.1f, 1.1f, h * 90f));
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(0.4f, 0f, 0.35f), 1.0f, 1.0f, h * 200f));
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(-0.3f, 1.05f, -0.25f), 0.9f, 0.9f, h * 300f, 0f, 1.05f));
+                        CrateStack(pr, p, h);
                         PartColliders(PlaceInRect(pr, Island("Prop_Barrel"), p + new Vector3(0.45f, 0f, -0.5f), 0.7f, 0.7f));
                         break;
                 }
@@ -1525,6 +1554,9 @@ public static partial class IslaZombieSetup
             for (int i = 0; i < L.doors.Count; i++) areas.GetArrayElementAtIndex(DoorAreaBase + i).FindPropertyRelative("name").stringValue = "Puerta" + (i + 1);
             areas.GetArrayElementAtIndex(LedgeArea).FindPropertyRelative("name").stringValue = "Caida";
             areas.GetArrayElementAtIndex(SlideArea).FindPropertyRelative("name").stringValue = "Tobogan";
+            var canal = areas.GetArrayElementAtIndex(NavAgents.CanalArea);
+            canal.FindPropertyRelative("name").stringValue = "Canal";
+            canal.FindPropertyRelative("cost").floatValue = 3f;   // swim only when it is clearly shorter
         }
         navSettings.ApplyModifiedProperties();
 
@@ -1535,6 +1567,9 @@ public static partial class IslaZombieSetup
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
         surface.layerMask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << WaterLayer) | (1 << NavAgents.PropLayer);   // doors block at runtime (carving obstacles)
         Bake(surface, NavMeshDataPath);
+        LastNavIslands = 0;
+        if (Ven && CutNavIslands(go.transform, L, 0) > 0) Bake(surface, NavMeshDataPath);   // islands on stall counters / roofs / canal beds (A5)
+        if (Ven) navIslandsLeft = CutNavIslands(go.transform, L, 0, false);
 
         // "Saltador": the same without the props, for the night old men who walk over them
         var jumper = go.AddComponent<NavMeshSurface>();
@@ -1543,6 +1578,65 @@ public static partial class IslaZombieSetup
         jumper.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
         jumper.layerMask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << WaterLayer);
         Bake(jumper, JumperNavMeshDataPath);
+    }
+
+    public static int LastNavIslands;
+    static int navIslandsLeft;
+
+    // NavMesh "islands" nobody can walk to (stall counters, roofs, canal beds): code that looks for "the nearest NavMesh"
+    // (push-back, spawning near a point, the exit of a shortcut) could put an old man up there. Every part of the mesh
+    // of agent type `agent` that has no path from the player start is covered with a Not Walkable modifier volume
+    // (tight around the island, so the floor beside a stall is never cut); the caller bakes again.
+    static int CutNavIslands(Transform parent, Layout L, int agent, bool apply = true)
+    {
+        Vector3? start = null;
+        foreach (var c in Cells(L)) if (L.At(c.x, c.y) == '@') { start = World(c.x, c.y); break; }
+        var f = new NavMeshQueryFilter { agentTypeID = agent, areaMask = NavMesh.AllAreas };
+        if (start == null || !NavMesh.SamplePosition(start.Value, out var sh, 2f, f)) return 0;
+        var tri = NavMesh.CalculateTriangulation();
+        var v = tri.vertices; var ix = tri.indices;
+        var weld = new int[v.Length];
+        var key = new Dictionary<Vector3Int, int>();
+        for (int i = 0; i < v.Length; i++) { var k = Vector3Int.RoundToInt(v[i] * 50f); if (!key.TryGetValue(k, out var w)) key[k] = w = i; weld[i] = w; }
+        var par = Enumerable.Range(0, v.Length).ToArray();
+        int Find(int a) { while (par[a] != a) a = par[a] = par[par[a]]; return a; }
+        for (int t = 0; t < ix.Length; t += 3)
+        {
+            int a = Find(weld[ix[t]]);
+            par[Find(weld[ix[t + 1]])] = a;
+            par[Find(weld[ix[t + 2]])] = a;
+        }
+        var comps = new Dictionary<int, (Bounds b, Vector3 rep, float area)>();
+        for (int t = 0; t < ix.Length; t += 3)
+        {
+            Vector3 A = v[ix[t]], B = v[ix[t + 1]], C = v[ix[t + 2]];
+            float ar = Vector3.Cross(B - A, C - A).magnitude / 2f;
+            int r = Find(weld[ix[t]]);
+            if (!comps.TryGetValue(r, out var e)) e = (new Bounds(A, Vector3.zero), (A + B + C) / 3f, 0f);
+            e.b.Encapsulate(A); e.b.Encapsulate(B); e.b.Encapsulate(C);
+            if (ar > e.area) { e.rep = (A + B + C) / 3f; e.area = ar; }
+            comps[r] = e;
+        }
+        var holder = new GameObject("SinMalla_Islas").transform;
+        holder.SetParent(parent, false);
+        var path = new NavMeshPath();
+        int cut = 0;
+        foreach (var e in comps.Values)
+        {
+            if (!NavMesh.SamplePosition(e.rep, out var h, 0.1f, f)) continue;   // the other agent type's mesh
+            if (NavMesh.CalculatePath(sh.position, h.position, f, path) && path.status == NavMeshPathStatus.PathComplete) continue;
+            cut++;
+            if (!apply) continue;
+            var vol = new GameObject("Isla").AddComponent<NavMeshModifierVolume>();
+            vol.transform.SetParent(holder, false);
+            vol.transform.position = new Vector3(e.b.center.x, e.b.center.y, e.b.center.z);
+            vol.size = new Vector3(e.b.size.x + 0.2f, e.b.size.y + 0.5f, e.b.size.z + 0.2f);
+            vol.center = Vector3.zero;   // the component defaults to (0, 1, 0)
+            vol.area = 1;   // Not Walkable
+        }
+        if (!apply) Object.DestroyImmediate(holder.gameObject);
+        else LastNavIslands = cut;
+        return cut;
     }
 
     static string JumperNavMeshDataPath => cfg.JumperNavMeshPath;
@@ -1590,7 +1684,7 @@ public static partial class IslaZombieSetup
         int allDoorBits = 0;
         for (int i = 0; i < L.doors.Count; i++) allDoorBits |= 1 << (DoorAreaBase + i);
         // slides are one-way shortcuts between groups: checked apart (CheckHeightsNav), never part of the door graph
-        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits & ~(1 << SlideArea); foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
+        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits & ~(1 << SlideArea) & ~(1 << NavAgents.CanalArea); foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
         var path = new NavMeshPath();
         Vector3? Snap(Vector3 p) => NavMesh.SamplePosition(p, out var h, 1.5f, NavAgents.Filter(0)) ? h.position : (Vector3?)null;
         bool Reach(Vector3 a, Vector3 b, int mask) => NavMesh.CalculatePath(a, b, new NavMeshQueryFilter { agentTypeID = 0, areaMask = mask }, path) && path.status == NavMeshPathStatus.PathComplete;

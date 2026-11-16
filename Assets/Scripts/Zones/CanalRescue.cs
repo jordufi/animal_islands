@@ -56,11 +56,14 @@ public class CanalRescue : MonoBehaviour
         {
             if (p == null || carrying.Contains(p) || p.IsDead || PlayerSlot.IsProxy(p)) continue;
             Vector3 pos = p.transform.position;
-            if (pos.y < waterY + 0.15f) { Rescue(p, true); continue; }
+            var tide = AcquaAlta.Instance;
+            bool swimming = tide != null && tide.SwimActive;   // acqua alta: the canals have a floor, you swim them
+            if (pos.y < (swimming ? tide.SwimY - 0.6f : waterY + 0.15f)) { Rescue(p, true); continue; }
             var cc = p.GetComponent<CharacterController>();
             if (cc == null || !cc.enabled || !cc.isGrounded) continue;
             char ch = LetterAt(pos);
             if (ch == '+') continue;                       // door cells: neither safe nor forbidden
+            if (swimming && pos.y < -0.1f) continue;       // swimming under an arched bridge: still the canal
             var z = ZoneAt(pos);
             if (z == null) continue;
             if (z.IsOpen) { if (pos.y < 7f) lastSafe[p] = CellCentre(pos); }   // never the top of the campanile
@@ -68,17 +71,26 @@ public class CanalRescue : MonoBehaviour
         }
     }
 
-    void Rescue(PlayerHealth p, bool water)
+    // The tide goes down while someone is still in a canal: back to the last open cell, no damage, no toast.
+    public void ToShore(PlayerHealth p)
+    {
+        if (p == null || carrying.Contains(p)) return;
+        Rescue(p, true, false);
+    }
+
+    public bool InWater(Vector3 p) => LetterAt(p) == '.';
+
+    void Rescue(PlayerHealth p, bool water, bool hurt = true)
     {
         if (!lastSafe.TryGetValue(p, out var target))
         {
             var spawn = GameObject.Find("PlayerSpawn");
             target = spawn != null ? spawn.transform.position : Vector3.zero;
         }
-        StartCoroutine(Carry(p, target + Vector3.up * 0.6f, water));
+        StartCoroutine(Carry(p, target + Vector3.up * 0.6f, water, hurt));
     }
 
-    IEnumerator Carry(PlayerHealth p, Vector3 target, bool water)
+    IEnumerator Carry(PlayerHealth p, Vector3 target, bool water, bool hurt)
     {
         carrying.Add(p);
         var cc = p.GetComponent<CharacterController>();
@@ -96,6 +108,7 @@ public class CanalRescue : MonoBehaviour
         if (cc != null) cc.enabled = true;
         if (pc != null) pc.enabled = true;
         carrying.Remove(p);
+        if (!hurt) yield break;
         if (water && damage > 0 && !p.IsDowned && p.CurrentHealth > damage + 1) p.TakeDamage(damage);
         var gm = GameManager.Instance;
         if (gm != null) gm.ShowMessageTo(p, water ? "¡Al agua! Sales por donde caíste." : "Ese barrio sigue cerrado: paga el puente.");

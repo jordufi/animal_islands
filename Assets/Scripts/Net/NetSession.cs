@@ -23,7 +23,7 @@ public class NetSession : MonoBehaviour
 {
     public const int MaxPlayers = 4;
     public const ushort DefaultPort = 7777;
-    const string Version = "animal-island-online-3";
+    const string Version = "animal-island-online-4";   // 4: golden gondolier spot in the quest state
     const float LoadTimeout = 45f;
 
     public static NetSession Instance { get; private set; }

@@ -13,8 +13,14 @@ public class MissionTask : Interactable
     [SerializeField] GameObject before;   // shown until done (the shovel on the stall, the mound, ...)
     [SerializeField] GameObject after;    // shown once done (the open grave with Giuseppe)
     [SerializeField] TextMesh worldLabel;
+    [SerializeField] int spot;            // Gondolier: index among the possible spots (BoatMission.GondolierSpot)
+    [SerializeField] GameObject spotRoot; // Gondolier: figure + blocker, hidden unless this spot was picked
 
     public Kind TaskKind => kind;
+    public int Spot => spot;
+    public bool Here => kind != Kind.Gondolier || Mission == null || Mission.GondolierSpot < 0 || Mission.GondolierSpot == spot;
+
+    public void SetSpot(int index, GameObject root) { spot = index; spotRoot = root; }
 
     public void Configure(Kind k, GameObject shownBefore, GameObject shownAfter, TextMesh label)
     {
@@ -37,6 +43,7 @@ public class MissionTask : Interactable
     void Update()
     {
         bool done = Done;
+        if (spotRoot != null && spotRoot.activeSelf != Here) spotRoot.SetActive(Here);
         if (before != null && before.activeSelf == done) before.SetActive(!done);
         if (after != null && after.activeSelf != done) after.SetActive(done);
         if (worldLabel == null) return;
@@ -50,7 +57,7 @@ public class MissionTask : Interactable
 
     public override string Prompt(PlayerInteractor player)
     {
-        if (Mission == null || Done) return "";
+        if (Mission == null || Done || !Here) return "";
         switch (kind)
         {
             case Kind.Shovel: return "□  Comprar la pala (" + CostText(ShovelCost) + ")";
@@ -59,11 +66,11 @@ public class MissionTask : Interactable
         }
     }
 
-    public override bool CanInteract(PlayerInteractor player) => Mission != null && !Done && (kind != Kind.Grave || Mission.Shovel);
+    public override bool CanInteract(PlayerInteractor player) => Mission != null && !Done && Here && (kind != Kind.Grave || Mission.Shovel);
 
     public override void Interact(PlayerInteractor player)
     {
-        if (!Net.Authority || Mission == null || Done) return;   // online client: PlayerInteractor asks the host
+        if (!Net.Authority || Mission == null || Done || !Here) return;   // online client: PlayerInteractor asks the host
         switch (kind)
         {
             case Kind.Shovel: if (Pay(ShovelCost, player)) Mission.BuyShovel(); break;

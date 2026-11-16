@@ -333,7 +333,7 @@ public static partial class IslaZombieSetup
         var report = new List<string>();
         var filter = NavAgents.Filter(0);
         var path = new NavMeshPath();
-        int walkOnly = NavMesh.AllAreas & ~(1 << LedgeArea) & ~(1 << SlideArea);   // every door open, no drops
+        int walkOnly = NavMesh.AllAreas & ~(1 << LedgeArea) & ~(1 << SlideArea) & ~(1 << NavAgents.CanalArea);   // every door open, no drops, no swimming
 
         // 5) every floor cell walkable from the start without dropping (no terrace you only reach by falling)
         if (L.HasHeights && NavMesh.SamplePosition(pts.playerSpawn, out var start, 2f, filter))

@@ -26,8 +26,16 @@ public static class CoopPlayTest
     static readonly List<Gamepad> pads = new List<Gamepad>();
     static bool startedScript;
 
+    static string mapId = "isla-del-faro";
+
+    // the same on La Serenisima (+ a gondola ride by J2 while the others play on)
+    [MenuItem("Tools/Island/Play Test Coop (La Serenisima)")]
+    public static void RunVenecia() { mapId = "la-serenisima"; Start(); }
+
     [MenuItem("Tools/Island/Play Test Coop")]
-    public static void Run()
+    public static void Run() { mapId = "isla-del-faro"; Start(); }
+
+    static void Start()
     {
         if (EditorApplication.isPlaying) { Debug.LogWarning("Stop play mode first"); return; }
         EditorSceneManager.OpenScene("Assets/Scenes/MainMenu.unity", OpenSceneMode.Single);
@@ -158,7 +166,18 @@ public static class CoopPlayTest
         Party.Members[2].animal = Party.Members[1].animal;   // repeating an animal is allowed
         yield return Press(1, GamepadButton.Start);   // START -> map selector
         yield return Wait(0.5f);
-        mm.PlayMap(0);   // Isla del Faro
+        {
+            var maps = new SerializedObject(mm).FindProperty("maps");
+            int index = 0, k = 0;
+            for (int i = 0; i < maps.arraySize; i++)
+            {
+                var m = maps.GetArrayElementAtIndex(i).objectReferenceValue as MapData;
+                if (m == null) continue;
+                if (m.id == mapId) index = k;
+                k++;
+            }
+            mm.PlayMap(index);   // Isla del Faro (0) or the map asked for
+        }
         float t0 = Time.realtimeSinceStartup;
         while ((GameManager.Instance == null || GameManager.Instance.PlayerCount < 3) && Time.realtimeSinceStartup - t0 < 30f) yield return null;
         var gm = GameManager.Instance;
@@ -193,6 +212,42 @@ public static class CoopPlayTest
         var turned = slots.Select((s, i) => Mathf.Abs(Mathf.DeltaAngle(s.CameraRig.Yaw, yaw0[i]))).ToList();
         Check(moved[1] > 1.2f && moved[0] < 0.2f && moved[2] < 0.2f, $"J2's stick moves only J2 (moved {moved[0]:F2} / {moved[1]:F2} / {moved[2]:F2} m)");
         Check(turned[1] > 20f && turned[0] < 1f && turned[2] < 1f, $"J2's right stick turns only J2's camera ({turned[0]:F0} / {turned[1]:F0} / {turned[2]:F0} deg)");
+
+        // ---------------------------------------------------------- 2b. La Serenisima: J2 rides a gondola, J1 / J3 play on
+        if (mapId == "la-serenisima")
+        {
+            foreach (var d in Object.FindObjectsByType<ZoneDoor>().ToList())   // not 1 and 3: the card steps below use them
+                if (!d.RequiresMission && !d.name.StartsWith("Door1_") && !d.name.StartsWith("Door3_")) d.DebugOpen();
+            yield return WaitGame(0.5f);
+            var cmv = CardManager.Instance;
+            if (cmv != null && cmv.CurrentOffer != null) { yield return Press(cmv.Chooser != null ? PlayerSlot.Of(cmv.Chooser).Index : 0, GamepadButton.South); yield return WaitGame(0.5f); }
+            gm.AddPoints(1000, PointSource.Debug);
+            var stop = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia"));
+            if (stop == null) Write("FAIL no Ferrovia gondola stop");
+            else
+            {
+                Vector3 dest = stop.Destination;
+                var j2 = players[1];
+                var cc2 = j2.GetComponent<CharacterController>();
+                cc2.enabled = false; j2.transform.position = stop.InteractPoint + Vector3.up * 0.1f; cc2.enabled = true;
+                Vector3 j1At = players[0].transform.position;
+                int potV = gm.Points;
+                stop.Interact(j2.GetComponent<PlayerInteractor>());
+                yield return WaitGame(1f);
+                Check(stop.Busy && gm.Points == potV - gm.Economy.gondolaCost, "split-screen: J2 pays the gondola from the shared pot (" + (potV - gm.Points) + ")");
+                Pad(0, new Vector2(0f, 1f));
+                yield return WaitGame(0.8f);
+                Pad(0, Vector2.zero);
+                Check(Vector3.Distance(players[0].transform.position, j1At) > 1f, "J1 keeps moving while J2 is on the gondola");
+                ShotAll("Renders/Coop_venecia_gondola.png");
+                float t1 = Time.realtimeSinceStartup;
+                while (stop.Busy && Time.realtimeSinceStartup - t1 < 16f) yield return null;
+                yield return WaitGame(0.3f);
+                Check(!stop.Busy && Vector3.Distance(j2.transform.position, dest) < 1.5f && j2.GetComponent<CharacterController>().enabled,
+                    "J2 lands at the next stop (" + Vector3.Distance(j2.transform.position, dest).ToString("F1") + " m) and can move again");
+                ShotAll("Renders/Coop_venecia_split3.png");
+            }
+        }
 
         // ---------------------------------------------------------- 3. shared pot + the opener chooses the card (game paused)
         gm.AddPoints(20000, PointSource.Debug);

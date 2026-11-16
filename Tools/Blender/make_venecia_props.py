@@ -20,6 +20,8 @@ COLORS = {
     "VN_AwningPaint": (0.75, 0.2, 0.15), "VN_Bronze": (0.3, 0.36, 0.3), "VN_Marble": (0.82, 0.82, 0.8), "VN_Granite": (0.4, 0.4, 0.42),
     "VN_Leaves": (0.13, 0.3, 0.16), "VN_White": (0.93, 0.93, 0.9), "VN_FloatPaint": (0.55, 0.2, 0.6), "VN_Flower": (0.9, 0.35, 0.5),
     "VN_Pole": (0.33, 0.24, 0.16), "VN_Blue": (0.15, 0.3, 0.6),
+    "VN_MaskPaint": (0.93, 0.9, 0.82), "VN_Leather": (0.3, 0.18, 0.1), "VN_Feather": (0.75, 0.1, 0.12), "VN_Gem": (0.6, 0.05, 0.2),
+    "VN_Bone": (0.86, 0.83, 0.72), "VN_Straw": (0.85, 0.72, 0.35),
 }
 
 def clear():
@@ -71,6 +73,18 @@ class Builder:
 
     def disc(self, r, thick, at, m, seg=12):   # round piece facing -Y (window tops, clock faces)
         self.cyl(r, r, thick, at, m, seg=seg, rot=[('X', 90)])
+
+    def half_disc(self, r, thick, at, m, seg=8):   # upper half of a disc facing -Y (door / window lunettes): no overlap below z
+        bm = self.bm
+        x0, y0, z0 = at
+        ring = [(r * math.cos(math.pi * i / seg), r * math.sin(math.pi * i / seg)) for i in range(seg + 1)]
+        f = [bm.verts.new((x0 + x, y0 - thick / 2, z0 + z)) for x, z in ring]
+        k = [bm.verts.new((x0 + x, y0 + thick / 2, z0 + z)) for x, z in ring]
+        bm.faces.new(f[::-1])
+        bm.faces.new(k)
+        for i in range(seg): bm.faces.new([f[i], f[i + 1], k[i + 1], k[i]])
+        bm.faces.new([f[seg], f[0], k[0], k[seg]])
+        self._finish(f + k, m)
 
     def pyramid(self, w, d, h, at, m):
         g = bmesh.ops.create_cone(self.bm, cap_ends=True, segments=4, radius1=1.0, radius2=0.0, depth=h)
@@ -124,8 +138,8 @@ def window(b, x, z, w, h, arch="round", shutter="VN_Shutter", open_shutters=True
     b.box((w, 0.06, h), (x, -0.1, z + h / 2), "VN_Glass")
     b.box((w + 0.4, 0.22, 0.1), (x, -0.11, z - 0.05), "VN_Istria")                # sill
     if arch == "round":
-        b.disc(w / 2 + 0.12, 0.1, (x, -0.05, z + h), "VN_Istria")
-        b.disc(w / 2, 0.14, (x, -0.06, z + h), "VN_Glass")
+        b.half_disc(w / 2 + 0.12, 0.1, (x, -0.05, z + h), "VN_Istria")
+        b.half_disc(w / 2, 0.1, (x, -0.08, z + h), "VN_Glass")
     elif arch == "gothic":
         b.box((w * 0.75 + 0.2, 0.1, w * 0.75 + 0.2), (x, -0.05, z + h), "VN_Istria", rot=[('Y', 45)])
         b.box((w * 0.72, 0.14, w * 0.72), (x, -0.06, z + h), "VN_Glass", rot=[('Y', 45)])
@@ -146,9 +160,10 @@ def fachada_a():   # door + two floors of arched windows with green shutters
     b = Builder("VN_Fachada_A")
     facade_base(b)
     b.box((1.2, 0.14, 2.2), (0, -0.07, 1.1), "VN_Istria")
-    b.disc(0.6, 0.14, (0, -0.07, 2.2), "VN_Istria")
-    b.box((0.94, 0.1, 2.1), (0, -0.13, 1.05), "M_Wood")
-    b.disc(0.47, 0.1, (0, -0.13, 2.2), "VN_Dark")
+    b.half_disc(0.6, 0.14, (0, -0.07, 2.2), "VN_Istria")
+    b.box((0.94, 0.1, 2.2), (0, -0.13, 1.1), "M_Wood")
+    b.box((1.02, 0.18, 0.1), (0, -0.14, 2.25), "VN_Istria")                       # stone transom
+    b.half_disc(0.45, 0.08, (0, -0.11, 2.3), "VN_Dark")                           # lunette, 2 cm behind the frame
     b.ball(0.05, (0.3, -0.2, 1.05), "VN_Gold")
     b.box((1.5, 0.4, 0.14), (0, -0.2, 0.07), "VN_Istria")                         # step
     window(b, 0, FLOOR[1] + 0.3, 0.8, 1.3)
@@ -420,32 +435,32 @@ def caballete():   # gondola hull on trestles (squero), 3.9 x 1.9 x 2.4 m, along
     return b.build()
 
 # ================================================================== cemetery
-def tumba_a():   # slab + headstone with a cross, low cover (1.3 m)
+def tumba_a():   # slab + low headstone with a cross: low cover you can jump (0.8 m)
     b = Builder("VN_Tumba_A")
     b.box((1.1, 1.9, 0.3), (0, 0, 0.15), "VN_Granite")
     b.box((0.95, 1.7, 0.1), (0, -0.05, 0.35), "VN_Marble")
-    b.box((0.95, 0.22, 1.0), (0, 0.82, 0.8), "VN_Marble")
-    b.disc(0.47, 0.22, (0, 0.82, 1.3), "VN_Marble")
-    b.box((0.08, 0.05, 0.4), (0, 0.69, 1.0), "VN_Bronze")
-    b.box((0.26, 0.05, 0.08), (0, 0.69, 1.08), "VN_Bronze")
+    b.box((0.95, 0.2, 0.35), (0, 0.82, 0.575), "VN_Marble")
+    b.half_disc(0.15, 0.2, (0, 0.82, 0.75), "VN_Marble", seg=8)
+    b.box((0.06, 0.05, 0.26), (0, 0.7, 0.62), "VN_Bronze")
+    b.box((0.2, 0.05, 0.06), (0, 0.7, 0.68), "VN_Bronze")
     b.cyl(0.1, 0.13, 0.25, (0.3, -0.6, 0.52), "VN_Bronze", seg=6)                   # vase
     for i in range(3): b.ball(0.09, (0.3 + (i - 1) * 0.08, -0.6, 0.72), "VN_Flower")
     b.box((0.16, 0.16, 0.26), (-0.3, -0.6, 0.53), "VN_Dark")                        # lantern
     b.box((0.1, 0.1, 0.14), (-0.3, -0.6, 0.55), "VN_Lamp")
     return b.build()
 
-def tumba_b():   # sarcophagus on lion feet with a pitched lid, low cover (1.25 m)
+def tumba_b():   # sarcophagus on lion feet with a pitched lid: low cover you can jump (0.85 m)
     b = Builder("VN_Tumba_B")
-    b.box((1.3, 2.0, 0.2), (0, 0, 0.1), "VN_Granite")
+    b.box((1.3, 2.0, 0.12), (0, 0, 0.06), "VN_Granite")
     for sx in (-1, 1):
-        for sy in (-1, 1): b.box((0.22, 0.22, 0.25), (sx * 0.4, sy * 0.75, 0.32), "VN_Bronze")
-    b.box((1.0, 1.8, 0.55), (0, 0, 0.72), "VN_Marble")
-    b.box((1.1, 1.9, 0.08), (0, 0, 1.03), "VN_Marble")
+        for sy in (-1, 1): b.box((0.2, 0.2, 0.14), (sx * 0.4, sy * 0.75, 0.19), "VN_Bronze")
+    b.box((1.0, 1.8, 0.36), (0, 0, 0.44), "VN_Marble")
+    b.box((1.1, 1.9, 0.06), (0, 0, 0.65), "VN_Marble")
     bm = b.bm
-    vs = [bm.verts.new(v) for v in [(-0.55, -0.95, 1.07), (0.55, -0.95, 1.07), (0, -0.95, 1.3), (-0.55, 0.95, 1.07), (0.55, 0.95, 1.07), (0, 0.95, 1.3)]]
+    vs = [bm.verts.new(v) for v in [(-0.55, -0.95, 0.68), (0.55, -0.95, 0.68), (0, -0.95, 0.85), (-0.55, 0.95, 0.68), (0.55, 0.95, 0.68), (0, 0.95, 0.85)]]
     for f in [(0, 1, 2), (5, 4, 3), (0, 3, 4, 1), (1, 4, 5, 2), (2, 5, 3, 0)]: bm.faces.new([vs[i] for i in f])
     b._finish(vs, "VN_Marble")
-    b.disc(0.2, 0.04, (0, -0.91, 0.72), "VN_Bronze")
+    b.disc(0.16, 0.04, (0, -0.91, 0.44), "VN_Bronze")
     return b.build()
 
 def tumba_c():   # granite pyramid monument with a bust, 1.9 x 1.9 x 3.2 m
@@ -479,7 +494,8 @@ def mausoleo():   # small family chapel, 1.95 x 1.95 x 3.6 m, door on the front
     b.box((0.08, 0.08, 0.5), (0, 0, 3.85), "VN_Gold")
     b.box((0.3, 0.08, 0.08), (0, 0, 3.95), "VN_Gold")
     b.box((0.9, 0.08, 1.7), (0, -0.86, 1.1), "VN_Dark")
-    b.disc(0.45, 0.08, (0, -0.86, 1.95), "VN_Dark")
+    b.box((1.0, 0.12, 0.08), (0, -0.87, 1.99), "VN_Granite")                      # lintel
+    b.half_disc(0.43, 0.06, (0, -0.85, 2.03), "VN_Dark")
     for s in (-1, 1): b.cyl(0.09, 0.08, 1.9, (s * 0.62, -0.9, 1.2), "VN_Granite", seg=8)
     for s in (-1, 1): b.disc(0.2, 0.06, (s * 0.87, 0, 1.7), "VN_Glass", seg=8) if False else None
     return b.build()
@@ -532,21 +548,82 @@ def portal():   # bridge gate: two stone posts with lamps and an iron arch, 2 m 
         b.box((ln + 0.02, 0.06, 0.06), ((x0 + x1) / 2, 0, 2.75 + (z0 + z1) / 2), "M_Iron", rot=[('Y', -math.degrees(math.atan2(z1 - z0, x1 - x0)))])
     return b.build()
 
-def mascara(name, peste):   # carnival mask worn by the old men: origin = centre of the face, front = -Y
+def mascara(name, kind):   # carnival mask worn by the old men: origin = centre of the face, front = -Y
+    # VN_MaskPaint is recoloured per old man in Unity (ivory / black and gold / red); the Dux is all gold
     b = Builder(name)
-    if peste:
-        b.ball(0.16, (0, 0, 0), "VN_White", scale=(1, 0.5, 1.15))
-        b.cyl(0.07, 0.015, 0.34, (0, -0.2, -0.04), "VN_White", seg=6, rot=[('X', 80)])   # beak
-        for s in (-1, 1): b.disc(0.045, 0.03, (s * 0.07, -0.085, 0.045), "VN_Dark", seg=8)
-        b.cyl(0.24, 0.24, 0.025, (0, 0.02, 0.17), "VN_Black", seg=10)                   # hat brim
-        b.cyl(0.13, 0.13, 0.12, (0, 0.02, 0.24), "VN_Black", seg=10)
+    face = "VN_Gold" if kind == "dux" else "VN_MaskPaint"
+    b.ball(0.17, (0, 0, 0), face, scale=(1, 0.45, 1.2), seg=12)
+    for s in (-1, 1):
+        b.ball(0.045, (s * 0.07, -0.078, 0.05), "VN_Dark", scale=(1.4, 0.4, 0.8))          # eye holes
+        b.box((0.11, 0.04, 0.025), (s * 0.07, -0.08, 0.1), face, rot=[('Y', s * -14)])       # brows
+    if kind == "peste":
+        beak = [(0.065, 0.05, 0.12, -0.11, -0.03, 72), (0.05, 0.032, 0.13, -0.23, -0.07, 62), (0.032, 0.008, 0.13, -0.34, -0.13, 50)]
+        for r1, r2, d, y, z, ang in beak: b.cyl(r1, r2, d, (0, y, z), face, seg=8, rot=[('X', ang)])   # long curved beak
+        for s in (-1, 1):
+            b.disc(0.05, 0.03, (s * 0.07, -0.09, 0.05), "VN_Gold", seg=10)                  # brass rings
+            b.disc(0.037, 0.035, (s * 0.07, -0.095, 0.05), "VN_Glass", seg=10)              # glass lenses
+        b.cyl(0.29, 0.29, 0.025, (0, 0.03, 0.18), "VN_Black", seg=14)                       # wide brim
+        b.cyl(0.14, 0.13, 0.14, (0, 0.03, 0.26), "VN_Black", seg=12)
+        b.cyl(0.145, 0.145, 0.03, (0, 0.03, 0.2), "VN_Leather", seg=12)                     # hat band
+        b.cyl(0.2, 0.15, 0.08, (0, 0.04, -0.2), "VN_Leather", seg=12)                       # leather collar
     else:
-        b.ball(0.17, (0, 0, 0), "VN_White", scale=(1, 0.45, 1.2))
-        b.box((0.2, 0.12, 0.14), (0, -0.07, -0.1), "VN_White", rot=[('X', 25)])            # bauta jaw
-        for s in (-1, 1): b.ball(0.04, (s * 0.07, -0.075, 0.05), "VN_Dark", scale=(1.4, 0.5, 0.8))
-        b.box((0.4, 0.2, 0.03), (0, 0.02, 0.19), "VN_Black")                               # tricorn
-        b.pyramid(0.36, 0.2, 0.12, (0, 0.02, 0.2), "VN_Black")
-        b.box((0.3, 0.02, 0.03), (0, -0.085, 0.13), "VN_Gold")
+        b.pyramid(0.22, 0.14, 0.14, (0, -0.09, -0.22), face)                                # bauta wedge jaw, jutting out
+        b.box((0.24, 0.16, 0.05), (0, -0.05, -0.12), face, rot=[('X', -28)])
+        b.box((0.03, 0.02, 0.1), (0, -0.085, 0.13), "VN_Gold")                              # filigree
+        for s in (-1, 1):
+            b.box((0.1, 0.02, 0.02), (s * 0.06, -0.083, 0.17), "VN_Gold", rot=[('Y', s * 25)])
+            b.ball(0.015, (s * 0.12, -0.06, -0.02), "VN_Gold")
+        if kind == "dux":   # corno ducale: the doge's horned cap, with gems
+            b.cyl(0.19, 0.15, 0.08, (0, 0.03, 0.2), "VN_Gold", seg=12)
+            b.cyl(0.14, 0.04, 0.26, (0, 0.09, 0.33), "VN_Gold", seg=10, rot=[('X', -22)])
+            for i, x in enumerate((-0.1, 0, 0.1)): b.ball(0.025, (x, -0.13, 0.21), "VN_Gem" if i != 1 else "VN_Blue")
+            b.ball(0.03, (0, -0.075, 0.0), "VN_Gem")
+        else:               # tricorn with a feather
+            b.cyl(0.25, 0.25, 0.03, (0, 0.03, 0.19), "VN_Black", seg=3, rot=[('Z', 30)])
+            b.cyl(0.13, 0.12, 0.1, (0, 0.03, 0.24), "VN_Black", seg=10)
+            b.box((0.24, 0.015, 0.015), (0, -0.115, 0.205), "VN_Gold")
+            b.ball(0.05, (0.13, 0.05, 0.34), "VN_Feather", scale=(0.4, 0.5, 2.0))
+    return b.build()
+
+def verja():   # iron fence, 2 m along X, 3.2 m tall with spikes, origin on the kerb (closed barrios)
+    b = Builder("VN_Verja")
+    b.box((2.0, 0.12, 0.25), (0, 0, 0.125), "VN_Istria")
+    for z in (0.5, 2.7): b.box((2.0, 0.06, 0.08), (0, 0, z), "M_Iron")
+    for i in range(9):
+        x = -0.9 + i * 0.225
+        b.box((0.035, 0.035, 2.9), (x, 0, 1.6), "M_Iron")
+        b.cyl(0.04, 0.0, 0.18, (x, 0, 3.14), "VN_Gold" if i % 2 == 0 else "M_Iron", seg=4)
+    for s in (-1, 1): b.box((0.14, 0.14, 3.0), (s * 0.97, 0, 1.5), "M_Iron")
+    return b.build()
+
+def giuseppe():   # skeleton with a beret and a cane climbing out of the grave, ~1.3 m, origin on the ground
+    b = Builder("VN_Giuseppe")
+    b.box((0.9, 1.7, 0.08), (0, 0.25, 0.04), "VN_Dark")                                  # the hole
+    b.box((0.26, 0.14, 0.42), (0, 0, 0.5), "VN_Bone")                                     # rib cage
+    for z in (0.38, 0.5, 0.62): b.box((0.3, 0.16, 0.03), (0, -0.01, z), "VN_Bone")
+    b.cyl(0.03, 0.03, 0.3, (0, 0.02, 0.18), "VN_Bone", seg=6)                             # spine
+    b.ball(0.12, (0, -0.02, 0.86), "VN_Bone", scale=(1, 1.1, 1.1))                         # skull
+    for s in (-1, 1): b.ball(0.03, (s * 0.045, -0.13, 0.88), "VN_Dark")
+    b.box((0.1, 0.05, 0.03), (0, -0.12, 0.79), "VN_Dark")
+    b.cyl(0.14, 0.15, 0.04, (0.02, 0, 0.99), "VN_Black", seg=10, rot=[('Y', 12)])          # beret
+    b.ball(0.02, (0.03, 0, 1.03), "VN_Black")
+    for s in (-1, 1): b.cyl(0.025, 0.02, 0.45, (s * 0.22, -0.05, 0.62), "VN_Bone", seg=6, rot=[('Y', s * -30), ('X', -20)])   # arms
+    b.cyl(0.02, 0.02, 1.0, (0.4, -0.12, 0.55), "VN_Pole", seg=6, rot=[('Y', 8)])           # cane
+    b.box((0.16, 0.03, 0.03), (0.36, -0.12, 1.05), "VN_Pole")
+    return b.build()
+
+def gondolero():   # golden gondolier with straw hat, striped shirt and oar, ~1.9 m, origin on the ground
+    b = Builder("VN_Gondolero")
+    for s in (-1, 1): b.cyl(0.07, 0.06, 0.85, (s * 0.1, 0, 0.43), "VN_Gold", seg=8)        # legs
+    for i in range(5): b.cyl(0.2 - i * 0.005, 0.2 - i * 0.005, 0.12, (0, 0, 0.92 + i * 0.12), "VN_Gold" if i % 2 else "VN_White", seg=10)   # striped shirt
+    b.ball(0.13, (0, 0, 1.62), "VN_Gold")                                                  # head
+    b.box((0.1, 0.04, 0.03), (0, -0.12, 1.57), "VN_Black")                                 # moustache
+    b.cyl(0.26, 0.26, 0.025, (0, 0, 1.73), "VN_Straw", seg=14)                             # boater
+    b.cyl(0.14, 0.14, 0.1, (0, 0, 1.79), "VN_Straw", seg=12)
+    b.cyl(0.145, 0.145, 0.035, (0, 0, 1.765), "VN_Red", seg=12)
+    for s in (-1, 1): b.cyl(0.05, 0.045, 0.55, (s * 0.25, -0.12, 1.25), "VN_Gold", seg=6, rot=[('X', -50)])   # arms forward
+    b.cyl(0.03, 0.03, 2.6, (0.05, -0.38, 1.1), "VN_Pole", seg=6, rot=[('X', -12)])         # oar
+    b.box((0.04, 0.16, 0.55), (0.05, -0.66, -0.1), "VN_Pole", rot=[('X', -12)])
     return b.build()
 
 clear()
@@ -556,8 +633,10 @@ for fn in (fachada_a, fachada_b, fachada_c, fachada_d, frente_templo, chimenea, 
     make(fn)
 make(palo, "VN_Palo", False)
 make(palo, "VN_PaloRayas", True)
-make(mascara, "VN_Mascara_Bauta", False)
-make(mascara, "VN_Mascara_Peste", True)
+make(mascara, "VN_Mascara_Bauta", "bauta")
+make(mascara, "VN_Mascara_Peste", "peste")
+make(mascara, "VN_Mascara_Dux", "dux")
+for fn in (verja, giuseppe, gondolero): make(fn)
 os.makedirs(os.path.dirname(BLEND), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 print("PROPS_RESULT " + json.dumps(res))

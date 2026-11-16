@@ -8,6 +8,8 @@
 //   doors = bridges (VN_PortalPuente); every cell with water on two opposite sides gets balustrades.
 // The pieces come from Tools/Blender/make_venecia_props.py (Assets/Maps/Venecia/Models); their origin is the
 // centre of the footprint on the ground and their front is +Z, so VenPlace puts the origin where it is told.
+using Unity.AI.Navigation;
+using UnityEngine.AI;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -41,6 +43,76 @@ public static partial class IslaZombieSetup
     static float Yaw(Vector3 dir) => Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;  // model front (+Z) towards dir
     static bool IsWater(Layout L, int c, int r) => L.At(c, r) == '.';
     static bool VenWalk(Layout L, int c, int r) => IsFloor(L, L.At(c, r)) || IsDoor(L.At(c, r));
+
+    // B4: the top (level >= 1, flat) cells of the big humped bridges that cross a canal are an open arch: a deck slab
+    // instead of a block down to the canal bed. Water, the swim floor and the gondola routes go under them.
+    static bool VenArched(Layout L, int c, int r)
+    {
+        if (!Ven || !L.InGrid(c, r) || !VenWalk(L, c, r) || L.IsRamp(c, r) || L.floorY[c, r] < LevelH - 0.1f) return false;
+        bool Open(Vector2Int d) => IsWater(L, c + d.x, r + d.y) || VenWalk(L, c + d.x, r + d.y) && !L.IsRamp(c + d.x, r + d.y)
+            && Mathf.Abs(L.floorY[c + d.x, r + d.y] - L.floorY[c, r]) < 0.1f && IsWater(L, c + 2 * d.x, r + 2 * d.y);
+        return Open(Vector2Int.up) && Open(Vector2Int.down) || Open(Vector2Int.left) && Open(Vector2Int.right);
+    }
+    static bool VenWet(Layout L, int c, int r) => IsWater(L, c, r) || VenArched(L, c, r);
+    const float ArchDeck = 0.3f;   // slab thickness of an arched bridge top
+
+    // Under an arch cell: the space between a half circle (radius Cell/2, its top at the slab) and the slab, extruded
+    // one cell along the canal. Submesh 0 = the vault (brick), 1 = the faces (white stone) at the open ends.
+    // No collider: it is above any passenger (the gondola ducks under the slab anyway).
+    static Mesh VaultMesh(float top, Vector3 along, Vector3 across, bool faceFront, bool faceBack)
+    {
+        const int seg = 10;
+        float rad = Cell / 2f, spring = top - rad;
+        var v = new List<Vector3>();
+        var vault = new List<int>();
+        var faces = new List<int>();
+        Vector3 Arc(int i, float l) { float a = Mathf.PI * i / seg; return across * (Mathf.Cos(a) * rad) + Vector3.up * (spring + Mathf.Sin(a) * rad) + along * l; }
+        Vector3 Top(int i, float l) { float a = Mathf.PI * i / seg; return across * (Mathf.Cos(a) * rad) + Vector3.up * top + along * l; }
+        float h = Cell / 2f;
+        void Quad(List<int> into, Vector3 a, Vector3 b, Vector3 c, Vector3 d)   // both sides, own vertices each
+        {
+            int k = v.Count;
+            v.AddRange(new[] { a, b, c, d, a, b, c, d });
+            into.AddRange(new[] { k, k + 1, k + 2, k, k + 2, k + 3, k + 4, k + 6, k + 5, k + 4, k + 7, k + 6 });
+        }
+        for (int i = 0; i < seg; i++)
+        {
+            Quad(vault, Arc(i, -h), Arc(i + 1, -h), Arc(i + 1, h), Arc(i, h));
+            if (faceFront) Quad(faces, Arc(i, h), Arc(i + 1, h), Top(i + 1, h), Top(i, h));
+            if (faceBack) Quad(faces, Arc(i, -h), Arc(i + 1, -h), Top(i + 1, -h), Top(i, -h));
+        }
+        var m = new Mesh { name = "VN_Boveda" };
+        m.SetVertices(v);
+        m.subMeshCount = 2;
+        m.SetTriangles(vault, 0);
+        m.SetTriangles(faces, 1);
+        m.RecalculateNormals();
+        m.RecalculateBounds();
+        return m;
+    }
+
+    static void VenBuildArches(Transform ground, Layout L)
+    {
+        int n = 0;
+        foreach (var p in Cells(L))
+        {
+            if (!VenArched(L, p.x, p.y)) continue;
+            var zd = L.Zone(L.cellZone[p.x, p.y]);
+            var top = zd != null ? VenGroundMaterial(zd) : M("VN_Ladrillo", new Color(0.52f, 0.33f, 0.27f));
+            var brick = M("VN_Ladrillo", new Color(0.52f, 0.33f, 0.27f));
+            float y = L.floorY[p.x, p.y];
+            TexBox(ground, $"Arco_{p.x}_{p.y}", Flat(World(p.x, p.y)), new Vector3(Cell, ArchDeck, Cell), top, brick, y - ArchDeck);
+            // a round vault under the slab (brick) with a white stone face where the canal goes in / out
+            bool flowZ = IsWater(L, p.x, p.y - 1) || VenArched(L, p.x, p.y - 1) && !VenArched(L, p.x - 1, p.y);
+            Vector3 along = flowZ ? Vector3.forward : Vector3.right, across = flowZ ? Vector3.right : Vector3.forward;
+            var nb = flowZ ? new[] { new Vector2Int(0, -1), new Vector2Int(0, 1) } : new[] { new Vector2Int(1, 0), new Vector2Int(-1, 0) };
+            var vault = Child(ground, $"Boveda_{p.x}_{p.y}", Flat(World(p.x, p.y)));
+            vault.AddComponent<MeshFilter>().sharedMesh = VaultMesh(y - ArchDeck, along, across, !VenArched(L, p.x + nb[0].x, p.y + nb[0].y), !VenArched(L, p.x + nb[1].x, p.y + nb[1].y));
+            vault.AddComponent<MeshRenderer>().sharedMaterials = new[] { brick, M("VN_Istria", new Color(0.9f, 0.88f, 0.82f)) };
+            n++;
+        }
+        if (n > 0) Debug.Log($"[Venecia] {n} arched bridge cells (open underneath)");
+    }
 
     static Material VenGroundMaterial(ZoneDef zd)
     {
@@ -150,6 +222,89 @@ public static partial class IslaZombieSetup
     }
 
     // ------------------------------------------------------------------ props
+    const float LowCoverTop = 0.9f;
+
+    // Cuts every box collider of a placed model at world height maxY (things above it are visual only).
+    static GameObject CapColliders(GameObject go, float maxY)
+    {
+        if (go == null) return null;
+        Physics.SyncTransforms();
+        foreach (var box in go.GetComponentsInChildren<BoxCollider>())
+        {
+            var b = box.bounds;
+            if (b.max.y <= maxY + 0.01f) continue;
+            float sy = Mathf.Max(0.0001f, box.transform.lossyScale.y);
+            float cut = (b.max.y - maxY) / sy;
+            if (b.min.y >= maxY - 0.05f) { Object.DestroyImmediate(box); continue; }
+            box.size -= new Vector3(0f, cut, 0f);
+            box.center -= new Vector3(0f, cut / 2f, 0f);
+        }
+        return go;
+    }
+
+    static Vector2Int CellOf(Vector3 p) => new Vector2Int(Mathf.RoundToInt(p.x / Cell + OriginCol), Mathf.RoundToInt(OriginRow - p.z / Cell));
+
+    // Setup checks: every collider of a low-cover cell ('x') is jumpable (A3), and no prop collider floats in the
+    // air (A1: the top crate of a stack used to hang 1 m above the others). Both maps use the second one.
+    static List<string> CheckProps(Layout L, Transform root)
+    {
+        var rep = new List<string>();
+        Physics.SyncTransforms();
+        int tall = 0;
+        var floating = new List<string>();
+        int mask = ~(1 << 4);   // water blockers are not a floor
+        foreach (var col in root.GetComponentsInChildren<Collider>())
+        {
+            if (col.isTrigger || !col.enabled || col.gameObject.layer != NavAgents.PropLayer) continue;
+            var b = col.bounds;
+            var cell = CellOf(b.center);
+            bool inside = cell.x >= 0 && cell.y >= 0 && cell.x < L.W && cell.y < L.H;
+            if (Ven && inside && L.At(cell.x, cell.y) == 'x' && b.max.y - World(cell.x, cell.y).y > LowCoverTop + 0.02f)
+            { tall++; rep.Add($"ERROR: low cover at {cell} can't be jumped ({col.name}, {b.max.y - World(cell.x, cell.y).y:0.00} m)"); }
+            // floating: nothing under the bottom of the collider within 0.2 m (probe the centre and four inner corners)
+            bool rests = false;
+            float y0 = b.min.y + 0.03f;
+            foreach (var o in new[] { Vector2.zero, new Vector2(-0.35f, -0.35f), new Vector2(0.35f, -0.35f), new Vector2(-0.35f, 0.35f), new Vector2(0.35f, 0.35f) })
+            {
+                var from = new Vector3(b.center.x + o.x * b.size.x, y0, b.center.z + o.y * b.size.z);
+                foreach (var h in Physics.RaycastAll(from, Vector3.down, 0.25f, mask, QueryTriggerInteraction.Ignore))
+                    if (h.collider != col) { rests = true; break; }
+                if (rests) break;
+            }
+            if (!rests && b.min.y > GroundAt(b.center) + 0.2f) floating.Add($"{col.transform.parent?.name}/{col.name} {cell} +{b.min.y - GroundAt(b.center):0.0} m");
+        }
+        if (Ven) rep.Add(tall == 0 ? "OK  low cover: every 'x' can be jumped (<= 0.9 m)" : $"ERROR: {tall} low-cover colliders too tall");
+        // A4: sweep the gondola hull (5.6 x 0.8 m) along every route and over every mooring: it must touch nothing solid
+        int gMask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << NavAgents.PropLayer);
+        var half = new Vector3(0.33f, 0.28f, GondolaHalfLength - 0.15f);
+        int samples = 0, clips = 0;
+        var clipNames = new List<string>();
+        void Hull(Vector3 at, Quaternion rot)
+        {
+            samples++;
+            var hits = Physics.OverlapBox(new Vector3(at.x, CanalY + 0.35f, at.z), half, rot, gMask, QueryTriggerInteraction.Ignore)
+                .Where(h => h.GetComponentInParent<AcquaAlta>() == null && h.transform.parent?.name != "SueloNado").ToArray();
+            if (hits.Length == 0) return;
+            clips++;
+            if (clipNames.Count < 8) clipNames.Add($"{hits[0].name} at {CellOf(at)}");
+        }
+        foreach (var gs in root.GetComponentsInChildren<GondolaStop>())
+        {
+            if (gs.Boat != null) Hull(gs.Boat.position, gs.Boat.rotation);
+            var pts = gs.PathPoints;
+            if (pts == null) continue;
+            for (int i = 1; i < pts.Length; i++)
+            {
+                Vector3 d = pts[i] - pts[i - 1]; d.y = 0f;
+                if (d.sqrMagnitude < 0.0001f || d.sqrMagnitude > 2.25f) continue;   // > 1.5 m: the start of the next route
+                Hull(pts[i], Quaternion.LookRotation(d.normalized));
+            }
+        }
+        if (Ven) rep.Add(clips == 0 ? $"OK  gondolas: the hull touches nothing on {samples} route / mooring samples" : $"WARNING: gondola hull touches something on {clips}/{samples} samples: " + string.Join("; ", clipNames));
+        rep.Add(floating.Count == 0 ? "OK  no floating prop colliders" : $"WARNING: {floating.Count} prop colliders float: " + string.Join("; ", floating.Take(12)));
+        return rep;
+    }
+
     static void VenBuildProps(Transform root, Layout L)
     {
         var pr = Child(root, "Props", Vector3.zero).transform;
@@ -190,9 +345,7 @@ public static partial class IslaZombieSetup
                         PartColliders(Repaint(PlaceInRect(pr, VN("VN_Carroza"), p, 1.95f, 1.95f, FaceOpen(L, cell)), "VN_FloatPaint", floats[(int)(h * 97) % floats.Length]));
                         break;
                     default:   // crate stacks
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(-0.35f, 0f, -0.3f), 1.1f, 1.1f, h * 90f));
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(0.4f, 0f, 0.35f), 1.0f, 1.0f, h * 200f));
-                        PartColliders(PlaceInRect(pr, Island("Prop_Crate"), p + new Vector3(-0.3f, 1.05f, -0.25f), 0.9f, 0.9f, h * 300f, 0f, 1.05f));
+                        CrateStack(pr, p, h);
                         PartColliders(PlaceInRect(pr, Island("Prop_Barrel"), p + new Vector3(0.45f, 0f, -0.5f), 0.7f, 0.7f));
                         break;
                 }
@@ -208,8 +361,10 @@ public static partial class IslaZombieSetup
                 float h = Hash(c, row, 3);
                 if (ch == 'x')
                 {
-                    if (z == 'i') PartColliders(PlaceInRect(pr, VN(h < 0.5f ? "VN_Tumba_A" : "VN_Tumba_B"), p, 1.9f, 1.9f, Mathf.Floor(Hash(c, row, 4) * 4f) * 90f), NavAgents.PropLayer, 0.25f);
-                    else PartColliders(PlaceInRect(pr, VN("VN_Mesa"), p, 1.9f, 1.9f, Mathf.Floor(Hash(c, row, 4) * 4f) * 90f, 0f, 0f, false), NavAgents.PropLayer, 0.25f);
+                    // 'x' = low cover: always jumpable (jump 1.2 m), so every collider stops at LowCoverTop (the parasol of
+                    // the cafe table has none above it). Checked in VenCheckLowCover.
+                    if (z == 'i') CapColliders(PartColliders(PlaceInRect(pr, VN(h < 0.5f ? "VN_Tumba_A" : "VN_Tumba_B"), p, 1.9f, 1.9f, Mathf.Floor(Hash(c, row, 4) * 4f) * 90f, LowCoverTop), NavAgents.PropLayer, 0.25f), p.y + LowCoverTop);
+                    else CapColliders(PartColliders(PlaceInRect(pr, VN("VN_Mesa"), p, 1.9f, 1.9f, Mathf.Floor(Hash(c, row, 4) * 4f) * 90f, 0f, 0f, false), NavAgents.PropLayer, 0.25f), p.y + LowCoverTop);
                 }
                 else if (ch == 'h') PartColliders(PlaceInRect(pr, VN("VN_Mausoleo"), p, 1.95f, 1.95f, FaceOpen(L, cell)));
                 else if (ch == 'A')
@@ -323,7 +478,9 @@ public static partial class IslaZombieSetup
         // acqua alta instead of night rounds: no senderistas here, the tide comes in every 5 rounds
         var sea = root.Find("Ground/Sea");
         var tide = Child(root, "AcquaAlta", Vector3.zero).AddComponent<AcquaAlta>();
-        tide.Configure(sea, root.Find("Flotantes"), CanalY);
+        var swim = VenBuildSwimFloor(root, L);
+        VenBuildBeacons(root, L);
+        tide.Configure(sea, root.Find("Flotantes"), CanalY, swim, SwimY);
         EditorUtility.SetDirty(tide);
         var rm = root.GetComponentInChildren<RoundManager>();
         if (rm != null)
@@ -341,10 +498,275 @@ public static partial class IslaZombieSetup
         }
         VenBuildGondolas(root, L, zones);
         VenBuildTasks(root, L);
+        VenBuildFences(root, L, zones);
         // the boss wears a golden mask here
         var dux = Child(root, "DuxMask", Vector3.zero).AddComponent<DuxMask>();
-        dux.Configure(VN("VN_Mascara_Bauta"), TestMapSetup.Mat("Gold", new Color(1f, 0.8f, 0.1f), 0.8f));
+        dux.Configure(VN("VN_Mascara_Dux"), TestMapSetup.Mat("Gold", new Color(1f, 0.8f, 0.1f), 0.8f));
         EditorUtility.SetDirty(dux);
+    }
+
+    // Acqua alta (A7): a floor under every canal, its top SwimY (0.25 m under the quays: you walk out without
+    // jumping, and the NavMesh (climb 0.45) joins it to every quay). Baked as NavMesh area "Canal" (NavAgents.CanalArea),
+    // which the old men only get while it floods; AcquaAlta switches the colliders on and off. The outer ring of the
+    // grid is open sea and has none.
+    const float SwimY = -0.25f;
+
+    static Transform VenBuildSwimFloor(Transform root, Layout L)
+    {
+        var g = Child(root, "SueloNado", Vector3.zero);
+        var mod = g.AddComponent<NavMeshModifier>();
+        mod.overrideArea = true;
+        mod.area = NavAgents.CanalArea;
+        foreach (var r in Rects(L, (c, row) => c > 0 && row > 0 && c < L.W - 1 && row < L.H - 1 && VenWet(L, c, row), (c, row) => 0))
+        {
+            var ctr = Flat(RectCenter(r));
+            var box = Child(g.transform, "Fondo", new Vector3(ctr.x, SwimY - 0.1f, ctr.z));
+            box.AddComponent<BoxCollider>().size = new Vector3(r.width * Cell, 0.2f, r.height * Cell);
+        }
+        return g.transform;
+    }
+
+    // Posts on every quay edge (A7): they stick out of the acqua alta, so you see where the quay ends under the water.
+    // One combined mesh for the poles and one for the red tops (hundreds of posts).
+    // Stylised low-poly water (user 2026-11-16: "not realistic, but better, still optimised and low poly").
+    // One mesh over the whole grid, a vertex every metre (jittered away from the quays: irregular facets), plus a strip
+    // out to the horizon; shader Island/LowPolyWater. Vertex colour R = distance to the nearest quay / 3 m (foam band,
+    // shallow-deep), G = over a street (light and see-through when the acqua alta floods it). Lives under Ground/Sea,
+    // which AcquaAlta moves up and down.
+    static void VenBuildWater(Transform sea, Layout L)
+    {
+        const float Step = 1f, FoamRange = 3f, Horizon = 320f;
+        float x0 = (0 - OriginCol) * Cell - Cell / 2f, x1 = (L.W - 1 - OriginCol) * Cell + Cell / 2f;
+        float z1 = (OriginRow - 0) * Cell + Cell / 2f, z0 = (OriginRow - (L.H - 1)) * Cell - Cell / 2f;
+        int nx = Mathf.RoundToInt((x1 - x0) / Step) + 1, nz = Mathf.RoundToInt((z1 - z0) / Step) + 1;
+
+        // distance from a point to the nearest cell (land or water) within reach, capped
+        float DistTo(float px, float pz, bool land, float cap)
+        {
+            int cc = Mathf.RoundToInt(px / Cell + OriginCol), cr = Mathf.RoundToInt(OriginRow - pz / Cell);
+            int reach = Mathf.CeilToInt(cap / Cell) + 1;
+            float best = cap;
+            for (int r = cr - reach; r <= cr + reach; r++)
+                for (int c = cc - reach; c <= cc + reach; c++)
+                {
+                    if (!L.InGrid(c, r) || VenWet(L, c, r) != !land) continue;
+                    float cx = (c - OriginCol) * Cell, cz = (OriginRow - r) * Cell;
+                    float dx = Mathf.Max(Mathf.Abs(px - cx) - Cell / 2f, 0f), dz = Mathf.Max(Mathf.Abs(pz - cz) - Cell / 2f, 0f);
+                    best = Mathf.Min(best, Mathf.Sqrt(dx * dx + dz * dz));
+                }
+            return best;
+        }
+
+        var rnd = new System.Random(4242);
+        var verts = new List<Vector3>(nx * nz + 600);
+        var cols = new List<Color32>(nx * nz + 600);
+        for (int j = 0; j < nz; j++)
+            for (int i = 0; i < nx; i++)
+            {
+                float px = x0 + i * Step, pz = z0 + j * Step;
+                float toLand = DistTo(px, pz, true, FoamRange);
+                bool street = DistTo(px, pz, false, 0.05f) > 0.01f;   // no water cell touches it
+                bool border = i == 0 || j == 0 || i == nx - 1 || j == nz - 1;
+                if (!border && !street && toLand > 0.9f)   // irregular facets, but straight foam along the quays
+                {
+                    px += ((float)rnd.NextDouble() - 0.5f) * 0.6f;
+                    pz += ((float)rnd.NextDouble() - 0.5f) * 0.6f;
+                }
+                verts.Add(new Vector3(px, 0f, pz));
+                cols.Add(new Color32((byte)Mathf.RoundToInt(255f * toLand / FoamRange), (byte)(street ? 255 : 0), 0, 255));
+            }
+        var tris = new List<int>(nx * nz * 6 + 3000);
+        for (int j = 0; j < nz - 1; j++)
+            for (int i = 0; i < nx - 1; i++)
+            {
+                int a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
+                // skip quads deep inside land (never seen, not even flooded: they are under the higher levels too)
+                if (cols[a].g == 255 && cols[b].g == 255 && cols[c].g == 255 && cols[d].g == 255 && !LowStreet(verts[a], verts[d])) continue;
+                if (((i + j) & 1) == 0) { tris.AddRange(new[] { a, c, d, a, d, b }); }
+                else { tris.AddRange(new[] { a, c, b, b, c, d }); }
+            }
+        // a street the acqua alta can reach: level 0 floor under the quad
+        bool LowStreet(Vector3 p, Vector3 q)
+        {
+            int c = Mathf.RoundToInt((p.x + q.x) / 2f / Cell + OriginCol), r = Mathf.RoundToInt(OriginRow - (p.z + q.z) / 2f / Cell);
+            return L.InGrid(c, r) && !IsSolid(L.At(c, r)) && L.floorY[c, r] < 0.1f;
+        }
+
+        // strip to the horizon: one outer vertex per border vertex, pushed straight out (corners diagonally)
+        var ring = new List<int>();
+        for (int i = 0; i < nx; i++) ring.Add(i);
+        for (int j = 1; j < nz; j++) ring.Add(j * nx + nx - 1);
+        for (int i = nx - 2; i >= 0; i--) ring.Add((nz - 1) * nx + i);
+        for (int j = nz - 2; j >= 1; j--) ring.Add(j * nx);
+        int outer0 = verts.Count;
+        foreach (int k in ring)
+        {
+            Vector3 p = verts[k];
+            float ox = p.x <= x0 + 0.01f ? -1f : p.x >= x1 - 0.01f ? 1f : 0f, oz = p.z <= z0 + 0.01f ? -1f : p.z >= z1 - 0.01f ? 1f : 0f;
+            verts.Add(p + new Vector3(ox, 0f, oz) * Horizon);
+            cols.Add(new Color32(255, 0, 0, 255));
+        }
+        for (int k = 0; k < ring.Count; k++)
+        {
+            int a = ring[k], b = ring[(k + 1) % ring.Count], oa = outer0 + k, ob = outer0 + (k + 1) % ring.Count;
+            tris.AddRange(new[] { a, oa, ob, a, ob, b });
+        }
+        // the ring goes round counter-clockwise seen from above only if the winding above is right: make every
+        // triangle face up
+        for (int t = 0; t < tris.Count; t += 3)
+        {
+            Vector3 n = Vector3.Cross(verts[tris[t + 1]] - verts[tris[t]], verts[tris[t + 2]] - verts[tris[t]]);
+            if (n.y < 0f) { int s = tris[t + 1]; tris[t + 1] = tris[t + 2]; tris[t + 2] = s; }
+        }
+
+        var mesh = new Mesh { name = "VN_AguaLowPoly", indexFormat = verts.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
+        mesh.SetVertices(verts);
+        mesh.SetColors(cols);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
+        var b2 = mesh.bounds; b2.Expand(new Vector3(0f, 0.6f, 0f)); mesh.bounds = b2;   // the waves
+
+        var go = Child(sea, "Agua", sea.position);
+        go.layer = WaterLayer;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = WaterMaterial();
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+        mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        Debug.Log($"[Venecia] water: {verts.Count} vertices, {tris.Count / 3} triangles");
+    }
+
+    static Material WaterMaterial()
+    {
+        const string path = TestMapSetup.DataRoot + "/Materials/VN_Agua.mat";
+        var shader = Shader.Find("Island/LowPolyWater");
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(shader); AssetDatabase.CreateAsset(m, path); }
+        else if (m.shader != shader) m.shader = shader;
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    static void VenBuildBeacons(Transform root, Layout L)
+    {
+        var poles = new List<CombineInstance>();
+        var tops = new List<CombineInstance>();
+        var cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+        foreach (var cell in Cells(L))
+        {
+            char ch = L.At(cell.x, cell.y);
+            if (L.cellZone[cell.x, cell.y] == (char)0 || IsSolid(ch) || IsDoor(ch)) continue;
+            Vector3 p0 = World(cell.x, cell.y);
+            if (p0.y > 0.1f) continue;   // only the low floor floods
+            foreach (var d in Dirs)
+            {
+                if (!IsWater(L, cell.x + d.x, cell.y + d.y)) continue;
+                Vector3 at = Flat(p0) + GridDir(d) * (Cell / 2f + 0.12f);
+                poles.Add(new CombineInstance { mesh = cube, transform = Matrix4x4.TRS(at + Vector3.up * 0.15f, Quaternion.identity, new Vector3(0.12f, 1.9f, 0.12f)) });
+                tops.Add(new CombineInstance { mesh = cube, transform = Matrix4x4.TRS(at + Vector3.up * 1.2f, Quaternion.identity, new Vector3(0.16f, 0.2f, 0.16f)) });
+            }
+        }
+        var g = Child(root, "Balizas", Vector3.zero);
+        void Part(string name, List<CombineInstance> list, Material m)
+        {
+            var mesh = new Mesh { name = name, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            mesh.CombineMeshes(list.ToArray(), true, true);
+            var go = Child(g.transform, name, Vector3.zero);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = m;
+        }
+        Part("Postes", poles, M("VN_Baliza", new Color(0.92f, 0.92f, 0.88f)));
+        Part("Cabezas", tops, M("VN_BalizaRoja", new Color(0.85f, 0.12f, 0.1f)));
+        Debug.Log($"[Venecia] {poles.Count} beacons on the quay edges");
+    }
+
+    // Fence obstacles (A8 + A7): the old men's NavMeshAgents ignore colliders, so each straight run of fence also
+    // carves the NavMesh while it stands (they could otherwise swim into a closed barrio during the acqua alta).
+    // Added after the setup checks, like the door obstacles (carving works in the editor too).
+    static void VenFenceObstacles(Transform root)
+    {
+        var vallas = root.Find("Vallas");
+        if (vallas == null) return;
+        foreach (var fence in vallas.GetComponentsInChildren<ZoneFence>(true))
+        {
+            var tramos = fence.transform.Find("Tramos");
+            if (tramos == null) continue;
+            var cols = tramos.Cast<Transform>().Where(t => t.name == "Colision").ToList();
+            // merge collinear neighbours: same orientation, same line, 2 m apart
+            var left = new HashSet<Transform>(cols);
+            while (left.Count > 0)
+            {
+                var a = left.First(); left.Remove(a);
+                var run = new List<Transform> { a };
+                Vector3 along = a.right;
+                bool grew = true;
+                while (grew)
+                {
+                    grew = false;
+                    foreach (var b in left.ToList())
+                    {
+                        if (Mathf.Abs(Vector3.Dot(b.right, along)) < 0.99f) continue;
+                        foreach (var r in run)
+                        {
+                            Vector3 d = b.position - r.position;
+                            if (Mathf.Abs(Vector3.Dot(d, along)) <= Cell + 0.05f && Vector3.Cross(d, along).magnitude < 0.05f)
+                            { run.Add(b); left.Remove(b); grew = true; break; }
+                        }
+                    }
+                }
+                float min = run.Min(t => Vector3.Dot(t.position, along)), max = run.Max(t => Vector3.Dot(t.position, along));
+                Vector3 mid = a.position + along * ((min + max) / 2f - Vector3.Dot(a.position, along));
+                var ob = Child(tramos, "Obstaculo", mid);
+                ob.transform.rotation = a.rotation;
+                var nmo = ob.AddComponent<NavMeshObstacle>();
+                nmo.shape = NavMeshObstacleShape.Box;
+                nmo.size = new Vector3(max - min + Cell, 3f, 0.3f);
+                nmo.carving = true;
+                nmo.carveOnlyStationary = true;
+            }
+        }
+    }
+
+    // Closed barrios (A8, user's decision): a 3.2 m iron fence (VN_Verja) on every edge between a floor cell of the
+    // zone and the canal, one group per zone (ZoneFence) that disappears when the zone opens. The start zone has none.
+    // The collider (Wall layer) is 6 m tall although the model is 3.2 m: the only wall taller than it looks, so the
+    // Frog's super jump (4 m) can't clear it. CanalRescue stays as the safety net.
+    const float FenceColliderTop = 6f;
+
+    static void VenBuildFences(Transform root, Layout L, Dictionary<char, Zone> zones)
+    {
+        var parent = Child(root, "Vallas", Vector3.zero).transform;
+        int pieces = 0;
+        foreach (var zd in L.zones)
+        {
+            if (zd.start || !zones.TryGetValue(zd.letter, out var zone)) continue;
+            var g = Child(parent, "Valla_" + zd.id, Vector3.zero);
+            var fence = g.AddComponent<ZoneFence>();
+            fence.Configure(zone);
+            var holder = Child(g.transform, "Tramos", Vector3.zero).transform;
+            foreach (var cell in Cells(L))
+            {
+                if (L.cellZone[cell.x, cell.y] != zd.letter || IsSolid(L.At(cell.x, cell.y)) || IsDoor(L.At(cell.x, cell.y))) continue;
+                foreach (var d in Dirs)
+                {
+                    if (!IsWater(L, cell.x + d.x, cell.y + d.y)) continue;
+                    Vector3 dir = GridDir(d), p = World(cell.x, cell.y) + dir * (Cell / 2f - 0.12f);
+                    var piece = VenPlace(holder, VN("VN_Verja"), p, Yaw(dir));   // the fence runs along local X
+                    if (piece == null) continue;
+                    piece.name = "Verja";
+                    var col = new GameObject("Colision");
+                    col.transform.SetParent(holder, false);
+                    col.transform.SetPositionAndRotation(p + Vector3.up * FenceColliderTop / 2f, Quaternion.Euler(0f, Yaw(dir), 0f));
+                    col.transform.localScale = Vector3.one;
+                    col.AddComponent<BoxCollider>().size = new Vector3(2.0f, FenceColliderTop, 0.3f);
+                    col.layer = TestMapSetup.WallLayer;
+                    pieces++;
+                }
+            }
+            EditorUtility.SetDirty(fence);
+        }
+        Debug.Log($"[Venecia] {pieces} fence pieces on closed barrios");
     }
 
     // The vaporetto task list (BoatMission.HasTasks): the campanile you climb to ring the bell (= dar la luz), the
@@ -359,7 +781,7 @@ public static partial class IslaZombieSetup
         var iron = M("VN_Hierro", new Color(0.3f, 0.3f, 0.33f));
         var gold = TestMapSetup.Mat("Gold", new Color(1f, 0.8f, 0.1f), 0.8f);
         var earth = M("VN_Tierra", new Color(0.36f, 0.26f, 0.18f));
-        var bone = M("VN_Giuseppe", new Color(0.88f, 0.86f, 0.78f));
+        int gondolierSpots = 0;
 
         // ---- campanile: door on its west face, belfry floor on top of the shaft, the bell = the power switch
         foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'Z' && L.cellZone[c, row] == 'e'))
@@ -423,24 +845,20 @@ public static partial class IslaZombieSetup
                 Box(before, "Cruz_Brazo", p + Vector3.forward * 0.8f, new Vector3(0.6f, 0.1f, 0.1f), wood, 0.7f, false);
                 Box(after, "Hoyo", p, new Vector3(1.0f, 0.03f, 1.7f), dark, 0f, false);
                 Box(after, "Tierra", p + Vector3.right * 0.75f, new Vector3(0.5f, 0.35f, 1.2f), earth, 0f, false);
-                Box(after, "Giuseppe_Cuerpo", p + Vector3.left * 0.7f, new Vector3(0.42f, 0.75f, 0.3f), bone, 0f, false);
-                TestMapSetup.Prim(PrimitiveType.Sphere, after, after.InverseTransformPoint(p + Vector3.left * 0.7f + Vector3.up * 0.98f), Vector3.one * 0.38f, bone);
-                Box(after, "Giuseppe_Boina", p + Vector3.left * 0.7f, new Vector3(0.42f, 0.06f, 0.42f), dark, 1.14f, false);
-                Box(after, "Giuseppe_Baston", p + Vector3.left * 0.7f + Vector3.forward * 0.3f, new Vector3(0.04f, 0.8f, 0.04f), wood, 0f, false);
+                VenPlace(after, VN("VN_Giuseppe"), p, FaceOpen(L, cell));   // skeleton with beret and cane climbing out
             }
-            else if (ch == 'O')   // the golden gondolier: a gold figure with his oar, against the end of a dead end
+            else if (ch == 'O')   // the golden gondolier: one of several dead ends / jetties, the host picks one (B2)
             {
-                Task("Gondolero_De_Oro", cell, MissionTask.Kind.Gondolier, out var before, out var after, false);
+                var gt = Task("Gondolero_De_Oro_" + gondolierSpots, cell, MissionTask.Kind.Gondolier, out var before, out var after, false);
+                var spotRoot = Child(gt.transform, "Sitio", gt.transform.position);
+                before.SetParent(spotRoot.transform, true); after.SetParent(spotRoot.transform, true);
+                gt.SetSpot(gondolierSpots++, spotRoot);
                 foreach (var t in new[] { before, after })
                 {
                     Box(t, "Peana", p, new Vector3(0.9f, 0.2f, 0.9f), istria, 0f, false);
-                    Box(t, "Cuerpo", p, new Vector3(0.45f, 1.15f, 0.32f), gold, 0.2f, false);
-                    TestMapSetup.Prim(PrimitiveType.Sphere, t, t.InverseTransformPoint(p + Vector3.up * 1.55f), Vector3.one * 0.36f, gold);
-                    Box(t, "Sombrero", p, new Vector3(0.6f, 0.05f, 0.6f), gold, 1.72f, false);
-                    Box(t, "Remo", p + Vector3.right * 0.42f, new Vector3(0.05f, 2.3f, 0.05f), gold, 0.2f, false);
-                    Box(t, "Remo_Pala", p + Vector3.right * 0.42f, new Vector3(0.05f, 0.5f, 0.2f), gold, 2.3f, false);
+                    VenPlace(t, VN("VN_Gondolero"), p + Vector3.up * 0.2f, FaceOpen(L, cell));   // straw hat, striped shirt, oar
                 }
-                Blocker(parent, "Gondolero_Bloqueo", p, new Vector3(0.9f, 1.9f, 0.9f), NavAgents.PropLayer);
+                Blocker(spotRoot.transform, "Gondolero_Bloqueo", p, new Vector3(0.9f, 1.9f, 0.9f), NavAgents.PropLayer);
                 after.gameObject.SetActive(true);   // he stays where he is, found or not
             }
         }
@@ -467,39 +885,65 @@ public static partial class IslaZombieSetup
             return -1;
         }
         bool Deck(int c, int r, Vector2Int d) { int a = Side(c, r, d), b = Side(c, r, -d); return a >= 0 && b >= 0 && a + b <= 1; }
-        bool Passable(int c, int r) => L.InGrid(c, r) && (IsWater(L, c, r) || VenWalk(L, c, r) && (Deck(c, r, Vector2Int.right) || Deck(c, r, Vector2Int.up)));
+        // A4: only open water. The bridges are solid down to the canal bed (no arch yet, see B4 in
+        // Docs/VENECIA_FALLOS_TRASPASO.md), so a route under them went through the stone. Deck() stays for when they open.
+        bool Passable(int c, int r) => L.InGrid(c, r) && VenWet(L, c, r);   // B4: and under the arched bridges
+        bool NearBank(Vector2Int p)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                    if (L.InGrid(p.x + dx, p.y + dy) && !VenWet(L, p.x + dx, p.y + dy)) return true;
+            return false;
+        }
         var water = cells.Select(p => p + Dirs.First(d => IsWater(L, p.x + d.x, p.y + d.y))).ToList();
         Vector3 W(Vector2Int p) => Flat(World(p.x, p.y)) + Vector3.up * CanalY;
 
         var stops = new List<GondolaStop>();
         var boats = new List<Transform>();
+        var routePoints = new List<Vector3>();
         for (int i = 0; i < cells.Count; i++)
         {
             Vector3 land = World(cells[i].x, cells[i].y), toWater = Flat(W(water[i]) - land).normalized;
             var go = Child(parent, "Gondola_" + L.Zone(L.cellZone[cells[i].x, cells[i].y]).id, land);
             stops.Add(go.AddComponent<GondolaStop>());
-            var boat = VenPlace(floating != null ? floating : parent, VN("VN_Gondola"), W(water[i]) - toWater * 0.15f, Yaw(new Vector3(toWater.z, 0f, -toWater.x)));
+            // A4: a passenger gondola is the 9.4 m model at 0.5 (4.7 x 0.65 m). Moored along the quay if the canal has room
+            // along it (water on both sides of the mooring cell), else bow out, square to the quay; poles outside the hull.
+            Vector3 along = new Vector3(toWater.z, 0f, -toWater.x);
+            var side = new Vector2Int(Mathf.RoundToInt(along.x), -Mathf.RoundToInt(along.z));
+            bool parallel = IsWater(L, water[i].x + side.x, water[i].y + side.y) && IsWater(L, water[i].x - side.x, water[i].y - side.y);
+            Vector3 quayEdge = Flat(land) + toWater * (Cell / 2f) + Vector3.up * CanalY;
+            Vector3 hullAt = parallel ? quayEdge + toWater * 0.75f : quayEdge + toWater * (GondolaHalfLength + 0.35f);
+            var boat = VenPlace(floating != null ? floating : parent, VN("VN_Gondola"), hullAt, Yaw(parallel ? along : -toWater), GondolaScale);
             boats.Add(boat != null ? boat.transform : null);
             foreach (float s in new[] { -1f, 1f })
-                VenPlace(floating != null ? floating : parent, VN("VN_PaloRayas"), W(water[i]) - toWater * 0.75f + new Vector3(toWater.z, 0f, -toWater.x) * s * 0.9f, 0f);
+            {
+                Vector3 pole = parallel ? quayEdge + toWater * 0.3f + along * s * (GondolaHalfLength + 0.45f) : quayEdge + toWater * 0.3f + along * s * 0.85f;
+                VenPlace(floating != null ? floating : parent, VN("VN_PaloRayas"), pole, 0f);
+            }
             var label = WorldLabel.Create(go.transform, new Vector3(0f, 2.4f, 0f), "GÓNDOLA", 0.3f, new Color(1f, 0.85f, 0.4f));
             label.transform.position = land + toWater * 0.7f + Vector3.up * 2.4f;
         }
         for (int i = 0; i < cells.Count; i++)
         {
-            // BFS over the canals from this stop's water cell
+            // shortest way over the canals from this stop's water cell (Dijkstra: a cell beside a quay costs more,
+            // so in wide water the gondola keeps off the banks and turns in the open; B4)
             var prev = new Dictionary<Vector2Int, Vector2Int> { [water[i]] = water[i] };
-            var q = new Queue<Vector2Int>();
-            q.Enqueue(water[i]);
-            while (q.Count > 0)
+            var dist = new Dictionary<Vector2Int, int> { [water[i]] = 0 };
+            var open = new SortedSet<(int cost, int x, int y)> { (0, water[i].x, water[i].y) };
+            while (open.Count > 0)
             {
-                var p = q.Dequeue();
+                var top = open.Min; open.Remove(top);
+                var p = new Vector2Int(top.x, top.y);
+                if (top.cost > dist[p]) continue;
                 foreach (var d in Dirs)
                 {
                     var n = p + d;
-                    if (prev.ContainsKey(n) || !Passable(n.x, n.y)) continue;
-                    prev[n] = p;
-                    q.Enqueue(n);
+                    if (!Passable(n.x, n.y)) continue;
+                    int cost = top.cost + 10 + (NearBank(n) ? 8 : 0);
+                    if (dist.TryGetValue(n, out var old) && old <= cost) continue;
+                    if (dist.ContainsKey(n)) open.Remove((old, n.x, n.y));
+                    dist[n] = cost; prev[n] = p;
+                    open.Add((cost, n.x, n.y));
                 }
             }
             var others = new List<GondolaStop>();
@@ -514,11 +958,148 @@ public static partial class IslaZombieSetup
                 path.Reverse();
                 others.Add(stops[j]);
                 starts.Add(points.Count);
-                for (int m = 0; m < path.Count; m++)   // corners only
-                    if (m == path.Count - 1 || m == 0 || path[m] - path[m - 1] != path[m + 1] - path[m]) points.Add(W(path[m]));
+                // A4: every cell of the path moved to the middle of the canal across its direction (the BFS hugs a quay),
+                // then only the points where the direction changes, then rounded corners
+                path.Insert(0, water[i]);
+                var mids = new List<Vector3>();
+                for (int m = 0; m < path.Count; m++)
+                {
+                    var dir = m + 1 < path.Count ? path[m + 1] - path[m] : path[m] - path[m - 1];
+                    var n = new Vector2Int(-dir.y, dir.x);
+                    int left = 0, right = 0;
+                    while (right < 1 && VenWet(L, path[m].x + n.x * (right + 1), path[m].y + n.y * (right + 1))) right++;
+                    while (left < 1 && VenWet(L, path[m].x - n.x * (left + 1), path[m].y - n.y * (left + 1))) left++;
+                    mids.Add(W(path[m]) + GridDir(n) * ((right - left) * Cell / 2f));
+                }
+                // B4: pulled taut: from each point straight on to the farthest point the hull reaches without touching
+                // anything (long straight runs in open water, turns only where the canal turns)
+                var corners = new List<Vector3> { mids[0] };
+                for (int at = 0; at < mids.Count - 1;)
+                {
+                    int best = at + 1;
+                    for (int e = at + 2; e < mids.Count && e - best <= 8; e++) if (SegmentClear(mids[at], mids[e], 0.65f)) best = e;   // with a margin
+                    corners.Add(mids[best]);
+                    at = best;
+                }
+                var smooth = Densify(RoundCorners(corners));   // rounded corners where the hull fits (A4, B4)
+                // a crossing (stops facing each other) points the hull at the quays: start and stop where it fits
+                while (smooth.Count > 2 && !HullClear(smooth[0], smooth[1] - smooth[0])) smooth.RemoveAt(0);
+                while (smooth.Count > 2 && !HullClear(smooth[smooth.Count - 1], smooth[smooth.Count - 1] - smooth[smooth.Count - 2])) smooth.RemoveAt(smooth.Count - 1);
+                points.AddRange(smooth);
             }
             stops[i].Configure(zones[L.cellZone[cells[i].x, cells[i].y]], World(cells[i].x, cells[i].y), boats[i], others.ToArray(), points.ToArray(), starts.ToArray());
             EditorUtility.SetDirty(stops[i]);
+            routePoints.AddRange(points);
         }
+        // A4: decoration boats out of the way of the routes and the moored gondolas
+        if (floating != null)
+        {
+            var keep = new HashSet<Transform>(boats.Where(b => b != null));
+            var busy = new List<Bounds>();
+            foreach (var b in keep) busy.Add(RenderBounds(b.gameObject));
+            int removed = 0;
+            foreach (Transform t in floating.Cast<Transform>().ToList())
+            {
+                if (keep.Contains(t) || !(t.name.StartsWith("VN_Gondola") || t.name.StartsWith("VN_Lancha"))) continue;
+                var bb = RenderBounds(t.gameObject);
+                bb.Expand(new Vector3(1.4f, 10f, 1.4f));
+                if (routePoints.Any(q => bb.Contains(new Vector3(q.x, bb.center.y, q.z))) || busy.Any(o => o.Intersects(bb)))
+                { Object.DestroyImmediate(t.gameObject); removed++; }
+            }
+            Debug.Log($"[Venecia] {removed} decoration boats moved out of the gondola routes");
+        }
+    }
+
+    const float GondolaScale = 0.5f, GondolaHalfLength = 9.44f * GondolaScale / 2f;
+
+    static bool SegmentClear(Vector3 a, Vector3 b, float halfWidth = 0.33f)
+    {
+        Vector3 d = b - a;
+        float len = d.magnitude;
+        if (len < 0.01f) return true;
+        for (float t = 0f; t < len; t += 0.5f) if (!HullClear(a + d * (t / len), d, halfWidth)) return false;
+        return HullClear(b, d, halfWidth);
+    }
+
+    // Each corner of a taut route replaced by a short curve (3 points) when the hull fits along it.
+    static List<Vector3> RoundCorners(List<Vector3> pts)
+    {
+        var res = new List<Vector3> { pts[0] };
+        for (int i = 1; i < pts.Count - 1; i++)
+        {
+            float max = Mathf.Min(3f, Vector3.Distance(pts[i], pts[i - 1]) / 2.2f, Vector3.Distance(pts[i], pts[i + 1]) / 2.2f);
+            bool done = false;
+            foreach (float f in new[] { 1f, 0.66f, 0.4f })   // the widest curve that fits
+            {
+                float cut = max * f;
+                if (cut < 0.3f) break;
+                Vector3 a = pts[i] + (pts[i - 1] - pts[i]).normalized * cut, b = pts[i] + (pts[i + 1] - pts[i]).normalized * cut;
+                Vector3 m = (a + 2f * pts[i] + b) / 4f;   // middle of the quadratic curve a - corner - b
+                Vector3 q1 = (a + m) / 2f + (pts[i] - (a + b) / 2f) * 0.125f, q2 = (m + b) / 2f + (pts[i] - (a + b) / 2f) * 0.125f;
+                if (!(SegmentClear(res[res.Count - 1], a) && SegmentClear(a, q1) && SegmentClear(q1, m) && SegmentClear(m, q2) && SegmentClear(q2, b))) continue;
+                res.AddRange(new[] { a, q1, m, q2, b });
+                done = true;
+                break;
+            }
+            if (!done) res.Add(pts[i]);
+        }
+        res.Add(pts[pts.Count - 1]);
+        return res;
+    }
+
+    // points every <= 1 m
+    static List<Vector3> Densify(List<Vector3> cur)
+    {
+        var res = new List<Vector3> { cur[0] };
+        for (int i = 1; i < cur.Count; i++)
+        {
+            int n = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(cur[i - 1], cur[i])));
+            for (int k = 1; k <= n; k++) res.Add(Vector3.Lerp(cur[i - 1], cur[i], k / (float)n));
+        }
+        return res;
+    }
+
+    // The gondola hull (oriented along dir) at a point touches nothing solid.
+    static bool HullClear(Vector3 at, Vector3 dir, float halfWidth = 0.33f)
+    {
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 1e-6f) return true;
+        Physics.SyncTransforms();
+        int mask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << NavAgents.PropLayer);
+        var hits = Physics.OverlapBox(new Vector3(at.x, CanalY + 0.35f, at.z), new Vector3(halfWidth, 0.28f, GondolaHalfLength - 0.15f), Quaternion.LookRotation(dir.normalized), mask, QueryTriggerInteraction.Ignore);
+        return hits.All(h => h.transform.parent != null && h.transform.parent.name == "SueloNado");
+    }
+
+    static Bounds RenderBounds(GameObject go)
+    {
+        var rs = go.GetComponentsInChildren<Renderer>();
+        if (rs.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
+        var b = rs[0].bounds;
+        foreach (var r in rs) b.Encapsulate(r.bounds);
+        return b;
+    }
+
+    // Chaikin corner cutting (2 passes) of a polyline; the ends stay where they are. Points every <= 1 m afterwards.
+    static List<Vector3> Smooth(List<Vector3> pts)
+    {
+        var cur = pts;
+        for (int pass = 0; pass < 2 && cur.Count > 2; pass++)
+        {
+            var nxt = new List<Vector3> { cur[0] };
+            for (int i = 0; i < cur.Count - 1; i++)
+            {
+                nxt.Add(Vector3.Lerp(cur[i], cur[i + 1], 0.25f));
+                nxt.Add(Vector3.Lerp(cur[i], cur[i + 1], 0.75f));
+            }
+            nxt.Add(cur[cur.Count - 1]);
+            cur = nxt;
+        }
+        var res = new List<Vector3> { cur[0] };
+        for (int i = 1; i < cur.Count; i++)
+        {
+            int n = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(cur[i - 1], cur[i])));
+            for (int k = 1; k <= n; k++) res.Add(Vector3.Lerp(cur[i - 1], cur[i], k / (float)n));
+        }
+        return res;
     }
 }
