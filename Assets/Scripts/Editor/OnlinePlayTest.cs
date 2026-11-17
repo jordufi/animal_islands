@@ -135,6 +135,7 @@ public static class OnlinePlayTest
         if (!EditorApplication.isPlaying) return;
         Application.runInBackground = true;
         EditorApplication.QueuePlayerLoopUpdate();
+        ZoneDoor.IgnoreRoundLimit = true;   // opens several doors in one round (the one-door-per-round rule is checked in SmokePlayTest)
         try
         {
             if (!startedScript) { startedScript = true; script.Push(IsVenecia ? VeneciaScript() : IsVilla ? VillaScript() : Script()); }

@@ -90,6 +90,7 @@ public static class HeightsPlayTest
         EditorApplication.QueuePlayerLoopUpdate();
         var gm = GameManager.Instance;
         if (gm == null || gm.Player == null) return;
+        ZoneDoor.IgnoreRoundLimit = true;   // opens several doors in one round (the one-door-per-round rule is checked in SmokePlayTest)
         try
         {
             var cm = CardManager.Instance;

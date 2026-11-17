@@ -48,6 +48,7 @@ public class Karaoke : Interactable
         StopAllCoroutines();
         singing = on;
         SingProgress = 0f;
+        if (on && EasterEgg.Instance != null) EasterEgg.Instance.SongStarted = true;
         if (on) StartCoroutine(NetProgress(duration));
     }
 
@@ -73,7 +74,9 @@ public class Karaoke : Interactable
     IEnumerator Sing(Transform player)
     {
         singing = true;
-        Game.ShowMessage("♪ Cantando... ¡aguanta cerca del karaoke!");
+        bool firstSong = !EasterEgg.Instance.SongStarted;
+        EasterEgg.Instance.SongStarted = true;
+        Game.ShowMessage(firstSong ? "♪ Cantando... ¡Los abuelos han oído a Julio y se vienen arriba!" : "♪ Cantando... ¡aguanta cerca del karaoke!");
         if (NetGame.H != null) NetGame.H.KaraokeChanged(this, true, singTime);
         for (float t = 0f; t < singTime; t += Time.deltaTime)
         {

@@ -20,6 +20,18 @@ public class EconomyData : ScriptableObject
     public bool bossMinionsPayHits = false;
     [Tooltip("Boat mission: full rounds to survive after calling the boat.")]
     public int missionDefenseRounds = 1;
+    [Header("Rules (user feedback 1)")]
+    [Tooltip("Doors the team can open per round: every paid, key or mission door counts, the dock too. 0 = no limit.")]
+    public int doorsPerRound = 1;
+    [Tooltip("Old men's speed once the Julio Iglesias records go into the karaoke (the song starts), for the rest of the run.")]
+    public float julioSpeedFactor = 1.25f;
+    [Header("Dentadura postiza (R1 / G): the funny grenade (user feedback 1)")]
+    public int dentaduraCount = 2;          // per player; the Nevera de munición fills them up
+    public float dentaduraDamage = 400f;    // one bite kills an old man up to round 3
+    public float dentaduraRadius = 3.5f;
+    public float dentaduraStun = 2.5f;
+    public float dentaduraFuse = 1.5f;      // bites when it lands, or after this long
+    public float dentaduraThrowSpeed = 13f;
     [Header("Boss")]
     [Tooltip("Boss health = this x the health of a normal old man of the round he appears in...")]
     public float bossHealthInEnemies = 45f;

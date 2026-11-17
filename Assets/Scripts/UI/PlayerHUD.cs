@@ -19,6 +19,8 @@ public class PlayerHUD : MonoBehaviour
     Camera cam;
 
     RectTransform canvasRect, view;
+    Text grenadeText;
+    PlayerGrenade grenade;
     Text healthText, weaponText, ammoText, otherWeaponText, promptText, abilityText, carryText, keyText, tagText, downText, reviveText;
     RectTransform healthFill, reloadFill, abilityFill, reviveFill;
     Image healthFillImage, damageFlash;
@@ -57,6 +59,7 @@ public class PlayerHUD : MonoBehaviour
         drinks = p.GetComponent<PlayerDrinks>();
         ability = p.GetComponent<PlayerAbility>();
         carry = p.GetComponent<PlayerCarry>();
+        grenade = p.GetComponent<PlayerGrenade>();
         cam = PlayerSlot.CameraOf(p);
         Build(playerCount, coop);
 
@@ -68,6 +71,8 @@ public class PlayerHUD : MonoBehaviour
         var melee = p.GetComponent<PlayerMelee>();
         if (melee != null) melee.Hit += killed => { SetCrosshair(new Color(1f, 0.6f, 0.1f)); crosshairFlashUntil = Time.time + (killed ? 0.3f : 0.12f); };
         drinks.Changed += RefreshDrinks;
+        if (grenade != null) grenade.Changed += RefreshGrenade;
+        RefreshGrenade();
         OnHealthChanged(player.CurrentHealth, player.MaxHealth);
         RefreshWeapon();
         RefreshDrinks();
@@ -78,7 +83,19 @@ public class PlayerHUD : MonoBehaviour
         if (player != null) player.HealthChanged -= OnHealthChanged;
         if (shooter != null) { shooter.WeaponsChanged -= RefreshWeapon; shooter.AmmoChanged -= RefreshWeapon; }
         if (drinks != null) drinks.Changed -= RefreshDrinks;
+        if (grenade != null) grenade.Changed -= RefreshGrenade;
     }
+
+    // bottom-left, over the drinks: the false teeth left (R1 / G)
+    void RefreshGrenade()
+    {
+        if (grenadeText == null) return;
+        int n = grenade != null ? grenade.Count : 0;
+        grenadeText.text = "R1 · Dentadura postiza x" + n;
+        grenadeText.color = n > 0 ? new Color(1f, 0.85f, 0.85f) : new Color(1f, 1f, 1f, 0.4f);
+    }
+
+    public string GrenadeText => grenadeText != null ? grenadeText.text : "";   // tests
 
     // ---------------------------------------------------------------- build
     void Build(int playerCount, bool coop)
@@ -127,6 +144,7 @@ public class PlayerHUD : MonoBehaviour
         UIKit.Image(abilityFill, new Color(0.3f, 0.7f, 1f));
         abilityText = UIKit.Text(UIKit.Stretch("Text", ab), "", 22);
         drinksRoot = UIKit.Anchored("Drinks", view, new Vector2(0, 0), new Vector2(40, 80), new Vector2(600, 50));
+        grenadeText = UIKit.Label("Grenade", view, new Vector2(0, 0), new Vector2(40, 136), new Vector2(500, 30), "", 22, TextAnchor.LowerLeft, Color.white);
 
         // centre: crosshair, prompt
         var cross = UIKit.Anchored("Crosshair", view, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(60, 60));
@@ -152,6 +170,9 @@ public class PlayerHUD : MonoBehaviour
         reviveText = UIKit.Label("Text", rv, new Vector2(0.5f, 1f), new Vector2(0, 30), new Vector2(800, 36), "", 26);
         reviveBar = rv.gameObject;
         reviveBar.SetActive(false);
+
+        // top centre: the "brújula de mierdecillas" (option in the main menu / Ajustes)
+        if (GameSettings.Compass) Compass.Create(view, player, cam);
     }
 
     // ---------------------------------------------------------------- refresh

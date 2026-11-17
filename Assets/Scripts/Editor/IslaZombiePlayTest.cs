@@ -83,6 +83,7 @@ public static class IslaZombiePlayTest
     {
         var gm = GameManager.Instance;
         if (gm == null || gm.Player == null) return;
+        ZoneDoor.IgnoreRoundLimit = true;   // opens several doors in one round (the one-door-per-round rule is checked in SmokePlayTest)
         if (gm.State == GameState.GameOver) { Write($"FAIL player died at step {step} (t={Time.time:F0}s)"); Finish("failed"); return; }
         var player = gm.Player;
         float t = Time.time - stepTime, rt = Time.realtimeSinceStartup - realTime;

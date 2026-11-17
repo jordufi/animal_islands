@@ -52,5 +52,11 @@ public class EnemyVariant : ScriptableObject
     public float throwCloudSeconds = 3f;
     public float throwCloudDps = 15f;
 
+    [Header("Hurt (user feedback 1)")]
+    [Tooltip("Below this share of his health he loses his glasses (walks slower) or drops his cane (runs faster), 50/50. 0 = never.")]
+    public float hurtShare = 0.25f;
+    public float glassesSpeedFactor = 0.6f;
+    public float caneSpeedFactor = 1.4f;
+
     public float ChanceAt(int round) => round < firstRound ? 0f : Mathf.Min(maxChance, baseChance + chancePerRound * (round - firstRound));
 }

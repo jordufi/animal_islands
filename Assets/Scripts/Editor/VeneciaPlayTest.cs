@@ -156,6 +156,7 @@ public static class VeneciaPlayTest
     {
         var gm = GameManager.Instance;
         if (gm == null || gm.Player == null) return;
+        ZoneDoor.IgnoreRoundLimit = true;   // opens several doors in one round (the one-door-per-round rule is checked in SmokePlayTest)
         if (gm.State == GameState.GameOver) { Write($"FAIL player died at step {step}"); Finish("failed"); return; }
         var cards = CardManager.Instance;
         if (cards != null && cards.CurrentOffer != null) { cards.Choose(cards.CurrentOffer[0]); return; }

@@ -45,6 +45,12 @@ public static class QuickChecks
         Check(eco.HitPointsFor(smg.fireInterval) == eco.fastHitPoints, $"the Thermomix ({1f / smg.fireInterval:F1} shots/s) earns the fast-gun hit pay");
         Check(eco.HitPointsFor(pistol.fireInterval) == eco.hitPoints && eco.HitPointsFor(shotgun.fireInterval) == eco.hitPoints, "pistol and shotgun earn the normal hit pay");
 
+        // ---- user feedback 1
+        Check(eco.doorsPerRound == 1, $"one door per round ({eco.doorsPerRound})");
+        Check(eco.dentaduraCount >= 1 && eco.dentaduraRadius >= 2f && eco.dentaduraDamage >= RoundManager.BaseHealth(3),
+            $"the false teeth: {eco.dentaduraCount} per player, {eco.dentaduraDamage:F0} damage (kills a round-3 old man), {eco.dentaduraRadius} m");
+        Check(eco.julioSpeedFactor > 1.05f && eco.julioSpeedFactor <= 1.5f, $"the Julio records fire the old men up a little ({eco.julioSpeedFactor:F2}x)");
+
         // ---- rounds: old man health
         Check(Mathf.Approximately(RoundManager.BaseHealth(1), 150f), $"round 1 old man has 150 health ({RoundManager.BaseHealth(1)})");
         Check(Mathf.Approximately(RoundManager.BaseHealth(9), 950f), $"round 9 old man has 950 health ({RoundManager.BaseHealth(9)})");

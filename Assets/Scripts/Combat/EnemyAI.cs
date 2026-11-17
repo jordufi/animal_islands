@@ -137,7 +137,8 @@ public class EnemyAI : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         if (animator != null) animator.applyRootMotion = false;
         health.Died += OnDied;
-        health.Damaged += (_, __) => flinchUntil = Time.time + flinchTime;
+        health.Damaged += (_, __) => { flinchUntil = Time.time + flinchTime; CheckHurt(); };
+        hurtSeed = Random.Range(1, 1 << 30);
         foreach (var t in GetComponentsInChildren<Transform>())
         {
             if (t.name == "Spine" && spine == null) spine = t;
@@ -204,6 +205,98 @@ public class EnemyAI : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetDrummers() => drummers.Clear();
 
+    // ---------------------------------------------------------------- hurt (user feedback 1, idea 11)
+    // Low on health (EnemyVariant.hurtShare) he loses his glasses (walks slower) or drops his cane (runs faster), 50/50.
+    // Online every machine picks the same from the NetId and drops the same prop (health reaches the clients through
+    // EnemyHealth.Damaged); only the host's old man changes speed.
+    bool hurt;
+    int hurtSeed;
+    float hurtFactor = 1f;
+    public int HurtState { get; private set; }   // 0 fine, 1 lost his glasses, 2 dropped his cane (tests)
+
+    void CheckHurt()
+    {
+        if (hurt || health == null || health.IsDead) return;
+        float share = Variant != null ? Variant.hurtShare : 0.25f;
+        if (share <= 0f || health.Current > health.MaxHealth * share) return;
+        hurt = true;
+        uint seed = (uint)(health.NetId != 0 ? health.NetId : hurtSeed) * 2654435761u;
+        bool cane = ((seed >> 16) & 1u) == 1u;
+        HurtState = cane ? 2 : 1;
+        hurtFactor = cane ? (Variant != null ? Variant.caneSpeedFactor : 1.4f) : (Variant != null ? Variant.glassesSpeedFactor : 0.6f);
+        nextAuraCheck = 0f;   // UpdateAura applies the new factor now
+        if (cane) DropCane(); else DropGlasses();
+    }
+
+    void DropCane()
+    {
+        Renderer cane = null;
+        foreach (var r in GetComponentsInChildren<Renderer>()) if (r.name.Contains("Cane")) { cane = r; break; }
+        if (cane == null) return;
+        Mesh mesh = null;
+        if (cane is SkinnedMeshRenderer sk) { mesh = new Mesh(); sk.BakeMesh(mesh, true); }
+        else { var mf = cane.GetComponent<MeshFilter>(); if (mf != null) mesh = mf.sharedMesh; }
+        cane.enabled = false;
+        if (mesh == null) return;
+        var go = new GameObject("BastonCaido");
+        go.transform.SetPositionAndRotation(cane.transform.position, cane.transform.rotation);
+        go.transform.localScale = cane is SkinnedMeshRenderer ? Vector3.one : cane.transform.lossyScale;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterials = cane.sharedMaterials;
+        Fall(go, mesh.bounds.size);
+    }
+
+    void DropGlasses()
+    {
+        Transform at = head != null ? head : transform;
+        Material mat = null;
+        foreach (var r in GetComponentsInChildren<Renderer>()) if (r.enabled && r.sharedMaterial != null) { mat = r.sharedMaterial; break; }
+        float k = transform.lossyScale.y;
+        var go = new GameObject("GafasCaidas");
+        go.transform.SetPositionAndRotation(at.position + transform.forward * 0.28f * k + Vector3.up * 0.12f * k, transform.rotation);
+        var block = new MaterialPropertyBlock();
+        block.SetColor(BaseColorId, new Color(0.08f, 0.08f, 0.1f));
+        block.SetColor(ColorId, new Color(0.08f, 0.08f, 0.1f));
+        void Part(PrimitiveType type, Vector3 pos, Vector3 scale, Quaternion rot)
+        {
+            var p = GameObject.CreatePrimitive(type);
+            Destroy(p.GetComponent<Collider>());
+            p.transform.SetParent(go.transform, false);
+            p.transform.localPosition = pos;
+            p.transform.localRotation = rot;
+            p.transform.localScale = scale;
+            var r = p.GetComponent<Renderer>();
+            if (mat != null) r.sharedMaterial = mat;
+            r.SetPropertyBlock(block);
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+        var lens = Quaternion.Euler(90f, 0f, 0f);
+        Part(PrimitiveType.Cylinder, new Vector3(-0.055f, 0f, 0f), new Vector3(0.075f, 0.006f, 0.075f), lens);
+        Part(PrimitiveType.Cylinder, new Vector3(0.055f, 0f, 0f), new Vector3(0.075f, 0.006f, 0.075f), lens);
+        Part(PrimitiveType.Cube, Vector3.zero, new Vector3(0.04f, 0.008f, 0.008f), Quaternion.identity);
+        foreach (float s in new[] { -1f, 1f }) Part(PrimitiveType.Cube, new Vector3(s * 0.095f, 0f, -0.06f), new Vector3(0.006f, 0.008f, 0.12f), Quaternion.identity);
+        go.transform.localScale = Vector3.one * Mathf.Max(1f, k * 1.6f);   // the old man's head is big
+        Fall(go, new Vector3(0.2f, 0.03f, 0.14f));
+    }
+
+    // A dropped prop: falls with physics, bounces a bit and goes after a few seconds (visual only).
+    void Fall(GameObject go, Vector3 size)
+    {
+        go.layer = 2;   // Ignore Raycast: bullets, the camera and the interaction rays go through it
+        var box = go.AddComponent<BoxCollider>();
+        box.size = Vector3.Max(size, Vector3.one * 0.03f);
+        var rb = go.AddComponent<Rigidbody>();
+        rb.mass = 0.3f;
+        rb.linearVelocity = transform.forward * 1.2f + Vector3.up * 1.5f + Random.insideUnitSphere * 0.4f;
+        rb.angularVelocity = Random.insideUnitSphere * 6f;
+        Destroy(go, 6f);
+    }
+
+    // Feedback 1 (idea 3): once the Julio Iglesias records go into the karaoke, every old man walks faster for the rest
+    // of the run (EconomyData.julioSpeedFactor). auraFactor holds every speed factor of this kind together.
+    static float JulioFactor => EasterEgg.Motivated && GameManager.Instance != null && GameManager.Instance.Economy != null
+        ? GameManager.Instance.Economy.julioSpeedFactor : 1f;
+
     void UpdateAura()
     {
         if (Time.time < nextAuraCheck || agent == null) return;
@@ -216,6 +309,7 @@ public class EnemyAI : MonoBehaviour
             if (d == this || d.Variant == null) continue;
             if ((d.transform.position - transform.position).sqrMagnitude <= d.Variant.auraRadius * d.Variant.auraRadius) f = Mathf.Max(f, d.Variant.auraSpeedFactor);
         }
+        f *= JulioFactor * hurtFactor;
         if (Mathf.Approximately(f, auraFactor)) return;
         agent.speed = agent.speed / auraFactor * f;
         auraFactor = f;

@@ -13,6 +13,9 @@ public class EasterEgg : MonoBehaviour
     public int DiscsFound { get; private set; }
     public int DiscsNeeded => discsNeeded;
     public bool Completed { get; set; }
+    // The records went into the karaoke (a song started): the old men get fired up for the rest of the run (feedback 1).
+    public bool SongStarted { get; set; }
+    public static bool Motivated => Instance != null && (Instance.SongStarted || Instance.Completed);
     public event Action Changed;
 
     void Awake() => Instance = this;

@@ -138,6 +138,16 @@ public static class SmokePlayTest
                 int z0 = ZoneManager.Instance.OpenCount, p0 = gm.Points;
                 door.Interact(inter);
                 Check(ZoneManager.Instance.OpenCount > z0 && p0 - gm.Points == 750, $"door 1 paid {p0 - gm.Points} (expected 750), zones {z0} -> {ZoneManager.Instance.OpenCount}");
+                // one door per round (user feedback 1): a second door in the same round is refused and charges nothing
+                var door2 = Object.FindObjectsByType<ZoneDoor>().FirstOrDefault(d => d.name.StartsWith("Door2_"));
+                if (door2 != null && eco.doorsPerRound == 1)
+                {
+                    int z1 = ZoneManager.Instance.OpenCount, p1 = gm.Points;
+                    door2.Interact(inter);
+                    string prompt = door2.Prompt(inter);
+                    Check(ZoneManager.Instance.OpenCount == z1 && gm.Points == p1 && prompt.Contains("esta ronda"), $"a second door in the same round is refused and charges nothing ('{prompt}')");
+                }
+                ZoneDoor.IgnoreRoundLimit = true;   // the rest of the smoke run opens the dock in this same round
                 Next();
                 break;
             }

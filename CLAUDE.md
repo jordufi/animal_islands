@@ -552,7 +552,13 @@ per round"; the gondola goes only to open zones; Original stays in the selector;
   one after another, summary in EditorPrefs `TestQueue.Log`; names in its `Tests` table).
 - Unity does not refresh scripts on its own while it is in the background: call `AssetDatabase.Refresh()` from a
   RunCommand after editing, then wait for the DLL. Python edits on Windows write CRLF: the repo is LF (`sed -i 's/\r$//'`).
-- Phase 4 next; phase 3 (GitHub release) waits for the user's go-ahead to publish.
+- **Phase 4 done** (details and numbers in the plan file): one door per round (`EconomyData.doorsPerRound`,
+  `ZoneDoor.IgnoreRoundLimit` for tests that open several), Julio fires the old men up (`julioSpeedFactor`), hurt old
+  men drop glasses / cane (`EnemyVariant.hurtShare...`, `EnemyAI.CheckHurt`), `UI/Compass.cs` ("brújula de
+  mierdecillas", `GameSettings.Compass`), map selector carousel (`MainMenu.MapStep`), the false teeth grenade
+  (`Throw` action R1 / G, `PlayerGrenade`, `Dentadura`). **Online protocol is now `animal-island-online-6`**
+  (PlayerFx kind 3): hotel / cruise must go to 7. Test: `Feedback4PlayTest` (Run / RunMenu).
+- Phase 3 (GitHub release) waits for the user's go-ahead to publish.
 
 ## Hotel Jubiles and Crucero "Reina del Imserso" (maps 5 and 6) — IN PROGRESS since 2026-11-17 (Opus): designed, layouts built without theme
 The user asked for both maps "at the same time", designed first. **All decisions so far are in `Docs/mapas.md`

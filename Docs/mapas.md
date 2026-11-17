@@ -28,6 +28,8 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
   jefe → extracción. Sin límite de tiempo. Partidas de 20 a 40 minutos, difíciles a propósito, sin progresión entre
   partidas.
 - **Cada puerta abierta = 1 carta de 3** (bendición + maldición para toda la partida). Las elige quien abre la puerta.
+- **Una puerta por ronda** para todo el equipo (feedback 1, decidido: también cuenta la del muelle / la misión; el
+  Portón del encierro se abre solo y no cuenta). Número en `Economy.asset` (`doorsPerRound`).
 - **Caja de armas** (Máquina de Granizados; tómbola en Villajubilada): un uso por zona abierta; después reaparece en
   otra zona abierta. Las primeras zonas donde puede salir van marcadas (`firstbox`).
 - **Bebidas** (necesitan luz): Carajillo del Abuelo, Mojito Turbo, Piña Colapso, Tinto de Verano Eterno.
@@ -39,7 +41,13 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
 - **Power-ups:** Nevera de munición, Siesta fulminante, 2x1 en conchas, Paella para todos.
 - **Modos:** Clásico y **Anselmo cagón** (la mitad de los abuelos atajan por las entradas).
 - **Secreto común:** tres discos falsos de Julio Iglesias → cantar en el karaoke → Disco de Oro, que se lleva en
-  brazos, se cae si te pegan y, si sales con él, duplica la puntuación.
+  brazos, se cae si te pegan y, si sales con él, duplica la puntuación. **En cuanto suena Julio, los abuelos se
+  vienen arriba:** corren un 25 % más el resto de la partida (riesgo y recompensa, feedback 1).
+- **Abuelos heridos** (feedback 1): con un 25 % de vida a uno se le caen las gafas (va un 40 % más lento) y a otro el
+  bastón (corre un 40 % más). Mitad y mitad.
+- **Dentadura postiza** (R1 / G, la granada): muerde en 3,5 m, quita 400 y aturde 2,5 s. Dos por jugador; la Nevera
+  las devuelve.
+- **Brújula de mierdecillas** (opción): flecha arriba que apunta a una tarea pendiente al azar.
 - **Llave Maestra:** está en un callejón sin salida al azar y sustituye una pieza de la misión. Si quien la lleva cae,
   se queda en el suelo.
 - **Reglas de diseño (todos los mapas, decididas):**

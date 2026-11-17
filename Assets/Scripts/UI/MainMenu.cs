@@ -33,7 +33,7 @@ public partial class MainMenu : MonoBehaviour
     Transform canvas;
     RectTransform titleBlock, menuPanel, cardPanel;
     Text pressText, animalName, animalTagline, animalPassive, animalAbility, difficultyInfo;
-    Button startButton, splitButton, onlineButton, animalButton, difficultyButton, modeButton, settingsButton, quitButton;
+    Button startButton, splitButton, onlineButton, animalButton, difficultyButton, modeButton, compassButton, settingsButton, quitButton;
     GameObject lobbyPanel;
     readonly System.Collections.Generic.List<Text> lobbySlots = new System.Collections.Generic.List<Text>();
     readonly System.Collections.Generic.Dictionary<Party.Member, float> lobbyStepAt = new System.Collections.Generic.Dictionary<Party.Member, float>();
@@ -42,7 +42,7 @@ public partial class MainMenu : MonoBehaviour
     int lobbyRow;                 // J1's cursor: 0 animal, 1 difficulty, 2 mode
     float lobbyRowStepAt;
     public int LobbyRow => lobbyRow;   // tests
-    const float Row = 82f;
+    const float Row = 70f;   // buttons 64 px tall (9 rows since the compass, user feedback 1)
     const float MenuY = -135f;
     Text modeInfo;
     Image fade;
@@ -109,12 +109,13 @@ public partial class MainMenu : MonoBehaviour
         onlineButton = MenuButton("Online", 2, "JUGAR ONLINE (2-4)", OpenOnline, 34);
         animalButton = MenuButton("Animal", 3, "", NextAnimal, 32);
         difficultyButton = MenuButton("Difficulty", 4, "", NextDifficulty, 32);
-        difficultyInfo = UIKit.Label("DifficultyInfo", menuPanel, new Vector2(0, 1), new Vector2(20, -4.9f * Row), new Vector2(600, 34), "", 22, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.75f));
-        modeButton = MenuButton("Mode", 5.3f, "", ToggleMode, 32);
-        modeInfo = UIKit.Label("ModeInfo", menuPanel, new Vector2(0, 1), new Vector2(20, -6.2f * Row), new Vector2(600, 34), "", 22, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.75f));
-        settingsButton = MenuButton("Settings", 6.6f, "Ajustes", OpenSettings, 32);
-        quitButton = MenuButton("Quit", 7.5f, "Salir", Quit, 32);
-        UIKit.ChainVertical(startButton, splitButton, onlineButton, animalButton, difficultyButton, modeButton, settingsButton, quitButton);
+        difficultyInfo = UIKit.Label("DifficultyInfo", menuPanel, new Vector2(0, 1), new Vector2(20, -4.97f * Row), new Vector2(600, 34), "", 22, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.75f));
+        modeButton = MenuButton("Mode", 5.52f, "", ToggleMode, 32);
+        modeInfo = UIKit.Label("ModeInfo", menuPanel, new Vector2(0, 1), new Vector2(20, -6.49f * Row), new Vector2(600, 34), "", 22, TextAnchor.UpperLeft, new Color(1, 1, 1, 0.75f));
+        compassButton = MenuButton("Compass", 7.03f, "", ToggleCompass, 30);
+        settingsButton = MenuButton("Settings", 8.03f, "Ajustes", OpenSettings, 32);
+        quitButton = MenuButton("Quit", 9.03f, "Salir", Quit, 32);
+        UIKit.ChainVertical(startButton, splitButton, onlineButton, animalButton, difficultyButton, modeButton, compassButton, settingsButton, quitButton);
         menuPanel.gameObject.SetActive(false);
 
         // selected animal card (bottom right)
@@ -127,7 +128,7 @@ public partial class MainMenu : MonoBehaviour
         cardPanel.gameObject.SetActive(false);
 
         UIKit.Label("Controls", canvas, new Vector2(0.5f, 0f), new Vector2(0, 18), new Vector2(1800, 34),
-            "R2 disparar · L2 apuntar · □ usar/recargar · Triángulo cambiar arma · L1 habilidad · X saltar · L3 correr · OPTIONS pausa", 22, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.7f));
+            "R2 disparar · L2 apuntar · □ usar/recargar · Triángulo cambiar arma · L1 habilidad · R1 dentadura · R3 ukelele · X saltar · L3 correr · OPTIONS pausa", 22, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.7f));
         UIKit.Label("Version", canvas, new Vector2(1, 0), new Vector2(-30, 56), new Vector2(500, 30), "Isla Zombie · v0.3", 20, TextAnchor.LowerRight, new Color(1, 1, 1, 0.6f));
 
         fade = UIKit.Image(UIKit.Stretch("Fade", canvas), Color.black);
@@ -136,7 +137,7 @@ public partial class MainMenu : MonoBehaviour
 
     Button MenuButton(string name, float row, string label, UnityEngine.Events.UnityAction action, int size)
     {
-        var b = UIKit.Button(name, menuPanel, new Vector2(0, 1), new Vector2(0, -row * Row), new Vector2(600, 72), label, action, size);
+        var b = UIKit.Button(name, menuPanel, new Vector2(0, 1), new Vector2(0, -row * Row), new Vector2(600, 64), label, action, size);
         var colors = b.colors;
         colors.normalColor = new Color(0.06f, 0.1f, 0.16f, 0.88f);
         b.colors = colors;
@@ -157,6 +158,7 @@ public partial class MainMenu : MonoBehaviour
         difficultyInfo.text = p.description;
         bool cagon = GameSettings.AnselmoCagon;
         modeButton.GetComponentInChildren<Text>().text = "Modo:  ◄  " + (cagon ? "Anselmo cagón" : "Clásico") + "  ►";
+        compassButton.GetComponentInChildren<Text>().text = "Brújula de mierdecillas:  ◄  " + (GameSettings.Compass ? "SÍ" : "NO") + "  ►";
         modeInfo.text = cagon ? "La mitad de los abuelos atajan por los WC y las entradas." : "Los abuelos te persiguen andando, como siempre.";
         animalName.text = a.displayName.ToUpper();
         animalName.color = a.uiColor;
@@ -211,10 +213,7 @@ public partial class MainMenu : MonoBehaviour
             pressText.color = new Color(1, 1, 1, 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 3f));
             if (SubmitPressed() && fade.color.a < 0.3f) StartCoroutine(ShowMenu());
         }
-        else if (screen == Screen.Maps)
-        {
-            if (CancelPressed()) CloseMaps();
-        }
+        else if (screen == Screen.Maps) UpdateMaps();
         else if (screen == Screen.Lobby) UpdateLobby();
         else if (screen == Screen.Online) UpdateOnline();
         else if (screen == Screen.Room) UpdateRoom();
@@ -225,6 +224,7 @@ public partial class MainMenu : MonoBehaviour
             if (h != 0 && selected == animalButton.gameObject) ChangeAnimal(h);
             else if (h != 0 && selected == difficultyButton.gameObject) ChangeDifficulty(h);
             else if (h != 0 && selected == modeButton.gameObject) ToggleMode();
+            else if (h != 0 && selected == compassButton.gameObject) ToggleCompass();
         }
         AnimateScene();
     }
@@ -273,6 +273,13 @@ public partial class MainMenu : MonoBehaviour
         RefreshTexts();
     }
 
+    // "Brújula de mierdecillas": an arrow on the HUD towards a random task still to do (user feedback 1)
+    void ToggleCompass()
+    {
+        GameSettings.Compass = !GameSettings.Compass;
+        RefreshTexts();
+    }
+
     void OpenSettings()
     {
         screen = Screen.Settings;
@@ -289,6 +296,7 @@ public partial class MainMenu : MonoBehaviour
         menuPanel.gameObject.SetActive(true);
         cardPanel.gameObject.SetActive(true);
         screen = Screen.Menu;
+        RefreshTexts();   // the compass can be switched in Ajustes too
         UIKit.Select(settingsButton);
     }
 
@@ -501,6 +509,18 @@ public partial class MainMenu : MonoBehaviour
     // ---------------------------------------------------------------- map selector
     public int MapCount => maps != null ? System.Array.FindAll(maps, m => m != null).Length : 0;
 
+    // A carousel (user feedback 1: with five maps the old row of cards ran off the screen): the chosen map's card big in
+    // the middle, its neighbours smaller and dimmed at the sides, sliding when it moves. ◄ ► (stick, D-pad, arrows,
+    // A / D) or a click on a side card moves it; X / Enter / a click on the middle card plays that map. It wraps round.
+    // Every map keeps its button "Map_<id>" (tests).
+    readonly System.Collections.Generic.List<RectTransform> mapCards = new System.Collections.Generic.List<RectTransform>();
+    readonly System.Collections.Generic.List<Button> mapButtons = new System.Collections.Generic.List<Button>();
+    int mapIndex;
+    float carouselPos;
+    Text mapCounter;
+    Button mapBack;
+    public int MapIndex => mapIndex;   // tests
+
     public void OpenMapSelector()
     {
         screen = Screen.Maps;
@@ -512,39 +532,108 @@ public partial class MainMenu : MonoBehaviour
         UIKit.Label("Title", panel, new Vector2(0.5f, 1f), new Vector2(0, -80), new Vector2(1400, 90), "ELIGE ISLA", 72, TextAnchor.MiddleCenter, UIKit.Accent)
             .gameObject.AddComponent<Outline>().effectColor = new Color(0.35f, 0.12f, 0.02f, 1f);
         var list = System.Array.FindAll(maps, m => m != null);
-        var buttons = new System.Collections.Generic.List<Selectable>();
-        Button preselect = null;
+        mapCards.Clear();
+        mapButtons.Clear();
+        mapIndex = 0;
         for (int i = 0; i < list.Length; i++)
         {
             var map = list[i];
             int index = i;
-            float x = (i - (list.Length - 1) / 2f) * 580f;
-            var b = UIKit.Button("Map_" + map.id, panel, new Vector2(0.5f, 0.5f), new Vector2(x, -10), new Vector2(540, 640), "", () => PlayMap(index));
+            var b = UIKit.Button("Map_" + map.id, panel, new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(540, 640), "", () => OnMapCard(index));
             var rt = (RectTransform)b.transform;
+            rt.gameObject.AddComponent<CanvasGroup>();
+            var nav = b.navigation;
+            nav.mode = Navigation.Mode.None;   // ◄ ► move the carousel, not the selection
+            b.navigation = nav;
             UIKit.Image(UIKit.Rect("Stripe", rt, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -10), Vector2.zero), UIKit.Accent);
             var pic = UIKit.Anchored("Preview", rt, new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(460, 440));   // anchored = pivot: top edge
             if (map.preview != null) pic.gameObject.AddComponent<RawImage>().texture = map.preview;
             else UIKit.Image(pic, new Color(0.1f, 0.4f, 0.55f));
-            UIKit.Label("Name", rt, new Vector2(0.5f, 0f), new Vector2(0, 108), new Vector2(500, 56), map.displayName.ToUpper(), 44, TextAnchor.MiddleCenter, UIKit.Accent);
+            var title = UIKit.Label("Name", rt, new Vector2(0.5f, 0f), new Vector2(0, 108), new Vector2(500, 56), map.displayName.ToUpper(), 44, TextAnchor.MiddleCenter, UIKit.Accent);
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;   // long names on one line, smaller
+            title.fontSize = Mathf.Clamp(Mathf.FloorToInt(480f / (Mathf.Max(1, map.displayName.Length) * 0.62f)), 24, 44);
             UIKit.Label("Desc", rt, new Vector2(0.5f, 0f), new Vector2(0, 14), new Vector2(500, 90), map.description, 22, TextAnchor.UpperCenter, new Color(1, 1, 1, 0.85f));
-            buttons.Add(b);
-            if (preselect == null || map.id == GameSettings.Map) preselect = b;   // the last map played, else the first
+            mapCards.Add(rt);
+            mapButtons.Add(b);
+            if (map.id == GameSettings.Map) mapIndex = i;   // the last map played, else the first
         }
-        var back = UIKit.Button("Back", panel, new Vector2(0.5f, 0f), new Vector2(0, 110), new Vector2(360, 70), "Volver", CloseMaps, 30);
-        UIKit.ChainHorizontal(buttons.ToArray());
-        foreach (var b in buttons)
-        {
-            var nav = b.navigation;
-            nav.selectOnDown = back;
-            b.navigation = nav;
-        }
-        var backNav = back.navigation;
-        backNav.mode = Navigation.Mode.Explicit;
-        backNav.selectOnUp = preselect;
-        back.navigation = backNav;
+        UIKit.Label("Left", panel, new Vector2(0.5f, 0.5f), new Vector2(-330, -10), new Vector2(80, 120), "◄", 64, TextAnchor.MiddleCenter, UIKit.Accent).raycastTarget = false;
+        UIKit.Label("Right", panel, new Vector2(0.5f, 0.5f), new Vector2(330, -10), new Vector2(80, 120), "►", 64, TextAnchor.MiddleCenter, UIKit.Accent).raycastTarget = false;
+        mapCounter = UIKit.Label("Counter", panel, new Vector2(0.5f, 1f), new Vector2(0, -150), new Vector2(800, 40), "", 28, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.8f));
+        mapBack = UIKit.Button("Back", panel, new Vector2(0.5f, 0f), new Vector2(0, 110), new Vector2(360, 70), "Volver", CloseMaps, 30);
         mapPanel = panel.gameObject;
         fade.transform.SetAsLastSibling();
-        UIKit.Select(preselect);
+        carouselPos = mapIndex;
+        MoveCarouselTo(mapIndex);
+        LayoutCarousel();
+    }
+
+    public void MapStep(int dir) => MoveCarouselTo(mapIndex + dir);   // tests (◄ ►)
+    public RectTransform MapCard(int i) => i >= 0 && i < mapCards.Count ? mapCards[i] : null;   // tests
+
+    void OnMapCard(int index)
+    {
+        if (index == mapIndex) PlayMap(index);
+        else MoveCarouselTo(index);
+    }
+
+    void MoveCarouselTo(int index)
+    {
+        if (mapButtons.Count == 0) return;
+        mapIndex = (index % mapButtons.Count + mapButtons.Count) % mapButtons.Count;
+        var center = mapButtons[mapIndex];
+        var nav = mapBack.navigation;
+        nav.mode = Navigation.Mode.Explicit;
+        nav.selectOnUp = center;
+        mapBack.navigation = nav;
+        var cnav = center.navigation;
+        cnav.mode = Navigation.Mode.Explicit;
+        cnav.selectOnDown = mapBack;
+        for (int i = 0; i < mapButtons.Count; i++)
+        {
+            var n = mapButtons[i].navigation;
+            if (i != mapIndex) { n.mode = Navigation.Mode.None; mapButtons[i].navigation = n; }
+        }
+        center.navigation = cnav;
+        mapCounter.text = (mapIndex + 1) + " / " + mapButtons.Count + "   ·   ◄ ► cambiar   ·   X jugar";
+        UIKit.Select(center);
+    }
+
+    void UpdateMaps()
+    {
+        if (CancelPressed()) { CloseMaps(); return; }
+        int h = HorizontalPressed();
+        if (h != 0) MoveCarouselTo(mapIndex + h);
+        LayoutCarousel();
+    }
+
+    // Cards slide to their places: offset d from the middle (wrapped round), smaller and dimmer the further away.
+    void LayoutCarousel()
+    {
+        int n = mapCards.Count;
+        if (n == 0) return;
+        float delta = Mathf.Repeat(mapIndex - carouselPos + n / 2f, n) - n / 2f;
+        carouselPos += delta * (1f - Mathf.Exp(-12f * Time.unscaledDeltaTime));
+        if (Mathf.Abs(delta) < 0.001f) carouselPos = mapIndex;
+        var order = new System.Collections.Generic.List<(float d, RectTransform rt)>();
+        for (int i = 0; i < n; i++)
+        {
+            float d = n > 1 ? Mathf.Repeat(i - carouselPos + n / 2f, n) - n / 2f : 0f;
+            float a = Mathf.Abs(d);
+            float x = Mathf.Sign(d) * (a <= 1f ? a * 560f : 560f + (a - 1f) * 330f);
+            float scale = a <= 1f ? Mathf.Lerp(1f, 0.66f, a) : Mathf.Lerp(0.66f, 0.5f, Mathf.Min(1f, a - 1f));
+            var rt = mapCards[i];
+            rt.anchoredPosition = new Vector2(x, -10f);
+            rt.localScale = Vector3.one * scale;
+            var cg = rt.GetComponent<CanvasGroup>();
+            cg.alpha = a <= 1f ? Mathf.Lerp(1f, 0.55f, a) : Mathf.Max(0f, 0.55f - (a - 1f) * 0.45f);
+            cg.blocksRaycasts = a < 1.6f;
+            rt.gameObject.SetActive(a < 2.3f);
+            order.Add((a, rt));
+        }
+        order.Sort((p, q) => q.d.CompareTo(p.d));   // the middle card drawn last (on top)
+        foreach (var o in order) o.rt.SetAsLastSibling();
+        fade.transform.SetAsLastSibling();
     }
 
     void CloseMaps()

@@ -55,6 +55,8 @@ public class NetPlayer : MonoBehaviour
         drinks.Changed += () => loadoutAt = 0f;
         shooter.ShotFx += SendShot;
         if (melee != null) melee.Swung += SendSwing;
+        var grenade = GetComponent<PlayerGrenade>();
+        if (grenade != null) grenade.Thrown += SendThrow;
         loadoutAt = 0f;
     }
 
@@ -140,6 +142,9 @@ public class NetPlayer : MonoBehaviour
 
     void SendSwing() => Send(NetBuf.Make(NetMsg.PlayerFx).Byte((byte)Index).Byte(2), true);
 
+    // The false teeth (Dentadura): the others see them fly and bite; the damage is the thrower's hits.
+    void SendThrow(Vector3 from, Vector3 velocity) => Send(NetBuf.Make(NetMsg.PlayerFx).Byte((byte)Index).Byte(3).Vec(from).Vec(velocity), true);
+
     // Tests / late joiners: everything about this player right now.
     public void SendAll()
     {
@@ -224,5 +229,6 @@ public class NetPlayer : MonoBehaviour
             shooter.PlayShotFx(from, ends);
         }
         else if (kind == 2 && melee != null) melee.PlaySwingFx();
+        else if (kind == 3) { Vector3 from = r.Vec(), velocity = r.Vec(); Dentadura.Throw(from, velocity, this, false); }
     }
 }

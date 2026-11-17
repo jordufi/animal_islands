@@ -23,7 +23,7 @@ public class NetSession : MonoBehaviour
 {
     public const int MaxPlayers = 4;
     public const ushort DefaultPort = 7777;
-    const string Version = "animal-island-online-5";   // 5: lit zones in the quest state, traca message (Villajubilada)
+    const string Version = "animal-island-online-6";   // 6: the false teeth (PlayerFx kind 3). 5: lit zones in the quest state, traca message (Villajubilada)
     const float LoadTimeout = 45f;
 
     public static NetSession Instance { get; private set; }

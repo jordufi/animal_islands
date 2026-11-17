@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-// Settings panel shared by the main menu and the pause menu (camera sensitivity, invert Y, FOV, sprint mode, FPS counter, full screen).
+// Settings panel shared by the main menu and the pause menu (camera sensitivity, invert Y, FOV, sprint mode, FPS counter, full
+// screen, the "brújula de mierdecillas"; the compass shows from the next match).
 public static class SettingsPanel
 {
     public static GameObject Build(Transform parent, UnityAction onBack, out Selectable first)
@@ -57,13 +58,20 @@ public static class SettingsPanel
             full.GetComponentInChildren<Text>().text = FullscreenText();
         });
 
+        Button compass = null;
+        compass = UIKit.Button("Compass", box, new Vector2(0.5f, 1f), new Vector2(0, -730), new Vector2(640, 70), CompassText(), () =>
+        {
+            GameSettings.Compass = !GameSettings.Compass;
+            compass.GetComponentInChildren<Text>().text = CompassText();
+        });
+
         var back = UIKit.Button("Back", box, new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(400, 80), "Volver", () =>
         {
             GameSettings.Save();
             onBack?.Invoke();
         }, 36);
 
-        UIKit.ChainVertical(sens, fov, invert, sprint, fps, full, back);
+        UIKit.ChainVertical(sens, fov, invert, sprint, fps, full, compass, back);
         first = sens;
         return panel.gameObject;
     }
@@ -73,6 +81,8 @@ public static class SettingsPanel
     static string FpsText() => "Contador de FPS: " + (GameSettings.ShowFps ? "SÍ" : "NO");
 
     static string FullscreenText() => "Pantalla completa: " + (GameSettings.Fullscreen ? "SÍ" : "NO (ventana)");
+
+    static string CompassText() => "Brújula de mierdecillas: " + (GameSettings.Compass ? "SÍ" : "NO");
 
     static string InvertText() => "Invertir eje Y: " + (GameSettings.InvertY ? "SÍ" : "NO");
 }

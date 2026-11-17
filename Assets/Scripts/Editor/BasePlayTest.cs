@@ -68,6 +68,7 @@ public static class BasePlayTest
         EditorApplication.QueuePlayerLoopUpdate();
         var gm = GameManager.Instance;
         if (gm == null || gm.Player == null) return;
+        ZoneDoor.IgnoreRoundLimit = true;   // opens several doors in one round (the one-door-per-round rule is checked in SmokePlayTest)
         try
         {
             if (script.Count == 0) script.Push(probe ? ProbeScript() : Script());

@@ -93,6 +93,9 @@ public class PlayerShooter : MonoBehaviour
     void Awake()
     {
         actions = PlayerSlot.ActionsFor(this, actions);   // co-op: this player's own devices
+        var grenade = GetComponent<PlayerGrenade>();     // the false teeth (R1 / G) read the same devices
+        if (grenade == null) grenade = gameObject.AddComponent<PlayerGrenade>();
+        grenade.Init(actions);
         var map = actions.FindActionMap("Player", true);
         fireAction = map.FindAction("Fire", true);
         aimAction = map.FindAction("Aim", true);
@@ -309,6 +312,8 @@ public class PlayerShooter : MonoBehaviour
     {
         foreach (var s in slots)
             if (s.data != null) s.reserve = MaxReserve(s);
+        var grenade = GetComponent<PlayerGrenade>();
+        if (grenade != null) grenade.Refill();   // the Nevera also brings the false teeth back
         AmmoChanged?.Invoke();
         if (isProxy && NetGame.H != null) NetGame.H.Forward(this, NetGame.Fwd.RefillAll);
     }

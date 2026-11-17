@@ -23,6 +23,7 @@ public static class GameSettings
     const string KeyShowFps = "settings.showFps";
     const string KeyAnselmo = "settings.anselmoCagon";
     const string KeyFullscreen = "settings.fullscreen";
+    const string KeyCompass = "settings.compass";
 
     public static Difficulty Difficulty
     {
@@ -96,6 +97,13 @@ public static class GameSettings
     {
         get => PlayerPrefs.GetInt(KeyAnselmo, 0) == 1;
         set => PlayerPrefs.SetInt(KeyAnselmo, value ? 1 : 0);
+    }
+
+    // "Brújula de mierdecillas" (user feedback 1): an arrow on the HUD towards a random task still to do. Off by default.
+    public static bool Compass
+    {
+        get => PlayerPrefs.GetInt(KeyCompass, 0) == 1;
+        set => PlayerPrefs.SetInt(KeyCompass, value ? 1 : 0);
     }
 
     public static void Save() => PlayerPrefs.Save();

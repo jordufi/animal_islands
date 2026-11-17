@@ -29,6 +29,10 @@ public static class TestQueue
         { "ClimbVillajubilada", ("ClimbPlayTest.", ClimbPlayTest.RunVillajubilada) },
         { "ClimbVenecia", ("ClimbPlayTest.", ClimbPlayTest.RunVenecia) },
         { "Shots", ("Feedback1Shots.", Feedback1Shots.Run) },
+        { "Feedback4", ("Feedback4PlayTest.", Feedback4PlayTest.Run) },
+        { "Feedback4Menu", ("Feedback4PlayTest.", Feedback4PlayTest.RunMenu) },
+        { "MapSelector", ("MapSelectorPlayTest.", MapSelectorPlayTest.RunOriginal) },
+        { "Online", ("OnlinePlayTest.", OnlinePlayTest.RunDirect) },
         { "ShotsAlturas", ("Feedback1Shots.", Feedback1Shots.RunAlturas) },
     };
 

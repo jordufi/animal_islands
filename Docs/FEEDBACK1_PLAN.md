@@ -128,7 +128,31 @@ IslaZombie 13, Coop 39, Smoke Venecia 15, Smoke alturas 15, todo con 0 FAIL. Cap
 - Pruebas: la comprobación sin sitios a los que solo llega el jugador; una prueba que sube al jugador al bus y mira que un
   abuelo llega hasta él; el `HeightsPlayTest` y los Smoke de cada mapa.
 
-### Fase 4 — gameplay general
+### Fase 4 — gameplay general — HECHA (2026-11-17), regresión al final de este apartado
+**Lo que se hizo:**
+- **Una puerta por ronda:** `EconomyData.doorsPerRound` (1). `ZoneDoor` cuenta las puertas de la ronda en cada
+  máquina (Interact en el host, NetOpened en los clientes) y rechaza otra sin cobrar ("Ya habéis abierto una puerta
+  esta ronda..."). Cuenta también la del muelle / misión (respuesta del usuario). `ZoneDoor.IgnoreRoundLimit` para
+  las pruebas que abren varias puertas seguidas; la regla se comprueba en `SmokePlayTest` y `Feedback4PlayTest`.
+- **Julio motiva:** `EconomyData.julioSpeedFactor` (x1,25) desde que empieza la canción del karaoke
+  (`EasterEgg.SongStarted` / `Motivated`), el resto de la partida. Va en el factor de velocidad de `EnemyAI`.
+- **Gafas y bastón:** `EnemyVariant.hurtShare` (0,25), `glassesSpeedFactor` (0,6), `caneSpeedFactor` (1,4).
+  `EnemyAI.CheckHurt`: 50/50 con la semilla `NetId` (mismo resultado en todas las máquinas); las gafas (primitivas) o
+  una copia del bastón caen con física y desaparecen a los 6 s; solo el abuelo del host cambia de velocidad.
+- **Brújula de mierdecillas:** `GameSettings.Compass` (desactivada por defecto), fila en el menú principal y en Ajustes;
+  `UI/Compass.cs` en el HUD de cada jugador (flecha + "Brújula de mierdecillas: la gasolina · 25 m").
+- **Carrusel de mapas:** `MainMenu.OpenMapSelector` reescrito (tarjeta grande en el centro, vecinas pequeñas, se
+  desliza y da la vuelta; ◄ ► o clic en una tarjeta lateral; X / Enter / clic en la central juega). Botones `Map_<id>`
+  intactos; `MapStep` / `MapCard` para pruebas. El menú principal tiene ahora 9 filas de 64 px.
+- **Dentadura postiza (la granada):** acción nueva `Throw` (R1 / G), `Combat/PlayerGrenade` (2 por jugador, la Nevera
+  las devuelve vía `PlayerShooter.RefillAllAmmo`), `Combat/Dentadura` (vuela castañeteando, muerde al tocar algo o a
+  los 1,5 s: 400 de daño, 3,5 m, aturde 2,5 s, paga como habilidad), HUD "R1 · Dentadura postiza x2". Online: el daño
+  va por `EnemyHits`; los demás ven la dentadura por `PlayerFx` tipo 3. **Protocolo `animal-island-online-6`** (el
+  hotel y el crucero, cuando lleguen, tendrán que subir a 7).
+- Prueba nueva `Feedback4PlayTest` (Run: puerta por ronda y la siguiente ronda, Julio, 8 abuelos heridos, brújula,
+  dentadura, Nevera; RunMenu: carrusel).
+
+**Plan original de la fase 4:**
 - **Una puerta por ronda (idea 5):** `EconomyData.doorsPerRound = 1`, cuenta del equipo por ronda (online: el host),
   mensaje "Ya habéis abierto una puerta esta ronda". **Pregunta abierta:** ¿cuenta la puerta del muelle / misión? (Propuesta:
   no.) Las puertas automáticas (el Portón del encierro) no cuentan.

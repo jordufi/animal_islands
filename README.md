@@ -13,7 +13,15 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   **extráete** en el barco de rescate.
 - **Power-ups** al matar abuelos: Nevera de munición, Siesta fulminante (mueren de un golpe), 2x1 en conchas y
   Paella para todos (acaba con todos los abuelos).
-- Cada puerta abierta ofrece **1 de 3 cartas** (bendición + maldición) para toda la partida.
+- Cada puerta abierta ofrece **1 de 3 cartas** (bendición + maldición) para toda la partida. **Una sola puerta por
+  ronda** (también la del muelle).
+- **Donde subes tú, sube el abuelo:** si te subes a un coche, unas cajas o el bus, los abuelos trepan detrás de ti.
+- **Dentadura postiza (R1 / G):** la granada del juego; muerde y aturde a los abuelos de alrededor. Dos por jugador,
+  vuelven con la Nevera de munición.
+- Los discos de Julio Iglesias en el karaoke **vienen arriba a los abuelos** (corren más el resto de la partida), y
+  un abuelo con poca vida pierde las **gafas** (va más lento) o el **bastón** (corre más).
+- **Brújula de mierdecillas** (opción del menú principal y de Ajustes): una flecha arriba que apunta a una tarea
+  pendiente al azar.
 - Armas en la **Máquina de Granizados** (una vez por zona), **Pack-a-Punch** en el Microondas del Chiringuito,
   bebidas con efectos secundarios, ukelele cuerpo a cuerpo.
 - 5 animales con pasiva y habilidad activa. Rondas nocturnas cada 5 rondas.
@@ -50,7 +58,7 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   **Setup Prueba de alturas** hacen lo mismo con la copia con alturas y con el mapa de prueba (formato en `Docs/FASE3_FORMATO.md`).
 - **Setup Test Map**: regenera datos, prefabs y la escena Original.
 - **Quick Checks** (reglas de diseño sobre los números de `Assets/Data`, al instante) y **Play Test Smoke** (partida entera por el camino corto, ~10 s): para entre cambio y cambio.
-- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit.
+- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Climb, Feedback 4, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit (`TestQueue.Run(...)` las encadena).
 - **Build Windows (.zip)**: exporta el juego a `Builds/` (también `Tools\Build-Game.ps1` con Unity cerrado).
 
 ## Control de versiones
