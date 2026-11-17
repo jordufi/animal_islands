@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f831cfa02984cf46a242c277049d17a, type: 3}
   m_Name: PulseraTodoIncluido
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  title: Pulsera todo incluido
+  title: "Media pensión"
   blessingText: "La M\xE1quina de Granizados un 40% m\xE1s barata"
   blessing:
   - stat: 15

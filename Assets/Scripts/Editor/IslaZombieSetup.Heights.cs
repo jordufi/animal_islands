@@ -13,7 +13,7 @@ public static partial class IslaZombieSetup
     static readonly Vector2Int[] Four = { new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) };
 
     // A cell you stand on: zone floor, marker, prop cell or pond (not sea, solid, door or slide).
-    static bool IsStand(Layout L, char ch) => ch != '.' && !IsSolid(ch) && !IsDoor(ch) && ch != '!';
+    static bool IsStand(Layout L, char ch) => ch != '.' && !IsSolid(ch) && !IsDoor(ch) && ch != '!' && ch != VoidCh && ch != ServiceCh;
     // Plain walkable floor (zone letter or marker): ledges / links only between these.
     static bool IsWalk(Layout L, int c, int r) => L.InGrid(c, r) && IsFloor(L, L.At(c, r));
     static int GroupOf(Layout L, int c, int r)
@@ -46,6 +46,14 @@ public static partial class IslaZombieSetup
                     if (n < 2 || n > 3) Err($"ramp run at ({c},{r}) is {n} cells long (2 or 3 per level)");
                     int lc = c - d.x, lr = r - d.y, hc = c + d.x * n, hr = r + d.y * n;
                     bool lowOk = L.InGrid(lc, lr) && IsStand(L, L.At(lc, lr)) && !L.IsRamp(lc, lr);
+                    // a stair that reaches the height of the floor above comes out on that floor (Docs/PLANTAS_FORMATO.md)
+                    var A = L.above;
+                    if (lowOk && A != null && L.level[lc, lr] + 1 >= Storey)
+                    {
+                        if (!(A.InGrid(hc, hr) && IsStand(A, A.At(hc, hr)) && !A.IsRamp(hc, hr) && A.level[hc, hr] == 0))
+                            Err($"stair at ({c},{r}) reaches floor {A.floorId} but ({hc},{hr}) there is '{A.At(hc, hr)}' (needs floor at level 0)");
+                        continue;
+                    }
                     bool highOk = L.InGrid(hc, hr) && IsStand(L, L.At(hc, hr)) && !L.IsRamp(hc, hr);
                     if (!lowOk) Err($"ramp run at ({c},{r}) has no floor at its low end ({lc},{lr})");
                     else if (!highOk) Err($"ramp run at ({c},{r}) ends in '{L.At(hc, hr)}' at ({hc},{hr}) (needs floor)");
@@ -84,8 +92,8 @@ public static partial class IslaZombieSetup
                 if (ch == 's' && L.level[c, r] > 0 && Four.Any(d => L.At(c + d.x, r + d.y) == '.') && !Four.Any(d => EntranceScore(L.At(c + d.x, r + d.y), L.cellZone[c, r]) > 2))
                     Err($"spawn at ({c},{r}) would climb out of the sea at level {L.level[c, r]} (sea is level 0)");
             }
-        report.Add(errors == 0 ? $"OK  heights grid: {(L.HasHeights ? "levels " + string.Join("/", Enumerable.Range(0, 10).Where(lv => Cells(L).Any(p => !L.IsRamp(p.x, p.y) && IsStand(L, L.At(p.x, p.y)) && L.level[p.x, p.y] == lv))) : "flat")}, {Cells(L).Count(p => L.IsRamp(p.x, p.y) && L.rampIdx[p.x, p.y] == 0)} ramp runs, {Cells(L).Count(p => L.At(p.x, p.y) == '!')} slides"
-                               : $"FAIL heights grid: {errors} errors");
+        report.Add(errors == 0 ? $"OK  {(L.Multi ? "floor " + L.floorId + " " : "")}heights grid: {(L.HasHeights ? "levels " + string.Join("/", Enumerable.Range(0, 10).Where(lv => Cells(L).Any(p => !L.IsRamp(p.x, p.y) && IsStand(L, L.At(p.x, p.y)) && L.level[p.x, p.y] == lv))) : "flat")}, {Cells(L).Count(p => L.IsRamp(p.x, p.y) && L.rampIdx[p.x, p.y] == 0)} ramp runs, {Cells(L).Count(p => L.At(p.x, p.y) == '!')} slides"
+                               : $"FAIL {(L.Multi ? "floor " + L.floorId + " " : "")}heights grid: {errors} errors");
         return report;
     }
 
@@ -146,7 +154,7 @@ public static partial class IslaZombieSetup
             if (!L.IsRamp(p.x, p.y) || L.rampIdx[p.x, p.y] != 0) continue;
             var d = RampDir(L.ramp[p.x, p.y]);
             int n = L.rampLen[p.x, p.y];
-            float y0 = L.level[p.x, p.y] * LevelH, y1 = y0 + LevelH;
+            float y0 = L.BaseY + L.level[p.x, p.y] * LevelH, y1 = y0 + LevelH;
             // world axes: grid +x = world +x, grid +row = world -z
             Vector3 up = new Vector3(d.x, 0f, -d.y);                  // uphill, horizontal
             Vector3 side = new Vector3(up.z, 0f, -up.x);              // across the ramp

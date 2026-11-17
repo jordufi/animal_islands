@@ -451,7 +451,7 @@ public static class TestMapSetup
             Card("BufeLibre", "Bufé libre", "Neveras de munición x2.5 más frecuentes", new[] { new StatMod(Stat.AmmoDropChance, 2.5f) }, "Cargadores un 25% más pequeños", new[] { new StatMod(Stat.MagazineSize, 0.75f) }, pink),
             Card("GorraDeCapitan", "Gorra de capitán", "+50% de daño a la cabeza", new[] { new StatMod(Stat.HeadshotDamage, 1.5f) }, "Los abuelos son un 10% más rápidos", new[] { new StatMod(Stat.EnemySpeed, 1.1f) }, gold),
             Card("ManosRapidas", "Manos rápidas", "Recargas un 50% más rápido", new[] { new StatMod(Stat.ReloadSpeed, 1.5f) }, "-20% de conchas", new[] { new StatMod(Stat.PointsGain, 0.8f) }, teal),
-            Card("PulseraTodoIncluido", "Pulsera todo incluido", "La Máquina de Granizados un 40% más barata", new[] { new StatMod(Stat.BoxCost, 0.6f) }, "Bebidas un 50% más caras", new[] { new StatMod(Stat.DrinkCost, 1.5f) }, pink),
+            Card("PulseraTodoIncluido", "Media pensión", "La Máquina de Granizados un 40% más barata", new[] { new StatMod(Stat.BoxCost, 0.6f) }, "Bebidas un 50% más caras", new[] { new StatMod(Stat.DrinkCost, 1.5f) }, pink),
         };
 
         AnimalData Animal(string id, string name, string tagline, Color col, string pName, string pDesc, StatMod[] pMods, AbilityType ab, string abName, string abDesc, float cd, float dur) =>

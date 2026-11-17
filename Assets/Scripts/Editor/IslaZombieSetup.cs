@@ -69,7 +69,7 @@ public static partial class IslaZombieSetup
     public static string LastReport = "";
 
     // ------------------------------------------------------------------ layout
-    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox, circuit; }
+    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox, circuit, roofed; }
     class DoorDef { public char digit; public string name; public int cost; public char[] zones; public bool key; }
 
     class Layout
@@ -95,6 +95,18 @@ public static partial class IslaZombieSetup
         public float Y(int c, int r) => InGrid(c, r) ? floorY[c, r] : 0f;
         public bool IsRamp(int c, int r) => InGrid(c, r) && ramp[c, r] != '\0';
         public char HeightAt(int c, int r) => heights != null && r < heights.Length && c < heights[r].Length ? heights[r][c] : '.';
+
+        // ---- real floors (Docs/PLANTAS_FORMATO.md): one Layout per floor; a one-floor map is a list of one
+        public string floorId = "0", floorName = "";
+        public int baseLevel;                         // in levels (x 2 m), may be negative (a basement)
+        public float BaseY => baseLevel * LevelH;
+        public List<Layout> floors;                   // every floor of the map, bottom to top
+        public Layout above, below;                   // the floor one storey up / down, or null
+        public List<LiftDef> lifts = new List<LiftDef>();
+        public List<LinkDef> links = new List<LinkDef>();
+        public Dictionary<string, (string floor, Vector2Int cell)> points = new Dictionary<string, (string, Vector2Int)>();
+        public bool Multi => floors != null && floors.Count > 1;
+        public Layout Floor(string id) => floors.FirstOrDefault(f => f.floorId == id);
     }
 
     public static Vector2Int RampDir(char ch) => ch == '^' ? new Vector2Int(0, -1) : ch == 'v' ? new Vector2Int(0, 1) : ch == '<' ? new Vector2Int(-1, 0) : ch == '>' ? new Vector2Int(1, 0) : Vector2Int.zero;
@@ -158,7 +170,7 @@ public static partial class IslaZombieSetup
         L.floorY = y;
     }
 
-    const string Markers = "@sBDPKJbXLGUMEYTCNSFO%Q&";   // pueblo: % traca post, Q the Porton del encierro, & where the lighter may lie     // venecia: N gondola stop, S shovel stall, F Giuseppe's grave, O golden gondolier   // N = gondola stop (theme venecia)
+    const string Markers = "@sBDPKJbXLGUMEYTCNSFO%Q&:";   // floors (Docs/PLANTAS_FORMATO.md): ":" grappling hook of the cruise   // pueblo: % traca post, Q the Porton del encierro, & where the lighter may lie     // venecia: N gondola stop, S shovel stall, F Giuseppe's grave, O golden gondolier   // N = gondola stop (theme venecia)
     const string Roofed = "tq";   // temple and cave floors
 
     static Layout Load() => Load(File.ReadAllLines(LayoutPath));
@@ -167,50 +179,110 @@ public static partial class IslaZombieSetup
     public static List<string> CheckLayoutLines(string[] lines)
     {
         var L = Load(lines);
+        var report = new List<string>();
+        foreach (var F in L.floors)
+        {
+            cur = F;
+            report.AddRange(F.heightErrors);
+            report.AddRange(CheckHeights(F));
+            report.AddRange(SlideReport(F));
+        }
+        if (L.Multi) report.AddRange(CheckFloorsGrid(L));
         cur = L;
-        var report = new List<string>(L.heightErrors);
-        report.AddRange(CheckHeights(L));
-        report.AddRange(SlideReport(L));
         return report;
     }
 
     static Layout Load(string[] lines)
     {
-        var L = new Layout();
-        var mapLines = new List<string>();
-        List<string> heightLines = null;
-        string section = "";
+        var zones = new List<ZoneDef>();
+        var doors = new List<DoorDef>();
+        var floorDefs = new List<(string id, string name, int bas)>();
+        var maps = new Dictionary<string, List<string>>();
+        var hts = new Dictionary<string, List<string>>();
+        var lifts = new List<LiftDef>();
+        var links = new List<LinkDef>();
+        var points = new Dictionary<string, (string, Vector2Int)>();
+        string section = "", arg = "0";
         foreach (var raw in lines)
         {
             var line = raw.TrimEnd();
             if (section != "map" && (line.Length == 0 || line.StartsWith("#"))) continue;
-            if (line.StartsWith("[")) { section = line.Trim('[', ']'); if (section == "heights") heightLines = new List<string>(); continue; }
-            if (section == "heights") { if (line.Length > 0 && !line.StartsWith("#")) heightLines.Add(line); continue; }
-            var f = line.Split('|').Select(s => s.Trim()).ToArray();
+            if (line.StartsWith("["))
+            {
+                var head = line.Trim('[', ']').Trim();
+                int sp = head.IndexOf(' ');
+                section = sp < 0 ? head : head.Substring(0, sp);
+                arg = sp < 0 ? "0" : head.Substring(sp + 1).Trim();   // [map] = [map 0]
+                if (section == "map" && !maps.ContainsKey(arg)) maps[arg] = new List<string>();
+                if (section == "heights" && !hts.ContainsKey(arg)) hts[arg] = new List<string>();
+                continue;
+            }
+            if (section == "heights") { hts[arg].Add(line); continue; }
+            if (section == "map") { if (line.Length > 0) maps[arg].Add(line); continue; }
+            var f = line.Split('|').Select(x => x.Trim()).ToArray();
             if (section == "zones")
-                L.zones.Add(new ZoneDef
+                zones.Add(new ZoneDef
                 {
                     letter = f[0][0], id = f[1], name = f[2], group = int.Parse(f[3]),
                     color = ColorUtility.TryParseHtmlString("#" + f[4], out var col) ? col : Color.gray,
-                    start = f.Skip(5).Contains("start"),
-                    firstBox = f.Skip(5).Contains("firstbox"),
-                    circuit = f.Skip(5).Contains("circuito")
+                    start = f.Skip(5).Any(x => x.Split(' ').Contains("start")),
+                    firstBox = f.Skip(5).Any(x => x.Split(' ').Contains("firstbox")),
+                    circuit = f.Skip(5).Any(x => x.Split(' ').Contains("circuito")),
+                    roofed = f.Skip(5).Any(x => x.Split(' ').Contains("techo"))
                 });
             else if (section == "doors")
-                L.doors.Add(new DoorDef
+                doors.Add(new DoorDef
                 {
                     digit = f[0][0], name = f[1], cost = int.Parse(f[2], CultureInfo.InvariantCulture),
-                    zones = f[3].Split(' ').Select(s => s[0]).ToArray(), key = f.Length > 4 && f[4] == "llave"
+                    zones = f[3].Split(' ').Select(x => x[0]).ToArray(), key = f.Length > 4 && f[4] == "llave"
                 });
-            else if (section == "map" && line.Length > 0) mapLines.Add(line);
+            else if (section == "floors") floorDefs.Add((f[0], f[1], int.Parse(f[2], CultureInfo.InvariantCulture)));
+            else if (section == "lifts") lifts.Add(new LiftDef { id = f[0], name = f[1], cell = ParseCell(f[2]), floors = f[3].Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries) });
+            else if (section == "links")
+            {
+                var ends = f[2].Split('>');
+                links.Add(new LinkDef { id = f[0], name = f[1], from = ParseFloorCell(ends[0]), to = ParseFloorCell(ends[1]), kind = f.Length > 3 ? f[3] : "tolva" });
+            }
+            else if (section == "points") points[f[0]] = ParseFloorCell(f[1]);
         }
-        L.map = mapLines.ToArray();
-        L.H = L.map.Length;
-        L.W = L.map.Max(r => r.Length);
-        L.heights = heightLines != null ? heightLines.ToArray() : null;
-        ComputeHeights(L, L.heightErrors);
+        if (floorDefs.Count == 0) floorDefs.Add(("0", "", 0));
+        var floors = new List<Layout>();
+        foreach (var (id, fname, bas) in floorDefs.OrderBy(x => x.bas))
+        {
+            var F = new Layout { zones = zones, doors = doors, lifts = lifts, links = links, points = points, floorId = id, floorName = fname, baseLevel = bas };
+            F.map = maps.TryGetValue(id, out var m) ? m.ToArray() : new string[0];
+            F.H = F.map.Length;
+            F.W = F.map.Length > 0 ? F.map.Max(r => r.Length) : 0;
+            F.heights = hts.TryGetValue(id, out var h) && h.Count > 0 ? h.ToArray() : null;
+            ComputeHeights(F, F.heightErrors);
+            ComputeZones(F);
+            floors.Add(F);
+        }
+        foreach (var F in floors)
+        {
+            F.floors = floors;
+            F.above = floors.FirstOrDefault(g => g.baseLevel == F.baseLevel + Storey);
+            F.below = floors.FirstOrDefault(g => g.baseLevel == F.baseLevel - Storey);
+        }
+        return floors[0];
+    }
 
-        // every land cell gets the zone of the nearest floor cell (multi-source BFS) ...
+    static Vector2Int ParseCell(string t)
+    {
+        var xy = t.Trim().Split(',');
+        return new Vector2Int(int.Parse(xy[0], CultureInfo.InvariantCulture), int.Parse(xy[1], CultureInfo.InvariantCulture));
+    }
+
+    static (string, Vector2Int) ParseFloorCell(string t)
+    {
+        var parts = t.Trim().Split(':');
+        return (parts[0].Trim(), ParseCell(parts[1]));
+    }
+
+    // cellZone of one floor: every non-sea cell takes the zone of the nearest floor cell; markers the most common
+    // floor letter around them (a spawn at a cave mouth stays outside).
+    static void ComputeZones(Layout L)
+    {
         L.cellZone = new char[L.W, L.H];
         var q = new Queue<Vector2Int>();
         for (int r = 0; r < L.H; r++)
@@ -241,12 +313,11 @@ public static partial class IslaZombieSetup
                     }
                 if (count.Count > 0) L.cellZone[c, r] = count.OrderByDescending(kv => kv.Value).First().Key;
             }
-        return L;
     }
 
     // Cell -> world point ON THE FLOOR of that cell (its height level; ramps at mid height). `y` is added on top.
     static Vector3 World(float c, float r, float y = 0f) => new Vector3((c - OriginCol) * Cell, y + CellY(c, r), (OriginRow - r) * Cell);
-    static float CellY(float c, float r) => cur != null && cur.floorY != null ? cur.Y(Mathf.FloorToInt(c + 0.5f), Mathf.FloorToInt(r + 0.5f)) : 0f;
+    static float CellY(float c, float r) => cur != null && cur.floorY != null ? cur.Y(Mathf.FloorToInt(c + 0.5f), Mathf.FloorToInt(r + 0.5f)) + cur.BaseY : 0f;
     // Floor height under a world point (nearest cell).
     static float GroundAt(Vector3 p) => CellY(p.x / Cell + OriginCol, OriginRow - p.z / Cell);
     static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
@@ -304,8 +375,11 @@ public static partial class IslaZombieSetup
         var report = new List<string>();
         var L = Load();
         cur = L;
-        report.AddRange(L.heightErrors);
-        report.AddRange(CheckHeights(L));
+        if (!L.Multi)
+        {
+            report.AddRange(L.heightErrors);
+            report.AddRange(CheckHeights(L));
+        }
         ConfigureModelImports();
 
         var scene = File.Exists(ScenePath)
@@ -318,6 +392,21 @@ public static partial class IslaZombieSetup
         var root = new GameObject(RootName).transform;
         TestMapSetup.EnsureLayers();
         SetupLight();
+        if (L.Multi) BuildFloors(root, data, L, report);   // real floors: IslaZombieSetup.Floors.cs
+        else BuildOneFloor(root, data, L, report);
+        if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
+
+        if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
+        if (cfg.isla || cfg.menu) PointMenuToMap();
+        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+        LastReport = string.Join("\n", report);
+        Debug.Log($"[IslaZombie] Setup of {cfg.name} done\n" + LastReport);
+    }
+
+    // The map as it always was: one grid (with or without heights).
+    static void BuildOneFloor(Transform root, TestMapSetup.Data data, Layout L, List<string> report)
+    {
         var entrances = PlanEntrances(L, report);
         var zones = BuildZones(root, L);
         BuildGround(root, L);
@@ -351,14 +440,6 @@ public static partial class IslaZombieSetup
         if (Ven) VenFenceObstacles(root);
         if (Pue) report.AddRange(PueAfterChecks(root, L));
         report.Add(BuildMapAndSigns(root, L, points, doors));
-        if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
-
-        if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
-        if (cfg.isla || cfg.menu) PointMenuToMap();
-        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-
-        LastReport = string.Join("\n", report);
-        Debug.Log($"[IslaZombie] Setup of {cfg.name} done\n" + LastReport);
     }
 
     // The props FBX use the island's shared material remap (BeachIslandImportSettings); make sure they
@@ -1089,7 +1170,7 @@ public static partial class IslaZombieSetup
         }
     }
 
-    class BuiltDoor { public ZoneDoor door; public float width; public RectInt cells; public bool alongX; public DoorDef def; }
+    class BuiltDoor { public ZoneDoor door; public float width; public RectInt cells; public bool alongX; public DoorDef def; public Layout floor; }
 
     static List<BuiltDoor> BuildDoors(Transform root, Layout L, Dictionary<char, Zone> zones)
     {
@@ -1103,6 +1184,7 @@ public static partial class IslaZombieSetup
         {
             var d = L.doors[i];
             var cells = Rects(L, (c, row) => L.At(c, row) == d.digit);
+            if (cells.Count == 0 && L.Multi) continue;   // the door is on another floor
             if (cells.Count != 1) { Debug.LogError($"[IslaZombie] door {d.digit} must be one straight run of cells (found {cells.Count})"); continue; }
             var r = cells[0];
             // the barrier runs along the wall: horizontal wall if the cell left of the run is wall
@@ -1125,14 +1207,14 @@ public static partial class IslaZombieSetup
             vol.size = new Vector3(width + 0.5f, 4f, Cell + 0.5f);
             vol.area = DoorAreaBase + i;
             // stone gate: two pillars and a lintel over the doorway (visual only)
-            if (Urb) { VenPlace(dr, VN(Pue ? "VJ_PortalPuente" : "VN_PortalPuente"), RectCenter(r), alongX ? 0f : 90f, (width + 0.4f) / 2.4f); result.Add(new BuiltDoor { door = zd, width = width, cells = r, alongX = alongX, def = d }); continue; }
+            if (Urb) { VenPlace(dr, VN(Pue ? "VJ_PortalPuente" : "VN_PortalPuente"), RectCenter(r), alongX ? 0f : 90f, (width + 0.4f) / 2.4f); result.Add(new BuiltDoor { door = zd, width = width, cells = r, alongX = alongX, def = d, floor = L }); continue; }
             var gate = Child(dr, "Portal" + d.digit, RectCenter(r)).transform;
             var along = alongX ? Vector3.right : Vector3.forward;
             var gm = d.cost >= 5000 ? temple : stone;
             foreach (float s in new[] { -1f, 1f })
                 TexBox(gate, "Pilar", RectCenter(r) + along * s * (width / 2f + 0.45f), new Vector3(1.1f, 4.4f, 1.1f) + (alongX ? Vector3.forward : Vector3.right) * 1.1f, gm, gm, 0f, false);
             TexBox(gate, "Dintel", RectCenter(r), (alongX ? new Vector3(width + 2f, 0.7f, 2.3f) : new Vector3(2.3f, 0.7f, width + 2f)), gm, gm, 4.0f, false);
-            result.Add(new BuiltDoor { door = zd, width = width, cells = r, alongX = alongX, def = d });
+            result.Add(new BuiltDoor { door = zd, width = width, cells = r, alongX = alongX, def = d, floor = L });
         }
         return result;
     }
@@ -1198,7 +1280,7 @@ public static partial class IslaZombieSetup
                     }
                 }
             }
-        if (needBox) Debug.LogError("[IslaZombie] the start zone needs a box spot (B)");
+        if (needBox && L.map.Any(row => row.Contains('@'))) Debug.LogError("[IslaZombie] the start zone needs a box spot (B)");
         return pts;
     }
 
@@ -1256,12 +1338,13 @@ public static partial class IslaZombieSetup
         TestMapSetup.Set(extraction.AddComponent<ExtractionPoint>(), "beacon", beacon);
         WorldLabel.Create(extraction.transform, new Vector3(0, 2.2f, 0), Pue ? "TRACTOR DE LA PEÑA" : Ven ? "VAPORETTO DE RESCATE" : "BARCO DE RESCATE", 0.3f, new Color(0.6f, 1f, 0.6f));
         var boatSide = FindSea(L, pts.extraction);
-        if (!Pue) PlaceInRect(Child(root, "Barco", Vector3.zero).transform, IZ("IZ_Barco"), pts.extraction + boatSide * 3.4f + Vector3.left * 3f, 9f, 3.4f, 0f, 0f, -0.9f);
+        if (!Pue && !L.Multi) PlaceInRect(Child(root, "Barco", Vector3.zero).transform, IZ("IZ_Barco"), pts.extraction + boatSide * 3.4f + Vector3.left * 3f, 9f, 3.4f, 0f, 0f, -0.9f);
 
         var spawn = Child(root, "PlayerSpawn", pts.playerSpawn, 90f);
         var systems = Child(root, "Systems", Vector3.zero);
         // the boss appears when the dock (d) opens; maps without a dock: the zone of the extraction point
         int xc = Mathf.RoundToInt(pts.extraction.x / Cell) + OriginCol, xr = OriginRow - Mathf.RoundToInt(pts.extraction.z / Cell);
+        L = FloorAt(L, pts.extraction);
         var bossZone = zones.TryGetValue('d', out var dock) ? dock : zones.TryGetValue(L.InGrid(xc, xr) ? L.cellZone[xc, xr] : '\0', out var xz) ? xz : zones.Values.Last();
         TestMapSetup.BuildSystems(systems, data, spawn.transform, bossZone, bossSpawn.transform,
             TestMapSetup.Model(TestMapSetup.PrefabRoot + "/Enemy_OldMan.prefab"),
@@ -1315,11 +1398,12 @@ public static partial class IslaZombieSetup
         {
             var cells = new List<Vector3>();
             for (int r = 0; r < L.H; r++) for (int c = 0; c < L.W; c++) if (L.At(c, r) == zd.letter) cells.Add(World(c, r));
-            if (cells.Count == 0) continue;
+            if (cells.Count == 0 || L.Multi && cells.Count < 12) continue;   // floors: only where the zone really is (not its stair)
             var center = cells.Aggregate(Vector3.zero, (a, b) => a + b) / cells.Count;
             OutlinedLabel(lr, "Label_" + zd.id, center + Vector3.up * 30f, zd.name.ToUpperInvariant(), 2.4f, Color.white);
         }
-        OutlinedLabel(lr, "Label_Salida", pts.extraction + new Vector3(-3f, 30f, -4f), "SALIDA", 2.8f, new Color(0.4f, 1f, 0.4f));
+        if (!L.Multi || FloorAt(L, pts.extraction) == L)
+            OutlinedLabel(lr, "Label_Salida", pts.extraction + new Vector3(-3f, 30f, -4f), "SALIDA", 2.8f, new Color(0.4f, 1f, 0.4f));
     }
 
     // White (or coloured) map text with a dark outline so it reads on any ground.
@@ -1563,6 +1647,7 @@ public static partial class IslaZombieSetup
             for (int i = 0; i < L.doors.Count; i++) areas.GetArrayElementAtIndex(DoorAreaBase + i).FindPropertyRelative("name").stringValue = "Puerta" + (i + 1);
             areas.GetArrayElementAtIndex(LedgeArea).FindPropertyRelative("name").stringValue = "Caida";
             areas.GetArrayElementAtIndex(SlideArea).FindPropertyRelative("name").stringValue = "Tobogan";
+            if (L.Multi) areas.GetArrayElementAtIndex(ServiceArea).FindPropertyRelative("name").stringValue = "Servicio";
             var canal = areas.GetArrayElementAtIndex(NavAgents.CanalArea);
             canal.FindPropertyRelative("name").stringValue = "Canal";
             canal.FindPropertyRelative("cost").floatValue = 3f;   // swim only when it is clearly shorter
@@ -1577,8 +1662,8 @@ public static partial class IslaZombieSetup
         surface.layerMask = (1 << 0) | (1 << TestMapSetup.WallLayer) | (1 << WaterLayer) | (1 << NavAgents.PropLayer);   // doors block at runtime (carving obstacles)
         Bake(surface, NavMeshDataPath);
         LastNavIslands = 0;
-        if (Urb && CutNavIslands(go.transform, L, 0) > 0) Bake(surface, NavMeshDataPath);   // islands on stall counters / roofs / canal beds (A5)
-        if (Urb) navIslandsLeft = CutNavIslands(go.transform, L, 0, false);
+        if ((Urb || L.Multi) && CutNavIslands(go.transform, L, 0) > 0) Bake(surface, NavMeshDataPath);   // islands on stall counters / roofs / canal beds (A5)
+        if (Urb || L.Multi) navIslandsLeft = CutNavIslands(go.transform, L, 0, false);
 
         // "Saltador": the same without the props, for the night old men who walk over them
         var jumper = go.AddComponent<NavMeshSurface>();
@@ -1599,7 +1684,12 @@ public static partial class IslaZombieSetup
     static int CutNavIslands(Transform parent, Layout L, int agent, bool apply = true)
     {
         Vector3? start = null;
-        foreach (var c in Cells(L)) if (L.At(c.x, c.y) == '@') { start = World(c.x, c.y); break; }
+        foreach (var F in L.floors ?? new List<Layout> { L })
+        {
+            var keep = cur; cur = F;
+            foreach (var c in Cells(F)) if (start == null && F.At(c.x, c.y) == '@') start = World(c.x, c.y);
+            cur = keep;
+        }
         var f = new NavMeshQueryFilter { agentTypeID = agent, areaMask = NavMesh.AllAreas };
         if (start == null || !NavMesh.SamplePosition(start.Value, out var sh, 2f, f)) return 0;
         var tri = NavMesh.CalculateTriangulation();
@@ -1616,11 +1706,13 @@ public static partial class IslaZombieSetup
             par[Find(weld[ix[t + 2]])] = a;
         }
         var comps = new Dictionary<int, (Bounds b, Vector3 rep, float area)>();
+        var tris = new Dictionary<int, List<int>>();   // floors: the triangles of each component (cut cell by cell)
         for (int t = 0; t < ix.Length; t += 3)
         {
             Vector3 A = v[ix[t]], B = v[ix[t + 1]], C = v[ix[t + 2]];
             float ar = Vector3.Cross(B - A, C - A).magnitude / 2f;
             int r = Find(weld[ix[t]]);
+            if (L.Multi) { if (!tris.TryGetValue(r, out var list)) tris[r] = list = new List<int>(); list.Add(t); }
             if (!comps.TryGetValue(r, out var e)) e = (new Bounds(A, Vector3.zero), (A + B + C) / 3f, 0f);
             e.b.Encapsulate(A); e.b.Encapsulate(B); e.b.Encapsulate(C);
             if (ar > e.area) { e.rep = (A + B + C) / 3f; e.area = ar; }
@@ -1630,18 +1722,36 @@ public static partial class IslaZombieSetup
         holder.SetParent(parent, false);
         var path = new NavMeshPath();
         int cut = 0;
-        foreach (var e in comps.Values)
+        void Volume(Bounds b)
         {
+            var vol = new GameObject("Isla").AddComponent<NavMeshModifierVolume>();
+            vol.transform.SetParent(holder, false);
+            vol.transform.position = new Vector3(b.center.x, b.center.y, b.center.z);
+            vol.size = new Vector3(b.size.x + 0.2f, b.size.y + 0.5f, b.size.z + 0.2f);
+            vol.center = Vector3.zero;   // the component defaults to (0, 1, 0)
+            vol.area = 1;   // Not Walkable
+        }
+        foreach (var kv in comps)
+        {
+            var e = kv.Value;
             if (!NavMesh.SamplePosition(e.rep, out var h, 0.1f, f)) continue;   // the other agent type's mesh
             if (NavMesh.CalculatePath(sh.position, h.position, f, path) && path.status == NavMeshPathStatus.PathComplete) continue;
             cut++;
             if (!apply) continue;
-            var vol = new GameObject("Isla").AddComponent<NavMeshModifierVolume>();
-            vol.transform.SetParent(holder, false);
-            vol.transform.position = new Vector3(e.b.center.x, e.b.center.y, e.b.center.z);
-            vol.size = new Vector3(e.b.size.x + 0.2f, e.b.size.y + 0.5f, e.b.size.z + 0.2f);
-            vol.center = Vector3.zero;   // the component defaults to (0, 1, 0)
-            vol.area = 1;   // Not Walkable
+            if (!L.Multi) { Volume(e.b); continue; }
+            // floors: an island of roof or wall tops can spread over the whole building at the height of a real floor
+            // (a stair landing): one volume per 2 m cell, around its own triangles only
+            var cells = new Dictionary<Vector2Int, Bounds>();
+            foreach (int t in tris[kv.Key])
+            {
+                Vector3 A = v[ix[t]], B = v[ix[t + 1]], C = v[ix[t + 2]];
+                var cen = (A + B + C) / 3f;
+                var k = new Vector2Int(Mathf.FloorToInt(cen.x / Cell), Mathf.FloorToInt(cen.z / Cell));
+                var tb = new Bounds(A, Vector3.zero);
+                tb.Encapsulate(B); tb.Encapsulate(C);
+                if (cells.TryGetValue(k, out var cb)) { cb.Encapsulate(tb); cells[k] = cb; } else cells[k] = tb;
+            }
+            foreach (var cb in cells.Values) Volume(cb);
         }
         if (!apply) Object.DestroyImmediate(holder.gameObject);
         else LastNavIslands = cut;
@@ -1693,7 +1803,7 @@ public static partial class IslaZombieSetup
         int allDoorBits = 0;
         for (int i = 0; i < L.doors.Count; i++) allDoorBits |= 1 << (DoorAreaBase + i);
         // slides are one-way shortcuts between groups: checked apart (CheckHeightsNav), never part of the door graph
-        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits & ~(1 << SlideArea) & ~(1 << NavAgents.CanalArea); foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
+        int Mask(params int[] open) { int m = NavMesh.AllAreas & ~allDoorBits & ~(1 << SlideArea) & ~(1 << NavAgents.CanalArea) & ~(1 << ServiceArea); foreach (var i in open) m |= 1 << (DoorAreaBase + i); return m; }
         var path = new NavMeshPath();
         Vector3? Snap(Vector3 p) => NavMesh.SamplePosition(p, out var h, 1.5f, NavAgents.Filter(0)) ? h.position : (Vector3?)null;
         bool Reach(Vector3 a, Vector3 b, int mask) => NavMesh.CalculatePath(a, b, new NavMeshQueryFilter { agentTypeID = 0, areaMask = mask }, path) && path.status == NavMeshPathStatus.PathComplete;
@@ -1774,7 +1884,7 @@ public static partial class IslaZombieSetup
         {
             total++;
             int mc = Mathf.RoundToInt(p.x / Cell) + OriginCol, mr = OriginRow - Mathf.RoundToInt(p.z / Cell);
-            char mz = L.cellZone[mc, mr];
+            char mz = FloorAt(L, p).cellZone[mc, mr];
             var s = Snap(p);
             if (probes.ContainsKey(mz) && s.HasValue && Reach(probes[mz], s.Value, closed)) continue;
             bad++;

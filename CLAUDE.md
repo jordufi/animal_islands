@@ -265,6 +265,8 @@ Camping→Templo 5000 (also opens Lago) · Faro↔Lago 1500 · Lago→Mercadillo
 ## How to work on this project (lessons learned)
 - **Making a new map from scratch: read `Docs/GUIA_NUEVO_MAPA.md` first** (design slots, files, step by step, every
   test to run and when, how to make a map fun, the mistakes already made). Villajubilada is the worked example.
+- **`Docs/mapas.md` (Spanish) = every map's features, mechanics, secrets, decisions, discarded ideas and proposals.**
+  Read it before touching a map's design and keep it updated when a map changes (it is the user-facing design record).
 - **After changing the map or `IslaZombieSetup*`:** run `IslaZombieSetup.Setup()` (idempotent: replaces the
   `IslaZombie` root, rebakes both NavMeshes, re-checks, points the menu at the scene, sets build scenes), read
   `IslaZombieSetup.LastReport`, then the play tests.
@@ -532,6 +534,52 @@ Decided with the user (don't re-ask): an inland village during its fiestas, in *
   the pregonero's sash barely shows; the bull's body is still one rigid piece; the online village test covers the first
   encierro, light and traca, not the whole mission; 4 players not tried.
   The earlier plan `Docs/VILLAJUBILADA_TRASPASO.md` describes the first design (no acts): this section wins.
+
+## Hotel Jubiles and Crucero "Reina del Imserso" (maps 5 and 6) — IN PROGRESS since 2026-11-17 (Opus): designed, layouts built without theme
+The user asked for both maps "at the same time", designed first. **All decisions so far are in `Docs/mapas.md`
+(sections 6 and 7): don't re-ask them.** Short version:
+- **Hotel Jubiles** (was "Hotel Gran Imserso"): 70s Benidorm hotel, stormy night, **real stacked floors**. Starts in a
+  blackout (torch, sleepwalker old man), the power is two doors from reception; turning it on is the act change (lifts,
+  minibars). Event = **bingo night** (first one the round after opening the Salón Dorado, then every 5): animador, free
+  card per player, numbered old men, line = power-up, bingo = pot, "reto de la noche" (10 approved) wins the **pulsera
+  todo incluido** (free drinks, wearer only). **Pulsera de puertas** hidden in 1 of 3 rooms opens secret passages for its
+  wearer; lost when the wearer goes down and hidden again in another room (decided). All The Shining parodies approved;
+  Hotel California only as the idea (no lyrics ever). Helicopter on the roof, boss Don Anselmo in a bathrobe.
+- **Crucero**: act 1 in the port (start + 2 paid zones, boarding pass in the second one opened); round 4 = horn + 2 min
+  countdown, the ship sails; not aboard = game over solo, in co-op only that player is out (back aboard next round).
+  Act 2 at sea at night, **real stacked decks**; boarding by launches in rounds 5, 10, 15 (cut the grappling ropes);
+  slides; jet skis = transport round the hull; overboard = ladder back. No bingo, no bracelets. Lifeboat crank exit,
+  boss the captain.
+- Both: lighting interesting but cheap (Android is a future target, no Android work now). Plan: shared tooling first
+  (stacked floors in the layout generator + cheap light kit), then each map in its own files (can be parallel sessions).
+- **Design done 2026-11-17:**
+  - **Specs:** `Docs/PLANTAS_FORMATO.md` (stacked-floor format: one grid per floor, `[floors]` bases in levels, `~` void,
+    `=` lift cab, `$` service door, `:` grappling hook, `[lifts]` / `[links]` / `[points]`, slabs / roofs / railings,
+    switchback stairs 3x3 alternating every two floors, checks, shared runtime pieces, work order with a `PruebaPlantas`
+    test map first), `Docs/HOTEL_JUBILES_DISENO.md`, `Docs/CRUCERO_DISENO.md` (zones, doors, rules with numbers,
+    light, Blender kits `HJ_*` / `CR_*`, online = protocol 6 once for both, play-test lists).
+  - **Layouts:** `Tools/Maps/make_hotel_layout.py` (5 floors, 8 zones, 1141 cells) and `make_crucero_layout.py`
+    (3 floors, 9 zones, 1301 cells), with the shared checks in `Tools/Maps/floors.py`. Both pass `--check`: doors,
+    groups sealed across floors through the stairs, headroom, ramps, lifts, links.
+- **Stacked floors built and verified 2026-11-17 (later, Opus); status list in `Docs/PLANTAS_FORMATO.md`:**
+  - Code: `IslaZombieSetup.Floors.cs` (BuildFloors: per-floor ground / slabs, solids, roofs, railings, lifts, links,
+    service doors, floor map PNGs, checks), reader in `IslaZombieSetup.cs` (`Layout.floors / above / below / BaseY`,
+    `Multi`), runtime `Zones/Lift`, `LiftButton`, `ServiceDoor`, `FloorLink`. Menu: Tools > Island > Setup Prueba de
+    plantas / Setup Hotel Jubiles / Setup Crucero, Play Test Plantas (`PlantasPlayTest.Run()`). NavMesh area 16 "Servicio".
+  - **Rules learned:** on floors every tall collider (open-air walls 10 m, spawn cabins, door barriers 5 m + carving
+    obstacle) must stop under the slab of the first higher floor with something at that cell (`CeilingY`, `CapDoor`):
+    a basement cabin cut the bufé, a ground-floor wall blocked the 2nd-floor balcony. `CutNavIslands` cuts per 2 m cell
+    on floors (one roof island spanned the building at a landing's height). No `BuildCoast` on floors (invisible walls
+    upstairs). Run each setup in its own RunCommand (two in one gave false "no spawn point on the NavMesh").
+    `IslaZombieSetup.LastSafeCells` lists the coverage safe cells (`floor:zone(c,r):n`) for placing spawns.
+  - **Verified:** `PlantasPlayTest` 21 OK / 0; Hotel (generic look, no theme yet) 0 errors, 112 m to the extraction,
+    coverage 37/1163; Crucero 0 errors, 84 m, coverage 29/1296 (was 252: crew doors added every ~8 cells, pool ladders);
+    Isla del Faro rebuilt with the same report, Smoke 15 OK, QuickChecks 0 fails.
+  - **Next:** themes (`IslaZombieSetup.Hotel.cs` / `.Crucero.cs`) with the Blender kits `HJ_*` / `CR_*` (two parallel
+    sessions made them), light kit, map rules (blackout, bingo, bracelets, sailing, boardings...), play tests, online
+    (protocol 6). Floors still missing: fall rescue, per-floor pause map / door signs, area 15, lift-stop spawns.
+- Name clash resolved (user, 2026-11-17): the card `Data/Cards/PulseraTodoIncluido.asset` is now titled "Media pensión"
+  (asset file and id unchanged, same effect).
 
 ## Phase 3 (heights) — DONE (2026-11-15, Opus): tooling + all zone layouts of "Isla del Faro (alturas)", not committed yet
 Spec: `Docs/FASE3_FORMATO.md`. Level = 2 m; `[heights]` grid before `[map]` (digits + ramp arrows `^ v < >`, runs of 2-3

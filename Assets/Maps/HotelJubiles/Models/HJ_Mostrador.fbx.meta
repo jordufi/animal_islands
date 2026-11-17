@@ -1,0 +1,591 @@
+fileFormatVersion: 2
+guid: 1d3ed6fa45465e34295d601f82b2f814
+ModelImporter:
+  serializedVersion: 24600
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Bark
+    second: {fileID: 2100000, guid: 73f89465aa5e55e48a7a0e4587c10af0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Canvas
+    second: {fileID: 2100000, guid: b34a91de5ca34db47a657b92d832813e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Carved
+    second: {fileID: 2100000, guid: eb5a7177a4e591b4382226de0d58e0df, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Coconut
+    second: {fileID: 2100000, guid: b8a1a3bf01aa9214391981419cd37ec6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Coral_Brain
+    second: {fileID: 2100000, guid: a94baa4321f487c478c3b095a0dd97fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Coral_Orange
+    second: {fileID: 2100000, guid: 256c37a098ef20649a740b602de9549f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Coral_Pink
+    second: {fileID: 2100000, guid: 810bc9a1a0c93f147939b58d64a75d75, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Ember
+    second: {fileID: 2100000, guid: 514b751e111e948469197f2a6d480f2a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_FlowerCenter
+    second: {fileID: 2100000, guid: 0ffa30729d0c41846a77252486b5a95e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Grass
+    second: {fileID: 2100000, guid: f2b2e90f93afa5b4faa0a55e5a31eb7d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GrassBlade
+    second: {fileID: 2100000, guid: cfe49d87acdb8cb48abb79a1653360e0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Iron
+    second: {fileID: 2100000, guid: 4b4d9916b4b023a4a91fa357d2603cd5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Leaves
+    second: {fileID: 2100000, guid: 37c92dcf5132d5b468645b9817d37abd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Bridge_Wood
+    second: {fileID: 2100000, guid: 72c34dd5b3bdd824190b7b0b59b90437, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Bush_Hibiscus
+    second: {fileID: 2100000, guid: 0db087b7f8939784299fe1c05f81f937, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Bush_Yellow
+    second: {fileID: 2100000, guid: bda6bd0c6ae8a454787cf9b274e03337, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Crab
+    second: {fileID: 2100000, guid: 699b5792bdbc0084d8a073f0b288e398, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Dock_End
+    second: {fileID: 2100000, guid: b5cb80ba26fd3fd479dd06f7fe6004e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Dock_Section
+    second: {fileID: 2100000, guid: aa057752fc6197d438ad2459f76fc727, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Driftwood
+    second: {fileID: 2100000, guid: 961628fcdb91a9a4383aae4bf66d03e8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Fern_A
+    second: {fileID: 2100000, guid: 810845ffa038a774cb780c8a9a220563, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Fern_B
+    second: {fileID: 2100000, guid: d03e4a805946e5646ba45fc164f1d9ee, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Grave_Cross
+    second: {fileID: 2100000, guid: c15c248e83da1f74583f1138e05987c2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Grave_Fence
+    second: {fileID: 2100000, guid: 5ecef4356b7abf549a6c4837b76cfcd3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Grave_Gate
+    second: {fileID: 2100000, guid: 6aefc336d877a3f40899f70a361a82a7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Grave_Mound
+    second: {fileID: 2100000, guid: a170803788bb3634cad1cc40073f952e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Grave_Rounded
+    second: {fileID: 2100000, guid: 82224aeb4c642ba419e6ccef321f4eff, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ivy_Wall
+    second: {fileID: 2100000, guid: bd099ad6a79abde4d8d1d285390ac41a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Leaf_Litter_A
+    second: {fileID: 2100000, guid: 4e6a4a6f9c3a4bc4cb8693afb9c835e8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Leaf_Litter_B
+    second: {fileID: 2100000, guid: a52832dc9f689484eb5139b90d0959f2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_LilyPad
+    second: {fileID: 2100000, guid: d5955b71b56f05948b9473eb432ae1c3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_LilyPad_Flower
+    second: {fileID: 2100000, guid: 5b2435b18212e8448935915fa111efe9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Log_Mossy
+    second: {fileID: 2100000, guid: f1e8b4f107e6ce94d8fcfd4125b0c3bd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Mushrooms
+    second: {fileID: 2100000, guid: 5777a4465ac0b6e4eb075d690ea06d48, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Palm_Shrub
+    second: {fileID: 2100000, guid: d41d3ab24184b7242ac530edc9150529, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Barrel
+    second: {fileID: 2100000, guid: 5576e7fcca3d52045b87978b787df68a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_BeachBall
+    second: {fileID: 2100000, guid: e7f53ef52d937974a8a4d2c47474e093, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Bottle
+    second: {fileID: 2100000, guid: 34feb100dcb6c7e41b6d6e444341b392, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_BucketSpade
+    second: {fileID: 2100000, guid: b32598b285f95e04a97731ba15aded5c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Candles
+    second: {fileID: 2100000, guid: 78cd7b14a65df904e9340406244d966f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Candles_Glow
+    second: {fileID: 2100000, guid: df09fa68837233d418c5deea906b9316, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_CookingPot
+    second: {fileID: 2100000, guid: d6252cd8638dbf742b2bc20addb00cfe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Crate
+    second: {fileID: 2100000, guid: 25a2ab7096868b847aa411c88fc2daf7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Fence
+    second: {fileID: 2100000, guid: e20ef688027c5204f91e4ecdac3dd62a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Hammock
+    second: {fileID: 2100000, guid: ffcdd5b6bb856684e870c0bd6853b3d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Lantern
+    second: {fileID: 2100000, guid: b58bd835b0a43cc4eaa6798e53cc35e8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Lantern_Glow
+    second: {fileID: 2100000, guid: 8473099a04f9b324a80ff8c56c401cad, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_LogBench
+    second: {fileID: 2100000, guid: 407cb0d536c94314d942bd3e8a5e10d9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Lounger
+    second: {fileID: 2100000, guid: 251070ac72930304c9908b367ef06d57, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_PicnicTable
+    second: {fileID: 2100000, guid: 9e3386ad472122442b25f346d88c40eb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Rowboat
+    second: {fileID: 2100000, guid: e531133ecac6df64b97cb730a655284d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Sandcastle
+    second: {fileID: 2100000, guid: fd2bd21cc89c2fe4bab78cf6bf26283c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Signpost
+    second: {fileID: 2100000, guid: 53283f67719ac454db6daf4f50cb13bf, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Surfboard_A
+    second: {fileID: 2100000, guid: e10f301c27473fe469467857f3da8842, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Surfboard_B
+    second: {fileID: 2100000, guid: 9e393f81e053bc24880b81efef75b4de, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_TikiBar
+    second: {fileID: 2100000, guid: 27c3e2c8234c49848b99cd999899b5f8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_TikiTorch
+    second: {fileID: 2100000, guid: b224fddd58ebfce458c03a15eec7c641, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_TikiTorch_Glow
+    second: {fileID: 2100000, guid: d4855a282f4ec304d948d48b1bea08f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Totem
+    second: {fileID: 2100000, guid: 8bee5308e2d344843ab1e992d92ab706, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Towel_A
+    second: {fileID: 2100000, guid: 8f9fd6fdbb28c1143983a65a0675358a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Towel_B
+    second: {fileID: 2100000, guid: af11869853f79cb40acd2212bd34957d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_TreasureChest
+    second: {fileID: 2100000, guid: ad871f9fec622da4185c0230fc1ea660, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Umbrella_Blue
+    second: {fileID: 2100000, guid: 0eace010f0138af4c8ac85742d9c4e9e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_Umbrella_Red
+    second: {fileID: 2100000, guid: 91aec3f66f2e0074c8aadc92adee8091, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Prop_VolleyNet
+    second: {fileID: 2100000, guid: 40be5647aa4e40d4c93cb408089c7fa4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Reeds
+    second: {fileID: 2100000, guid: c5106e094ea43f54aaaa1386b91ab74e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Arch
+    second: {fileID: 2100000, guid: b07ef141216e51e4e99a996b7792c19c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Arch_Broken
+    second: {fileID: 2100000, guid: 1732817461816bf4bbf9b461d48bb656, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Brazier
+    second: {fileID: 2100000, guid: ba9c4e712cdf017489f870766b845b4e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Brazier_Glow
+    second: {fileID: 2100000, guid: e28b16812f0b92745a28ba7d6408e776, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Crypt
+    second: {fileID: 2100000, guid: d089540c500138c4b9965d144a1d12d5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_IdolHead
+    second: {fileID: 2100000, guid: 5be11d041cbc72d4ea7a8f90e505e804, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Ruin_Well
+    second: {fileID: 2100000, guid: 69bf8c5a5d27f4c43a49e8c27934b97d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Starfish_Orange
+    second: {fileID: 2100000, guid: 27724f8a7b596b44ba7a04ea4711cb81, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Starfish_Pink
+    second: {fileID: 2100000, guid: 8a70f681adb408a4e8340fa8d79579a3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Pal_Tree_Stump
+    second: {fileID: 2100000, guid: 3db9fe775bd8268488d5ff958793ffae, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Palm
+    second: {fileID: 2100000, guid: 281be8dcca829cb44a5065bb19e0478d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Petal_Flower_Pink.001
+    second: {fileID: 2100000, guid: a2426378cec03814cbe6076804f50955, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Petal_Flower_White.001
+    second: {fileID: 2100000, guid: f05a1377ed4c84349b039d5863bb0825, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Petal_Flower_Yellow.001
+    second: {fileID: 2100000, guid: c2363a50927088b439e12db0eb758ab9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Rock
+    second: {fileID: 2100000, guid: ed59e3571edbb1b47ab79e3e1a8207c4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Sand
+    second: {fileID: 2100000, guid: 5355be7badec7264f9944aa8d9e2866e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Seaweed
+    second: {fileID: 2100000, guid: bb26a9a6f0a4cbc47b40bbfa20e19884, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Shell
+    second: {fileID: 2100000, guid: 4ea2f155636c07b4da5f20f4cb4db029, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Stem
+    second: {fileID: 2100000, guid: c6f09fc12ec25d84f82732d72997a686, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Stone
+    second: {fileID: 2100000, guid: 45fd737a765560445bb8c663a75224fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_StoneMoss
+    second: {fileID: 2100000, guid: f5e8cbc00f2143d43a4f838a6436cf46, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_TempleCarved
+    second: {fileID: 2100000, guid: 8b9f272a867e63d49918265e1a664832, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_TempleDark
+    second: {fileID: 2100000, guid: d389c6142f1eb384ab473e4cbf4bd98f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_TempleStone
+    second: {fileID: 2100000, guid: 609656e61de70ab4dbd92f19b6afb14d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_TentInside
+    second: {fileID: 2100000, guid: 8bab6224f17b98b4298f825466fff014, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Water_Ocean
+    second: {fileID: 2100000, guid: dd5efe3e8ba408945bf9ea90f5be57da, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Water_OceanFar
+    second: {fileID: 2100000, guid: 70ca406b3cca4784885cc35a6d1422f5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Water_Pond
+    second: {fileID: 2100000, guid: ec0fda22a3737e941a5a84c45de58a2e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Wood
+    second: {fileID: 2100000, guid: 11e1a5da6556f984fb3933272904d87c, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 1
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    preBakeConvexCollisionMesh: 0
+    preBakeTriangleCollisionMesh: 0
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 0
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -58,8 +58,10 @@ public static partial class IslaZombieSetup
                 foreach (var d in Dirs.OrderBy(d => Hash(c, r, d.x * 3 + d.y + 40)))
                 {
                     var n = new Vector2Int(c + d.x, r + d.y);
-                    int score = EntranceScore(L.At(n.x, n.y), z);
-                    if (score > bestScore) { bestScore = score; best = new EntrancePlan { cell = new Vector2Int(c, r), n = n, kind = L.At(n.x, n.y), zone = z }; }
+                    char nc = L.At(n.x, n.y);
+                    if (L.Multi && nc == 'w') nc = '.';   // stacked floors (hotel, cruise): out of the pool by its ladder
+                    int score = EntranceScore(nc, z);
+                    if (score > bestScore) { bestScore = score; best = new EntrancePlan { cell = new Vector2Int(c, r), n = n, kind = nc, zone = z }; }
                 }
                 if (best == null) { plain++; report.Add($"WARNING spawn at cell ({c},{r}) has nothing solid next to it: plain spawn point (no entrance)"); continue; }
                 plans.Add(best);
@@ -107,7 +109,12 @@ public static partial class IslaZombieSetup
         var cabinRoot = Child(root, "Cabinas", Vector3.zero).transform;
         // every cabin is built once, with a doorway on each face that has an entrance
         foreach (var g in plans.Where(p => p.kind == '#' && !Urb).GroupBy(p => p.n))
-            BuildCabin(cabinRoot, World(g.Key.x, g.Key.y), g.First().zone, g.Select(p => Flat(World(p.cell.x, p.cell.y) - World(p.n.x, p.n.y))).Select(v => v.normalized).ToList());
+        {
+            var at = World(g.Key.x, g.Key.y);
+            // stacked floors: the cabin's collider stops under the floor above (it stood up into the bufé from the basement)
+            float top = Mathf.Min(ColliderHeight - 0.5f, CeilingY(L, g.Key.x, g.Key.y) - 0.05f - at.y);
+            BuildCabin(cabinRoot, at, g.First().zone, g.Select(p => Flat(World(p.cell.x, p.cell.y) - World(p.n.x, p.n.y))).Select(v => v.normalized).ToList(), top);
+        }
         var black = M("Oscuridad", new Color(0.02f, 0.02f, 0.025f));
         var rock = Shared("M_Rock", new Color(0.45f, 0.41f, 0.37f));
         var temple = Shared("M_TempleDark", new Color(0.35f, 0.33f, 0.3f));
@@ -242,7 +249,7 @@ public static partial class IslaZombieSetup
     // A cabin / shed filling one wall cell: thin walls with a doorway on every face in `doorFaces` (unit
     // vectors from the centre towards the floor side), a dark partition behind the doorways and a roof.
     // Solid like the wall for everyone (one Wall-layer box over the whole cell); the doors are per entrance.
-    static void BuildCabin(Transform parent, Vector3 center, char zone, List<Vector3> doorFaces)
+    static void BuildCabin(Transform parent, Vector3 center, char zone, List<Vector3> doorFaces, float top = ColliderHeight - 0.5f)
     {
         var body = M("Cabina_Spawn", SpawnColor);
         var roof = M("Cabina_Techo", new Color(0.25f, 0.25f, 0.28f));
@@ -251,8 +258,8 @@ public static partial class IslaZombieSetup
         var cab = Child(parent, "Cabina_" + zone, center);
         cab.layer = TestMapSetup.WallLayer;
         var box = cab.AddComponent<BoxCollider>();
-        box.size = new Vector3(Cell, ColliderHeight, Cell);
-        box.center = new Vector3(0f, ColliderHeight / 2f - 0.5f, 0f);
+        box.size = new Vector3(Cell, top + 0.5f, Cell);   // from 0.5 m under the floor to `top` (10 m tall without a floor above)
+        box.center = new Vector3(0f, (top - 0.5f) / 2f, 0f);
         foreach (var f in new[] { Vector3.forward, Vector3.right, Vector3.back, Vector3.left })
         {
             Vector3 side = Vector3.Cross(Vector3.up, f);   // along the face
@@ -278,8 +285,12 @@ public static partial class IslaZombieSetup
     // lane where they come from both ends (front and back), fine for corridors.
     const float CoverageRange = 24f;
 
+    // Every safe cell of the last setup ("<floor>:<zone>(c,r):<directions>"), for placing new spawns (stacked floors).
+    public static readonly List<string> LastSafeCells = new List<string>();
+
     static List<string> SpawnCoverage(Layout L, Dictionary<char, Zone> zones)
     {
+        if (L.floors == null || L == L.floors[0]) LastSafeCells.Clear();
         var report = new List<string>();
         var exits = new List<Vector3>();
         foreach (var z in zones.Values)
@@ -322,7 +333,7 @@ public static partial class IslaZombieSetup
                     int n = 0;
                     for (int k = 0; k < 8; k++) if ((sectors & (1 << k)) != 0) n++;
                     sumSectors += n;
-                    if (n <= 1) { safe++; if (worst.Count < 40) worst.Add($"{zd.id}({c},{r}):{n}"); }
+                    if (n <= 1) { safe++; if (worst.Count < 40) worst.Add($"{zd.id}({c},{r}):{n}"); LastSafeCells.Add($"{L.floorId}:{zd.id}({c},{r}):{n}"); }
                     else if (n == 2) two++;
                 }
             totalCells += cells;

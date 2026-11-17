@@ -42,6 +42,8 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
 | `Tools/` | Scripts de compilación y copia de seguridad; scripts de Blender en `Tools/Blender/` |
 | `CLAUDE.md` | Contexto técnico y decisiones de diseño detalladas del proyecto |
 | `Docs/GUIA_NUEVO_MAPA.md` | Guía para hacer un mapa nuevo desde cero: diseño, pasos, pruebas y errores ya cometidos |
+| `Docs/mapas.md` | Cada mapa al detalle: mecánicas, secretos, decisiones de diseño, lo descartado y propuestas de mejora |
+| `Docs/PLANTAS_FORMATO.md`, `Docs/HOTEL_JUBILES_DISENO.md`, `Docs/CRUCERO_DISENO.md` | Diseño del hotel y del crucero (en preparación) y del formato con plantas reales que necesitan |
 
 ## Herramientas (menú Tools > Island)
 - **Setup Isla Zombie**: reconstruye la escena desde el layout y comprueba el mapa. **Setup Isla del Faro (alturas)** y
@@ -59,7 +61,8 @@ Se versiona solo el código y los assets (~20 MB). **No se suben** `Library/`, `
 Cada mapa rellena los mismos huecos que La Serenísima: forma, tipo de puerta, evento cada 5 rondas, abuelos nuevos,
 misión y extracción. Regla de diseño: ningún atajo para el jugador sin su versión para los abuelos.
 
-### 1. Hotel Gran Imserso (torre de Benidorm)
+### 1. Hotel Gran Imserso (torre de Benidorm) — EN DISEÑO como "Hotel Jubiles", ver `Docs/mapas.md`
+Idea original (el diseño decidido ha cambiado: empieza a oscuras, bingo con retos, pulseras, guiños a El Resplandor).
 Mapa vertical: vestíbulo y piscina amplios abajo, pasillos de habitaciones estrechos arriba y la azotea.
 - **Puertas:** rellanos de escalera y botones del ascensor de pago; cada planta es una zona.
 - **Ascensor:** se paga por llamarlo, es lento y ruidoso. Los abuelos suben por la escalera o en el otro ascensor.
@@ -82,7 +85,8 @@ Mapa llano: un anillo de calles alrededor de la plaza, callejones y la iglesia.
   abuela de los petardos (niega una zona).
 - **Ambiente y extracción:** la caja de armas es la tómbola; se sale en el remolque del tractor tras las tareas del pregón.
 
-### 3. Crucero "Reina del Imserso"
+### 3. Crucero "Reina del Imserso" — EN DISEÑO, ver `Docs/mapas.md`
+Idea original (el diseño decidido ha cambiado: empieza en el puerto, zarpa en la ronda 4, abordajes de lanchas).
 Mapa largo y estrecho en tres cubiertas: pasillos de camarotes (estrechos) contra la cubierta de la piscina (abierta).
 - **Puertas:** mamparos.
 - **Cada 5 rondas, marejada:** el barco escora. Todos derivan hacia el lado bajo, las tumbonas sueltas resbalan y
