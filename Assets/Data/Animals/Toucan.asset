@@ -27,3 +27,4 @@ MonoBehaviour:
   abilityDescription: "8 s viendo a los abuelos a trav\xE9s de las paredes y +50% da\xF1o a la cabeza"
   abilityCooldown: 40
   abilityDuration: 8
+  furyMoveSpeed: 1.25

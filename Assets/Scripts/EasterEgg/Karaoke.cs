@@ -95,6 +95,6 @@ public class Karaoke : Interactable
         var p = rewardPoint != null ? rewardPoint.position : transform.position + transform.forward;
         var disc = Instantiate(goldenDiscPrefab, p, Quaternion.identity);
         if (NetGame.H != null) NetGame.H.DiscSpawned(this, disc);
-        Game.ShowMessage("¡DISCO DE ORO! Llévalo al barco para multiplicar tu puntuación");
+        Game.ShowMessage("¡DISCO DE ORO! Llévalo al " + BoatMission.Vehicle + " para multiplicar tu puntuación");
     }
 }

@@ -234,7 +234,9 @@ def grada():
     b = Builder("IZ_Grada")
     for i in range(3):
         b.box((1.95, 0.6, 0.3), (0, -0.6 + i * 0.6, 0.15 + i * 0.3), "M_Wood")
-        b.box((1.95, 0.6, 0.15 + i * 0.3), (0, -0.6 + i * 0.6, (0.15 + i * 0.3) / 2), "M_Iron")
+        # iron frame under the seat, inset and below it: the old one shared the seat's side faces (flicker)
+        if i > 0:
+            b.box((1.89, 0.54, i * 0.3), (0, -0.6 + i * 0.6, i * 0.15), "M_Iron")
     return b.build()
 
 clear()

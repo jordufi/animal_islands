@@ -68,7 +68,7 @@ public class MasterKey : Interactable
         Holder = player;
         if (player.Health != null) { player.Health.Died += OnHolderDied; player.Health.Downed += OnHolderDied; }
         Show(false);
-        Game.ShowMessage("¡" + (Game.IsCoop && PlayerSlot.Of(player) != null ? PlayerSlot.Of(player).Tag + " tiene" : "Tienes") + " la LLAVE MAESTRA! " + (BoatMission.Instance != null && BoatMission.Instance.HasTasks ? "Abre la puerta del vaporetto" : BoatMission.Instance != null && BoatMission.Instance.HasMission ? "Vale por una pieza que falte al llamar al barco" : "Abre el muelle gratis"));
+        Game.ShowMessage("¡" + (Game.IsCoop && PlayerSlot.Of(player) != null ? PlayerSlot.Of(player).Tag + " tiene" : "Tienes") + " la LLAVE MAESTRA! " + (BoatMission.Instance != null && BoatMission.Instance.HasTasks ? (BoatMission.Instance.Pueblo ? "Abre la barricada de Las Eras" : "Abre la puerta del vaporetto") : BoatMission.Instance != null && BoatMission.Instance.HasMission ? "Vale por una pieza que falte al llamar al barco" : "Abre el muelle gratis"));
         Changed?.Invoke();
         Sync();
     }

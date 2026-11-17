@@ -108,8 +108,8 @@ l | Eras | Las Eras | 7 | B49A5A
 ..######################eeeeeBeeee##########llllllllloll#.
 ..######################eeeeeeeeee##########llslllllllll#.
 ..######################seeeeeeeee##eseeB#######99#######.
-..####uuuuuuuuuuE#######eeeeeeeeee##eeeee#fffffsfffffffB#.
-..####s####%####u#######eeeeeoeees##seeeO#ffSfffffffffff#.
+..####uuuuuuuuuuE########eeeeeeeee##eeeee#fffffsfffffffB#.
+..####s####%####u########eeeeoeees##seeeO#ffSfffffffffff#.
 ..##Luu####u####u#######Deexeexeee##eeees#fffffffffoofff#.
 ..##uOu####uuuD#u##usu5seeeeeeeeeeeeees###fffoooofffffff#.
 ..##suu####u####u##uuu5eeeeeeeseeeseeee###sffooooffffffE#.

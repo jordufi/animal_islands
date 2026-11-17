@@ -535,6 +535,25 @@ Decided with the user (don't re-ask): an inland village during its fiestas, in *
   encierro, light and traca, not the whole mission; 4 players not tried.
   The earlier plan `Docs/VILLAJUBILADA_TRASPASO.md` describes the first design (no acts): this section wins.
 
+## User feedback 1 (2026-11-17) — IN PROGRESS
+`Docs/Feedback_Usuarios1.md` (the user's friends' feedback) + **`Docs/FEEDBACK1_PLAN.md` (assessment, phases, status)**
++ `Docs/FEEDBACK_PROPUESTAS.md` (the user's answers to the open questions: the dock / mission door counts for "one door
+per round"; the gondola goes only to open zones; Original stays in the selector; one simple tutorial, Isla del Faro only).
+- **Phase 1 done and verified** (cursor lock, pause in 3 columns, "barco/tractor/vaporetto" texts, volley stands, fixed
+  world labels, task list on Isla del Faro, faster Red Panda fury). Fixed while checking the pictures: `WorldText` has a
+  `_Cull` property and fixed labels use a one-sided material (they showed mirrored through their back copy);
+  `WorldLabel.ReadFrom(label, dir)` pins the reading side (spawn cabin plaques); the pause hides the objective list.
+- **Phase 2 done and verified — rule "donde subes tú, sube el abuelo":** `EnemyAI.UpdateClimb` (old men near a player
+  standing on a prop, or with no path to him, switch to the Saltador NavMesh and hop up like the senderistas;
+  `EnemyAI.Perched`), machines are on the Prop layer, ramp to the Imserso bus roof (`BusRamp`), a Villajubilada pocket
+  closed. **`Editor/ReachCheck.cs` runs in every setup report** (warns about any spot a jumping player reaches where no
+  old man can hit him; all 4 maps clean). New tests: `ClimbPlayTest` (Run / RunVillajubilada / RunVenecia),
+  `Feedback1Shots` (pictures `Renders/Feedback1_*.png`) and **`TestQueue.Run("Smoke", "Coop", ...)`** (runs play tests
+  one after another, summary in EditorPrefs `TestQueue.Log`; names in its `Tests` table).
+- Unity does not refresh scripts on its own while it is in the background: call `AssetDatabase.Refresh()` from a
+  RunCommand after editing, then wait for the DLL. Python edits on Windows write CRLF: the repo is LF (`sed -i 's/\r$//'`).
+- Phase 4 next; phase 3 (GitHub release) waits for the user's go-ahead to publish.
+
 ## Hotel Jubiles and Crucero "Reina del Imserso" (maps 5 and 6) — IN PROGRESS since 2026-11-17 (Opus): designed, layouts built without theme
 The user asked for both maps "at the same time", designed first. **All decisions so far are in `Docs/mapas.md`
 (sections 6 and 7): don't re-ask them.** Short version:

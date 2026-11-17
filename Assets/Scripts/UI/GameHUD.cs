@@ -137,12 +137,12 @@ public class GameHUD : MonoBehaviour
         string objective = mission != null ? mission.Objective() : "";
         objectiveText.text = objective.Length > 0 ? "Objetivo: " + objective : "";
         // task-list maps (La Serenisima), one screen: the whole list with its checks, top left under the health
-        if (mission != null && mission.HasTasks && !toastSplit && !(GameManager.Instance != null && GameManager.Instance.BossDefeated))
+        if (mission != null && (mission.HasTasks || mission.HasMission) && !toastSplit && !(GameManager.Instance != null && GameManager.Instance.BossDefeated))
         {
             objectiveText.supportRichText = true;
             objectiveText.verticalOverflow = VerticalWrapMode.Overflow;
             objectiveText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var sb = new System.Text.StringBuilder("<b>PARA QUE VENGA EL VAPORETTO</b>");
+            var sb = new System.Text.StringBuilder("<b>PARA QUE VENGA EL " + BoatMission.Vehicle.ToUpperInvariant() + "</b>");
             foreach (var (text, done) in mission.TaskList())
                 sb.Append(done ? "\n<color=#7CFC7C>[X] " + text + "</color>" : "\n[  ] " + text);
             if (mission.Called || mission.Complete) sb.Append("\n<color=#FFE680>> " + objective + "</color>");
@@ -352,6 +352,8 @@ public class GameHUD : MonoBehaviour
         if ((s == GameState.GameOver || s == GameState.Victory) && cardPanel != null) CloseCards();
         if (s == GameState.Paused) ShowPause();
         else if (pausePanel != null) { Destroy(pausePanel); pausePanel = null; if (settingsPanel != null) Destroy(settingsPanel); }
+        // the pause screen has its own map and card list: the objective list and the toasts would show under it
+        objectiveText.enabled = toastText.enabled = buffText.enabled = s != GameState.Paused;
         if (s == GameState.GameOver || s == GameState.Victory) ShowEnd(s == GameState.Victory);
     }
 
@@ -363,8 +365,7 @@ public class GameHUD : MonoBehaviour
         if (Net.Online)
             UIKit.Label("Online", panel, new Vector2(0.5f, 0.5f), new Vector2(0, 205), new Vector2(1200, 40),
                 "Partida online: el juego sigue mientras tanto" + (Net.IsHost && NetSession.Instance.JoinCode.Length > 0 ? "  ·  Código: " + NetSession.Instance.JoinCode : ""), 26, TextAnchor.MiddleCenter, new Color(1f, 0.6f, 0.5f));
-        var cards = CardManager.Instance != null ? string.Join("\n", CardManager.Instance.Taken.Select(c => c.title + ": " + c.blessingText + " / " + c.curseText)) : "";
-        UIKit.Label("Cards", panel, new Vector2(0.5f, 0f), new Vector2(0, 40), new Vector2(1600, 260), cards.Length > 0 ? "Cartas activas:\n" + cards : "", 22);
+        BuildPauseCards(panel);
         var resume = UIKit.Button("Resume", panel, new Vector2(0.5f, 0.5f), new Vector2(0, 120), new Vector2(520, 80), "Continuar", () => gm.SetPaused(false), 36);
         var settings = UIKit.Button("Settings", panel, new Vector2(0.5f, 0.5f), new Vector2(0, 20), new Vector2(520, 80), "Ajustes", null, 36);
         string restartLabel = Net.Online ? "Reiniciar (todos)" : "Reiniciar partida";
@@ -385,13 +386,34 @@ public class GameHUD : MonoBehaviour
         UIKit.Select(resume);
     }
 
+    // Right column of the pause screen: every card taken, blessing in green (+) and curse in red (-).
+    void BuildPauseCards(RectTransform panel)
+    {
+        if (CardManager.Instance == null || CardManager.Instance.Taken.Count == 0) return;
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in CardManager.Instance.Taken)
+        {
+            sb.Append("<b><color=#").Append(ColorUtility.ToHtmlStringRGB(Color.Lerp(c.color, Color.white, 0.35f))).Append('>')
+              .Append(c.title.ToUpperInvariant()).Append("</color></b>\n");
+            sb.Append("<color=#7CFF7C>+ ").Append(c.blessingText).Append("</color>\n");
+            sb.Append("<color=#FF6A5C>- ").Append(c.curseText).Append("</color>\n\n");
+        }
+        var box = UIKit.Anchored("Cards", panel, new Vector2(1f, 0.5f), new Vector2(-40f, 0f), new Vector2(500f, 820f));
+        UIKit.Image(box, new Color(0f, 0f, 0f, 0.55f));
+        UIKit.Label("CardsTitle", box, new Vector2(0.5f, 1f), new Vector2(0, -10), new Vector2(480, 44), "CARTAS ACTIVAS", 30, TextAnchor.MiddleCenter, UIKit.Accent);
+        var t = UIKit.Label("CardsList", box, new Vector2(0.5f, 1f), new Vector2(0, -62), new Vector2(460, 740), sb.ToString(), 21, TextAnchor.UpperLeft);
+        t.supportRichText = true;
+        t.resizeTextForBestFit = true; t.resizeTextMinSize = 12; t.resizeTextMaxSize = 21;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+    }
+
     // Map of the island with the players' positions (so nobody gets lost).
     void BuildPauseMap(RectTransform panel)
     {
         var info = MapInfo.Instance;
         if (info == null || info.Texture == null) return;
-        const float size = 560f;
-        var frame = UIKit.Anchored("Map", panel, new Vector2(0f, 0.5f), new Vector2(60f + size / 2f, 30f), new Vector2(size + 12f, size + 12f));
+        const float size = 500f;   // left column; buttons in the middle, cards on the right (no overlap down to 4:3)
+        var frame = UIKit.Anchored("Map", panel, new Vector2(0f, 0.5f), new Vector2(40f, 0f), new Vector2(size + 12f, size + 12f));
         UIKit.Image(frame, new Color(0f, 0f, 0f, 0.8f));
         var map = UIKit.Rect("Image", frame, Vector2.zero, Vector2.one, new Vector2(6, 6), new Vector2(-6, -6));
         map.gameObject.AddComponent<RawImage>().texture = info.Texture;

@@ -303,7 +303,7 @@ public static class Phase1PlayTest
         pm.Apply(PowerUpKind.DoublePoints, shooter);
         yield return Wait(0.3f);
         Write("   HUD objective: '" + HudText("Objective") + "', power-ups: '" + HudText("Buffs") + "'");
-        Check(HudText("Objective").StartsWith("Objetivo:") && HudText("Buffs").Contains("x2"), "HUD shows the objective and the active power-up");
+        Check(HudText("Objective").Contains("PARA QUE VENGA EL BARCO") && HudText("Objective").Contains("Acaba con Don Anselmo") &&HudText("Buffs").Contains("x2"), "HUD shows the objective and the active power-up");
         Shot("Renders/Phase1_hud.png");
         yield return null;
     }

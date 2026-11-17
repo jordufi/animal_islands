@@ -27,3 +27,4 @@ MonoBehaviour:
   abilityDescription: "onda que da\xF1a, empuja y aturde a los abuelos cercanos"
   abilityCooldown: 35
   abilityDuration: 0.5
+  furyMoveSpeed: 1.25

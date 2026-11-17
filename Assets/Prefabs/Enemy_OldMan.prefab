@@ -187,6 +187,9 @@ MonoBehaviour:
   flinchTime: 0.18
   destroyDelay: 4
   targetInterval: 0.75
+  climbStartRadius: 9
+  climbMinHeight: 0.6
+  climbLinger: 2.5
 --- !u!1001 &1560562604261587312
 PrefabInstance:
   m_ObjectHideFlags: 0

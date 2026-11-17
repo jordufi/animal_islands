@@ -6,11 +6,12 @@ Shader "AnimalIsland/WorldText"
     {
         _MainTex ("Font Texture", 2D) = "white" {}
         _Color ("Text Color", Color) = (1, 1, 1, 1)
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0   // Off for labels that turn to the camera, Back for fixed ones
     }
     SubShader
     {
         Tags { "Queue" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" }
-        Lighting Off Cull Off ZWrite Off ZTest LEqual
+        Lighting Off Cull [_Cull] ZWrite Off ZTest LEqual
         Blend SrcAlpha OneMinusSrcAlpha
         Pass
         {

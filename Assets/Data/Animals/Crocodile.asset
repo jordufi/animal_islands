@@ -27,3 +27,4 @@ MonoBehaviour:
   abilityDescription: "6 s recibiendo un 70% menos de da\xF1o"
   abilityCooldown: 40
   abilityDuration: 6
+  furyMoveSpeed: 1.25

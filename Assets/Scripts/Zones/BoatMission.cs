@@ -37,6 +37,10 @@ public class BoatMission : MonoBehaviour
     // chupinazo, Gondolier = the golden cabezudo) and one fuse box per zone instead of a single switch.
     [SerializeField] string flavor = "";
     public bool Pueblo => flavor == "pueblo";
+    // The rescue vehicle and where it waits, per map (feedback 2026-11-17: the village still talked about a boat).
+    public static string Vehicle => Instance != null && Instance.Pueblo ? "tractor" : Instance != null && Instance.HasTasks ? "vaporetto" : "barco";
+    public static string BoardText => Instance != null && Instance.Pueblo ? "Sube al remolque del tractor"
+        : Instance != null && Instance.HasTasks ? "Sube al vaporetto al final del embarcadero" : "Sube al barco al final del muelle";
     PowerSwitch[] zoneSwitches = new PowerSwitch[0];   // sorted by zone name: the same order on every machine
     int litMask;
     public bool HasZonePower => zoneSwitches.Length > 0;
@@ -57,6 +61,18 @@ public class BoatMission : MonoBehaviour
     public System.Collections.Generic.List<(string text, bool done)> TaskList()
     {
         var egg = EasterEgg.Instance;
+        if (!HasTasks)   // petrol + radio maps (Isla del Faro): every step at once (feedback 2026-11-17)
+        {
+            var l = new System.Collections.Generic.List<(string, bool)>();
+            if (HasSwitch) l.Add(("Dar la luz en el cuadro eléctrico", Power));
+            if (HasMission)
+            {
+                l.Add(("Encontrar la gasolina", Gas));
+                l.Add(("Encontrar la radio", Radio));
+                l.Add(("Llamar al barco desde la emisora" + (MissingPieces == 1 ? " (la llave maestra vale por la pieza que falta)" : ""), Called || Complete));
+            }
+            return l;
+        }
         if (Pueblo)
             return new System.Collections.Generic.List<(string, bool)>
             {
@@ -259,7 +275,7 @@ public class BoatMission : MonoBehaviour
     // ---------------------------------------------------------------- HUD
     public string Objective()
     {
-        if (Game != null && Game.BossDefeated) return Pueblo ? "Sube al remolque del tractor" : "Sube al barco al final del muelle";
+        if (Game != null && Game.BossDefeated) return BoardText;
         if (!HasMission) return HasSwitch && !Power ? "Da la luz" : "";
         if (HasTasks)
         {

@@ -12,6 +12,8 @@ using UnityEngine.AI;
 // New old men usually come out of a SpawnEntrance (EmergeFrom): hidden inside, walk out, climb the
 // barrier, then join the NavMesh. Night variants (EnemyVariant.jumper) use the "Saltador" NavMesh and
 // hop on top of the props they cross; throwsChanclas makes them throw flip-flops from mid range.
+// Day old men climb too (UpdateClimb): when the player they chase stands on a prop out of their reach, the ones
+// close by switch to the "Saltador" NavMesh and hop onto the props like the night ones ("donde subes tú, sube el abuelo").
 // "Anselmo cagón" mode (EnableTunnels): a tunneler walks into a spawn entrance when going in, through the
 // "pipes" and out of another entrance near the player is shorter than walking; the others chase as usual.
 [RequireComponent(typeof(NavMeshAgent), typeof(EnemyHealth))]
@@ -128,6 +130,7 @@ public class EnemyAI : MonoBehaviour
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        groundAgentType = agent.agentTypeID;
         agent.autoTraverseOffMeshLink = false;   // ledge drops / slides: jumped in an arc by TraverseLink
         agent.areaMask = NavAgents.EnemyMask;    // no canal beds unless the acqua alta is on
         health = GetComponent<EnemyHealth>();
@@ -346,6 +349,7 @@ public class EnemyAI : MonoBehaviour
         if (onLink) return;
         if (agent.enabled && agent.isOnOffMeshLink) { StartCoroutine(TraverseLink()); return; }
         if (Variant != null && Variant.jumper) UpdateHop();
+        else UpdateClimb();
         if (animator != null) animator.SetFloat(SpeedHash, agent.velocity.magnitude / Mathf.Max(0.1f, transform.localScale.x), 0.1f, Time.deltaTime);
 
         var player = Target;
@@ -375,7 +379,7 @@ public class EnemyAI : MonoBehaviour
         }
         else if (agent.isOnNavMesh)
         {
-            if (Tunneler && UpdateTunnel(player)) return;
+            if (Tunneler && !climbing && UpdateTunnel(player)) return;
             agent.isStopped = false;
             if (Time.time >= nextRepathTime)
             {
@@ -626,6 +630,68 @@ public class EnemyAI : MonoBehaviour
     }
 
     public bool Hopping { get; private set; }
+
+    // ---------------------------------------------------------------- climbing after the player (feedback 1)
+    // A player standing on a prop (car roof, crate stack, the bus, a drink machine...) is out of reach of the normal
+    // NavMesh, where props block. Old men within climbStartRadius of him switch to the "Saltador" NavMesh (props
+    // ignored) and hop onto the props like the night senderistas; once nobody has been up there for a while and they
+    // are back on the ground they switch back. Maps without a Saltador NavMesh keep the old behaviour.
+    [Header("Climbing")]
+    [SerializeField] float climbStartRadius = 9f;
+    [SerializeField] float climbMinHeight = 0.6f;    // the prop top must be this high over the ground to count
+    [SerializeField] float climbLinger = 2.5f;       // seconds without anyone up there before climbing down for good
+    int groundAgentType;
+    float groundStopping = -1f;
+    bool climbing;
+    float nextClimbCheck, perchedSeenAt = -99f;
+    public bool Climbing => climbing;
+    public static event System.Action<EnemyAI> ClimbStarted;   // tests
+
+    // Standing on a prop whose top is high over the ground (the "Saltador" NavMesh runs under props).
+    public static bool Perched(Vector3 feet, float minHeight = 0.6f)
+    {
+        if (!Physics.Raycast(feet + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << NavAgents.PropLayer, QueryTriggerInteraction.Ignore)) return false;
+        int jumper = NavAgents.JumperId;
+        if (jumper == 0) return false;
+        return NavMesh.SamplePosition(hit.point + Vector3.down * 1.5f, out var ground, 2.5f, NavAgents.Filter(jumper))
+            && hit.point.y - ground.position.y >= minHeight;
+    }
+
+    void UpdateClimb()
+    {
+        if (!agent.enabled || NavAgents.JumperId == 0 || NavAgents.JumperId == groundAgentType) return;
+        if (climbing) UpdateHop();
+        if (Time.time < nextClimbCheck) return;
+        nextClimbCheck = Time.time + 0.4f;
+        var p = Target;
+        // close to him, or with no way to him on the normal NavMesh (a prop top is not on it)
+        if (p != null && p.CanBeTargeted && Perched(p.transform.position, climbMinHeight)
+            && ((p.transform.position - transform.position).sqrMagnitude < climbStartRadius * climbStartRadius || agent.pathStatus != NavMeshPathStatus.PathComplete))
+            perchedSeenAt = Time.time;
+        bool wanted = Time.time - perchedSeenAt < climbLinger;
+        if (wanted && !climbing && !InTunnel && tunnelIn == null) SetClimbing(true);
+        else if (!wanted && climbing && agent.baseOffset < 0.05f) SetClimbing(false);
+    }
+
+    void SetClimbing(bool on)
+    {
+        int id = on ? NavAgents.JumperId : groundAgentType;
+        Vector3 feet = transform.position - Vector3.up * agent.baseOffset;
+        if (!NavAgents.Sample(feet, on ? 2f : 1.5f, out var at, id)) return;   // (climbing down inside a prop: try again later)
+        agent.enabled = false;
+        agent.agentTypeID = id;
+        agent.baseOffset = 0f;
+        hopVelocity = 0f;
+        Hopping = false;
+        agent.enabled = true;
+        agent.Warp(at);
+        // he must get right under the player to hop onto the prop (a crate is 0.9 m wide: the usual 1 m stop is beside it)
+        if (groundStopping < 0f) groundStopping = agent.stoppingDistance;
+        agent.stoppingDistance = on ? 0.1f : groundStopping;
+        climbing = on;
+        nextRepathTime = 0f;
+        if (on) ClimbStarted?.Invoke(this);
+    }
 
     // ---------------------------------------------------------------- one-way links (ledge drops, slides)
     bool onLink;

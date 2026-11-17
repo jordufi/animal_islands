@@ -24,6 +24,7 @@ MonoBehaviour:
     multiplier: 1.15
   ability: 0
   abilityName: Furia Roja
-  abilityDescription: "7 s disparando un 50% m\xE1s r\xE1pido y recargando el doble"
+  abilityDescription: "7 s disparando un 50% m\xE1s r\xE1pido, recargando el doble y corriendo un 25% m\xE1s"
   abilityCooldown: 40
   abilityDuration: 7
+  furyMoveSpeed: 1.25

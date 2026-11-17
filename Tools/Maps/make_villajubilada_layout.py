@@ -91,6 +91,7 @@ fill(24, 6, 33, 12, 'e')                     # the atrium
 fill(26, 3, 31, 5, 'Z')                      # the church
 level(24, 6, 33, 9, 1)
 ramp([(25, 11), (25, 10)], '^'); ramp([(32, 11), (32, 10)], '^')
+fill(24, 10, 24, 11, '#')                    # (feedback 1) the corner west of the ramp was a pocket only a jumping player reached
 marks('o', (29, 11)); marks('x', (27, 12), (30, 12))
 fill(36, 9, 40, 12, 'e')                     # the penas' yard
 marks('e', (39, 15), (39, 21))               # portales

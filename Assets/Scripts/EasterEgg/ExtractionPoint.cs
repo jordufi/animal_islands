@@ -31,9 +31,9 @@ public class ExtractionPoint : Interactable
     {
         if (Game == null || !Game.BossDefeated) return "";
         string missing = Missing();
-        if (missing.Length > 0) return "Esperando a " + missing + " para subir al barco";
+        if (missing.Length > 0) return "Esperando a " + missing + " para subir al " + BoatMission.Vehicle;
         var carried = player.Carry != null ? player.Carry.Carried : null;
-        return "□  Subir al barco y escapar" + (carried != null ? " con " + carried.DisplayName : "");
+        return "□  Subir al " + BoatMission.Vehicle + " y escapar" + (carried != null ? " con " + carried.DisplayName : "");
     }
 
     public override void Interact(PlayerInteractor player)

@@ -158,6 +158,7 @@ public static partial class IslaZombieSetup
                         Box(t, "Cartel", B - d * 0.04f, new Vector3(1.0f, 0.34f, 0.04f), white, 2.12f, false);
                         var label = WorldLabel.Create(t, Vector3.zero, sign, 0.28f, new Color(0.1f, 0.15f, 0.35f));
                         label.transform.position = B - d * 0.15f + Vector3.up * 2.29f;
+                        WorldLabel.ReadFrom(label, -d);   // on the plaque, read from outside the cabin
                     }
                     Box(t, "Valla", B - d * 0.08f + Vector3.up * 0f, new Vector3(1.1f, 0.12f, 0.05f), paint, 0.42f, false);
                     Box(t, "Valla", B - d * 0.08f, new Vector3(1.1f, 0.12f, 0.05f), paint, 0.15f, false);

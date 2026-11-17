@@ -30,4 +30,5 @@ public class AnimalData : ScriptableObject
     [TextArea] public string abilityDescription;
     public float abilityCooldown = 40f;
     public float abilityDuration = 6f;
+    public float furyMoveSpeed = 1.25f;   // Furia Roja: move speed while it lasts (feedback 2026-11-17)
 }

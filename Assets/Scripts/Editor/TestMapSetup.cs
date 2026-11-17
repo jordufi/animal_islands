@@ -463,7 +463,7 @@ public static class TestMapSetup
         d.animals = new[]
         {
             Animal("RedPanda", "Panda Rojo", "Dispara primero, pregunta nunca.", new Color(0.9f, 0.4f, 0.2f), "Dedos ágiles", "recarga +15%", new[] { new StatMod(Stat.ReloadSpeed, 1.15f) },
-                AbilityType.RedFury, "Furia Roja", "7 s disparando un 50% más rápido y recargando el doble", 40, 7),
+                AbilityType.RedFury, "Furia Roja", "7 s disparando un 50% más rápido, recargando el doble y corriendo un 25% más", 40, 7),
             Animal("Panda", "Panda", "Abraza fuerte. Demasiado fuerte.", new Color(0.9f, 0.9f, 0.9f), "Lorza protectora", "+25% vida", new[] { new StatMod(Stat.MaxHealth, 1.25f) },
                 AbilityType.BearHug, "Abrazo de Oso", "onda que daña, empuja y aturde a los abuelos cercanos", 35, 0.5f),
             Animal("Frog", "Rana", "Salta primero, cae encima después.", new Color(0.3f, 0.85f, 0.3f), "Ancas de acero", "+10% velocidad", new[] { new StatMod(Stat.MoveSpeed, 1.1f) },
@@ -1283,7 +1283,7 @@ public static class TestMapSetup
     {
         var go = Child(parent, "Drink_" + drink.id, pos);
         var body = Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.9f, 0), new Vector3(0.9f, 1.8f, 0.7f), Mat("Drink_" + drink.id, drink.color, 0.3f), true);
-        body.layer = 0;
+        body.layer = NavAgents.PropLayer;   // a prop: old men climb onto it after a player who stands on it (ReachCheck)
         Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 2.0f, 0), new Vector3(0.35f, 0.2f, 0.35f), Mat("Glass", new Color(1, 1, 1, 0.6f)));
         var label = WorldLabel.Create(go.transform, new Vector3(0, 2.6f, 0), drink.displayName, 0.25f, drink.color);
         var m = go.AddComponent<DrinkMachine>();
@@ -1297,7 +1297,7 @@ public static class TestMapSetup
     {
         var go = Child(parent, "PackAPunch_Microondas", pos);
         var body = Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.6f, 0), new Vector3(1.4f, 1.2f, 0.9f), Mat("Microwave", new Color(0.85f, 0.85f, 0.85f)), true);
-        body.layer = 0;
+        body.layer = NavAgents.PropLayer;   // a prop: old men climb onto it after a player who stands on it (ReachCheck)
         Prim(PrimitiveType.Cube, go.transform, new Vector3(-0.15f, 0.65f, -0.46f), new Vector3(0.9f, 0.7f, 0.02f), Mat("MicrowaveGlass", new Color(1f, 0.6f, 0.1f), 1.2f));
         var label = WorldLabel.Create(go.transform, new Vector3(0, 2.0f, 0), "", 0.25f, new Color(1f, 0.7f, 0.3f));
         var pap = go.AddComponent<PackAPunch>();
@@ -1308,7 +1308,7 @@ public static class TestMapSetup
     {
         var go = Child(parent, "Karaoke", pos, 180f);
         var body = Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.7f, 0), new Vector3(0.8f, 1.4f, 0.6f), Mat("Karaoke", new Color(0.55f, 0.2f, 0.8f), 0.4f), true);
-        body.layer = 0;
+        body.layer = NavAgents.PropLayer;   // a prop: old men climb onto it after a player who stands on it (ReachCheck)
         Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0.6f, 0.75f, 0), new Vector3(0.05f, 0.75f, 0.05f), Mat("Pole", new Color(0.45f, 0.3f, 0.15f)));
         var label = WorldLabel.Create(go.transform, new Vector3(0, 2.0f, 0), "KARAOKE", 0.25f, new Color(0.85f, 0.6f, 1f));
         var reward = Child(go.transform, "RewardPoint", pos + go.transform.forward * 1.3f + Vector3.up * 0.6f);

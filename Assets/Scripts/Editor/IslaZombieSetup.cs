@@ -394,6 +394,7 @@ public static partial class IslaZombieSetup
         SetupLight();
         if (L.Multi) BuildFloors(root, data, L, report);   // real floors: IslaZombieSetup.Floors.cs
         else BuildOneFloor(root, data, L, report);
+        report.AddRange(ReachCheck.Run());   // feedback 1: no spot a player jumps to where no old man can hit him
         if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
 
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
@@ -889,6 +890,45 @@ public static partial class IslaZombieSetup
         return go;
     }
 
+    // Feedback 1: you could stand on the roof of the Imserso bus out of every old man's reach. A ramp of planks from the
+    // ground to the roof at a free end of the bus (two plain floor cells in line): the default NavMesh bakes it (layer
+    // Prop) and joins it to the roof, so the old men walk up after you; the night ones and the climbers hop anyway.
+    static void BusRamp(Transform parent, Layout L, RectInt r, GameObject bus)
+    {
+        if (bus == null || Mathf.Max(r.width, r.height) < 2) return;
+        bool alongX = r.width >= r.height;
+        var rs = bus.GetComponentsInChildren<Renderer>();
+        if (rs.Length == 0) return;
+        var bb = rs[0].bounds;
+        foreach (var x in rs) bb.Encapsulate(x.bounds);
+        foreach (int dir in new[] { 1, -1 })
+        {
+            var cells = new List<Vector2Int>();
+            for (int k = 1; k <= 2; k++)
+                cells.Add(alongX ? new Vector2Int(dir > 0 ? r.xMax - 1 + k : r.x - k, r.y + r.height / 2)
+                                 : new Vector2Int(r.x + r.width / 2, dir > 0 ? r.yMax - 1 + k : r.y - k));
+            if (!cells.All(c => L.Zone(L.At(c.x, c.y)) != null)) continue;   // plain floor only (no prop, marker or wall)
+            // world direction away from the bus (grid +x = world +x, grid +row = world -z)
+            Vector3 outDir = alongX ? new Vector3(dir, 0f, 0f) : new Vector3(0f, 0f, -dir);
+            float face = alongX ? (dir > 0 ? bb.max.x : bb.min.x) : (dir > 0 ? bb.min.z : bb.max.z);
+            Vector3 c0 = Flat(World(cells[0].x, cells[0].y));
+            Vector3 high = alongX ? new Vector3(face, 0f, c0.z) : new Vector3(c0.x, 0f, face);
+            high -= outDir * 0.1f;                                    // tucked under the roof edge
+            Vector3 low = Flat(World(cells[1].x, cells[1].y)) + outDir * (Cell / 2f - 0.1f);
+            float y0 = World(cells[0].x, cells[0].y).y, y1 = bb.max.y - 0.02f;
+            Vector3 side = new Vector3(outDir.z, 0f, -outDir.x);
+            var go = new GameObject("RampaBus");
+            go.transform.SetParent(parent, false);
+            var mesh = WedgeMesh(low, high, side * 0.7f, y0, y1);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var wood = Shared("M_Wood", new Color(0.55f, 0.4f, 0.25f));
+            go.AddComponent<MeshRenderer>().sharedMaterials = new[] { wood, wood };
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            go.layer = NavAgents.PropLayer;
+            return;
+        }
+    }
+
     // Collision for a big mesh as seen from above: 0.4 m columns from the ground up to the mesh, merged into
     // boxes. Nothing can pass under a wing (the NavMesh and the player agree) and what you see is what blocks.
     const float MinPropTop = 0.5f;
@@ -1014,7 +1054,8 @@ public static partial class IslaZombieSetup
         }
         foreach (var r in Rects(L, (c, row) => L.At(c, row) == 'W'))
         {
-            PartColliders(PlaceInRect(pr, IZ("IZ_Autobus"), RectCenter(r), r.width * Cell, r.height * Cell));
+            var bus = PartColliders(PlaceInRect(pr, IZ("IZ_Autobus"), RectCenter(r), r.width * Cell, r.height * Cell));
+            BusRamp(pr, L, r, bus);
         }
 
         // low cover (x): crashed plane on the beach, bleachers at the volley court, campfire, loungers

@@ -27,3 +27,4 @@ MonoBehaviour:
   abilityDescription: salto enorme que aturde al caer
   abilityCooldown: 30
   abilityDuration: 1.5
+  furyMoveSpeed: 1.25

@@ -44,6 +44,10 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
   se queda en el suelo.
 - **Reglas de diseño (todos los mapas, decididas):**
   - Los abuelos siempre pueden seguir la ruta del jugador. Las únicas excepciones son la góndola y el campanile.
+    Desde el feedback 1 (2026-11-17): **donde subes tú, sube el abuelo.** Si te subes a un prop (coche, cajas, bus,
+    caseta, puesto, máquina, tractor...), los abuelos cercanos trepan detrás de ti como los senderistas de noche. El
+    setup avisa de cualquier sitio al que llegue el jugador saltando y donde ningún abuelo le pueda pegar
+    (`ReachCheck`); hoy no queda ninguno en los cuatro mapas.
   - Nada de sitios seguros.
   - Que no se vea venir a los abuelos de lejos.
   - En cada mapa, una zona ancha y una estrecha.
@@ -88,6 +92,8 @@ Mercadillo · Muelle (jefe y salida).
   a los objetos y tiran chanclas. Al amanecer cae una Nevera de munición.
 - **Entradas de abuelos:** 69 en total: el WC, el autobús del Imserso, tiendas, la grieta de la roca, la escalerilla de
   la piscina desde el mar... Todas en verde, nunca confundibles con una puerta de pago.
+- **El bus del Imserso tiene una rampa de tablones** hasta el techo, en el hueco del final (feedback 1: "deberia haber
+  una rampita"). Es un mirador arriesgado: los abuelos suben por la rampa o trepan.
 - **Carteles "ESTÁS AQUÍ"** junto a cada puerta, y el mismo mapa en el menú de pausa.
 - **Premios repartidos:**
   - Bebidas en Camping, Parking, Faro y Lago.
@@ -315,6 +321,8 @@ golpes) → vaporetto.
   - Sus máquinas solo funcionan con luz.
 - **Tracas:** la primera trampa del juego. Se paga por encender una traca a lo largo de una calle, y sus bajas pagan
   como una baja normal.
+- El rincón al oeste de la rampa del atrio de la iglesia (casillas 24,10-11) es ahora parte de la casa: era un hueco
+  donde solo se metía un jugador saltando (feedback 1, 2026-11-17).
 - **Abuelos nuevos:**
   - **El del bombo:** lento él, pero los que tiene cerca andan ×1,3. Es objetivo prioritario.
   - **La de los petardos:** donde cae lo que tira, deja una mancha que quema.

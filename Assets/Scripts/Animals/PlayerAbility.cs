@@ -53,7 +53,7 @@ public class PlayerAbility : MonoBehaviour
         switch (animal.ability)
         {
             case AbilityType.RedFury:
-                StartCoroutine(TimedMods(new[] { new StatMod(Stat.FireRate, 1.5f), new StatMod(Stat.ReloadSpeed, 2f) }, animal.abilityDuration));
+                StartCoroutine(TimedMods(new[] { new StatMod(Stat.FireRate, 1.5f), new StatMod(Stat.ReloadSpeed, 2f), new StatMod(Stat.MoveSpeed, animal.furyMoveSpeed) }, animal.abilityDuration));
                 break;
             case AbilityType.Armor:
                 StartCoroutine(TimedMods(new[] { new StatMod(Stat.DamageTaken, 0.3f), new StatMod(Stat.MoveSpeed, 0.9f) }, animal.abilityDuration));

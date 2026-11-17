@@ -32,7 +32,7 @@ public class ZoneDoor : Interactable
     void Update()
     {
         if (worldLabel != null)
-            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + (Locked ? (Pueblo ? "CERRADO: falta el tractor" : "CERRADO: falta el barco") : Free ? "ABRIR" : Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : ""));
+            worldLabel.text = doorName + "\n→ " + Destination() + "\n" + (Locked ? "CERRADO: falta el " + BoatMission.Vehicle : Free ? "ABRIR" : Cost + " conchas" + (acceptsMasterKey ? "\no la LLAVE MAESTRA" : ""));
     }
 
     public override bool CanInteract(PlayerInteractor player) => !Locked;
