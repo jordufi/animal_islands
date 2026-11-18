@@ -224,7 +224,7 @@ public static class Feedback4PlayTest
         yield return Real(0.8f);
         int n = mm.MapCount;
         Check(n >= 2, $"{n} maps in the carousel");
-        Check(Object.FindObjectsByType<UnityEngine.UI.Button>().Count(b => b.name.StartsWith("Map_")) == n, "every map keeps its Map_<id> button");
+        Check(Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Include).Count(b => b.name.StartsWith("Map_")) == n, "every map keeps its Map_<id> button (far cards of the carousel are hidden)");
         int start = mm.MapIndex;
         var mid = mm.MapCard(start);
         Check(mid != null && Mathf.Abs(mid.anchoredPosition.x) < 1f && mid.localScale.x > 0.99f, $"map {start} big in the middle");
@@ -251,7 +251,7 @@ public static class Feedback4PlayTest
     }
 
     // ------------------------------------------------------------------ pictures
-    static void Shot(string path, Vector3 at)
+    internal static void Shot(string path, Vector3 at)
     {
         var go = new GameObject("ShotCam");
         var cam = go.AddComponent<Camera>();
@@ -261,7 +261,7 @@ public static class Feedback4PlayTest
         Object.Destroy(go);
     }
 
-    static void ShotHud(string path) => Render(GameManager.Instance.CameraRig.GetComponent<Camera>(), path, true);
+    internal static void ShotHud(string path) => Render(GameManager.Instance.CameraRig.GetComponent<Camera>(), path, true);
 
     static void ShotMenu(string path)
     {
@@ -269,7 +269,7 @@ public static class Feedback4PlayTest
         Render(cam, path, true);
     }
 
-    static void Render(Camera cam, string path, bool ui)
+    internal static void Render(Camera cam, string path, bool ui)
     {
         const int w = 1600, h = 900;
         var canvases = ui ? Object.FindObjectsByType<Canvas>().Where(c => c.renderMode == RenderMode.ScreenSpaceOverlay).ToList() : new List<Canvas>();

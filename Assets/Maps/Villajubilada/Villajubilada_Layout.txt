@@ -5,7 +5,7 @@
 #   o  tall prop (columns, stalls, attractions, straw bales)   x  low cover (tables): always jumpable, never in a 1-cell lane
 #   V  the cattle lorry (the encierro starts here)   Q  the Porton del encierro   %  traca post (buyable trap)
 #   1-9 barricades of the penas = paid doors
-#   markers as in Isla del Faro: @ s B D P K J b X L G U M   E fuse box of its zone (lights + machines of that zone)
+#   markers as in Isla del Faro: @ s B D P K J b X L G U M I   E fuse box of its zone (lights + machines of that zone)
 #   S firecracker stall (sells the lighter if you left without it)   & where the lighter may lie (the second zone you open)
 #   F the town hall balcony (light the chupinazo)   O the golden cabezudo (the host picks one)
 # route = the encierro, in cell corners; ring = index of the corner where the ring starts
@@ -112,7 +112,7 @@ l | Eras | Las Eras | 7 | B49A5A
 ..####s####%####u########eeeeoeees##seeeO#ffSfffffffffff#.
 ..##Luu####u####u#######Deexeexeee##eeees#fffffffffoofff#.
 ..##uOu####uuuD#u##usu5seeeeeeeeeeeeees###fffoooofffffff#.
-..##suu####u####u##uuu5eeeeeeeseeeseeee###sffooooffffffE#.
+..##sIu####u####u##uuu5eeeeeeeseeeseeee###sffooooffffffE#.
 ..####u####u####u##uu#######77#######e%e##fffoooofffffff#.
 ..####uuuuuuusuuuuuuu#######pp#######ee###fffoooosoofxxf#.
 ..####u####u####u##su##sppFppppsppP##es###foffffffffffff#.

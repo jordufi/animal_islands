@@ -43,3 +43,6 @@ MonoBehaviour:
   throwCloudRadius: 0
   throwCloudSeconds: 3
   throwCloudDps: 15
+  hurtShare: 0.25
+  glassesSpeedFactor: 0.6
+  caneSpeedFactor: 1.4

@@ -654,6 +654,7 @@ public partial class MainMenu : MonoBehaviour
         screen = Screen.Loading;
         GameSettings.Map = list[index].id;
         GameSettings.Save();
+        Tutorial.Requested = list[index].tutorial;   // solo only: GameManager adds it
         StartCoroutine(LoadGame(list[index].sceneName, list[index].displayName));
     }
 

@@ -24,11 +24,14 @@ public class MysteryBox : Interactable
 
     State state = State.Ready;
     WeaponData offered;
+    int offeredStars = 1;   // 1-3 (EconomyData.boxStarOdds)
     Transform currentSpot;
 
     public int Cost => Mathf.RoundToInt(baseCost * RunModifiers.Get(Stat.BoxCost) / 10f) * 10;
     public string StateName => state.ToString();          // tests
     public WeaponData Offered => offered;                  // tests
+    public int OfferedStars => offeredStars;               // tests
+    string OfferName => offered == null ? "" : offered.displayName + PlayerShooter.StarText(offeredStars);
     public bool IsAvailable => state == State.Ready;
     public bool WaitingForFirstZone => waitingFirst;
     public Transform CurrentSpot => currentSpot;
@@ -96,6 +99,22 @@ public class MysteryBox : Interactable
         Sync();
     }
 
+    // The tutorial: the box shows up now at a box spot of this (open) zone.
+    public void AppearIn(Zone zone)
+    {
+        var spots = zone != null ? zone.BoxSpots.ToList() : new List<Transform>();
+        if (spots.Count == 0 || !Net.Authority) return;
+        StopAllCoroutines();
+        waitingFirst = false;
+        offered = null;
+        currentSpot = spots[Random.Range(0, spots.Count)];
+        transform.SetPositionAndRotation(currentSpot.position, currentSpot.rotation);
+        state = State.Ready;
+        SetRollText("");
+        SetVisible(true);
+        Sync();
+    }
+
     void MoveToRandomSpot()
     {
         var spots = ZoneManager.Instance.OpenBoxSpots().ToList();
@@ -120,7 +139,7 @@ public class MysteryBox : Interactable
         switch (state)
         {
             case State.Ready: return (Tombola ? "□  La Tómbola: arma aleatoria (" : "□  Máquina de Granizados: arma aleatoria (") + CostText(Cost) + ")";
-            case State.Offering: return "□  Coger " + offered.displayName;
+            case State.Offering: return "□  Coger " + OfferName;
             default: return "";
         }
     }
@@ -137,8 +156,8 @@ public class MysteryBox : Interactable
         }
         else if (state == State.Offering)
         {
-            player.Shooter.GiveWeapon(offered);
-            Game.ShowMessage("¡" + offered.displayName + "!");
+            player.Shooter.GiveWeapon(offered, offeredStars);
+            Game.ShowMessage("¡" + OfferName + "!");
             StopAllCoroutines();
             StartCoroutine(Vanish(0.2f));
         }
@@ -168,12 +187,13 @@ public class MysteryBox : Interactable
         }
 
         offered = PickWeighted(candidates);
+        offeredStars = PlayerShooter.Eco.RollBoxStars(Random.value);
         state = State.Offering;
         offerEnd = Time.time + offerTime;
         Sync();
         for (float t = offerTime; t > 0f; t -= Time.deltaTime)
         {
-            SetRollText(offered.displayName + "\n" + Mathf.CeilToInt(t));
+            SetRollText(OfferName + "\n" + Mathf.CeilToInt(t));
             yield return null;
         }
         Game.ShowMessage("La máquina se ha quedado tu arma. Haber estado atento.");
@@ -214,7 +234,7 @@ public class MysteryBox : Interactable
     {
         var net = NetGame.Instance;
         b.Byte((byte)state).Short(net != null ? net.BoxSpotIndex(currentSpot) : -1).Bool(visual == null || visual.activeSelf)
-         .Str(offered != null ? offered.name : "").Float(Mathf.Max(0f, offerEnd - Time.time)).Str(text);
+         .Str(offered != null ? offered.name : "").Byte((byte)offeredStars).Float(Mathf.Max(0f, offerEnd - Time.time)).Str(text);
     }
 
     // Online client: what the host's box is doing.
@@ -224,6 +244,7 @@ public class MysteryBox : Interactable
         int spot = r.Short();
         bool visible = r.Bool();
         var weapon = NetGame.FindAsset<WeaponData>(r.Str());
+        int stars = r.Byte();
         float left = r.Float();
         string text = r.Str();
         var t = NetGame.Instance != null ? NetGame.Instance.BoxSpot(spot) : null;
@@ -231,6 +252,7 @@ public class MysteryBox : Interactable
         StopAllCoroutines();
         state = s;
         offered = weapon;
+        offeredStars = stars;
         SetVisible(visible);
         if (text.Length > 0) SetRollText(text);
         else if (s == State.Rolling) StartCoroutine(NetRolling());
@@ -252,7 +274,7 @@ public class MysteryBox : Interactable
     {
         for (float t = left; t > 0f; t -= Time.deltaTime)
         {
-            SetRollText(offered.displayName + "\n" + Mathf.CeilToInt(t));
+            SetRollText(OfferName + "\n" + Mathf.CeilToInt(t));
             yield return null;
         }
     }

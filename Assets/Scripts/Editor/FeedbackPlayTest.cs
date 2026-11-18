@@ -164,8 +164,11 @@ public static class FeedbackPlayTest
         slot.magazine = 0;
         shooter.Reload();
         float r0 = Time.time;
-        yield return Wait(2.1f);   // 0.5 start + 0.75 per shell -> 2 shells
-        Check(shells == 2 && slot.magazine == 2 && shooter.IsReloading, $"reload goes shell by shell: {shells} shells after {Time.time - r0:F1} s (mag {slot.magazine}/5), still reloading");
+        // timings from the data: a wall weapon is 0 stars (slower reload, PlayerShooter.ReloadFactor)
+        float rf = PlayerShooter.ReloadFactor(slot), w0 = slot.data.reloadStartTime / rf, w1 = slot.data.shellLoadTime / rf;
+        int size = shooter.MagazineSize(slot);
+        yield return Wait(w0 + w1 * 2.5f);   // start + 2.5 shells -> 2 shells in
+        Check(shells == 2 && slot.magazine == 2 && shooter.IsReloading, $"reload goes shell by shell: {shells} shells after {Time.time - r0:F1} s (mag {slot.magazine}/{size}), still reloading");
         // a shot stops the reload
         Pad(Vector2.zero, GamepadButton.RightTrigger);
         yield return Wait(0.15f);
@@ -173,8 +176,8 @@ public static class FeedbackPlayTest
         yield return Wait(0.2f);
         Check(!shooter.IsReloading && slot.magazine == 1, $"R2 during the reload fires and stops it (mag {slot.magazine}, reloading {shooter.IsReloading})");
         shooter.Reload();
-        yield return Wait(0.5f + 0.75f * 4 + 0.3f);
-        Check(slot.magazine == 5, $"full reload: mag {slot.magazine}/5, reserve {slot.reserve}");
+        yield return Wait(w0 + w1 * (size - 1) + 0.3f);
+        Check(slot.magazine == size, $"full reload: mag {slot.magazine}/{size}, reserve {slot.reserve}");
         string ammoPrompt = wall.Prompt(interactor);
         before = gm.Points;
         wall.Interact(interactor);

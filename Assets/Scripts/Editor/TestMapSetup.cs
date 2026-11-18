@@ -487,12 +487,16 @@ public static class TestMapSetup
                 m.description = "Canales, puentes de pago y un cementerio monumental en medio. Cuidado con el acqua alta."; }),
             Asset<MapData>(DataRoot + "/Maps/Villajubilada.asset", m => { m.id = "villajubilada"; m.displayName = "Fiestas de Villajubilada"; m.sceneName = "Villajubilada";
                 m.description = "Un pueblo en fiestas. En la ronda 5 sueltan los toros: corre calle arriba, que ya no hay vuelta atrás."; }),
+            // feedback 1, phase 7: the guided tutorial on Isla del Faro (UI/Tutorial.cs), solo only
+            Asset<MapData>(DataRoot + "/Maps/IslaDelFaroTutorial.asset", m => { m.id = "isla-del-faro-tutorial"; m.displayName = "Isla del Faro (tutorial)"; m.sceneName = "IslaZombie";
+                m.description = "Cinco minutos guiados para aprender lo básico: disparar, ukelele, dentadura, puertas, cartas, bebidas y la caja."; m.tutorial = true; }),
         };
         d.maps[0].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         d.maps[1].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(OriginalPreviewPath);
         d.maps[2].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/IslaFaroAlturas/IslaFaroAlturas_Map.png");
         d.maps[3].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/Venecia/Venecia_Map.png");
         d.maps[4].preview = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Maps/Villajubilada/Villajubilada_Map.png");
+        d.maps[5].preview = AssetDatabase.LoadAssetAtPath<Texture2D>(IslaDelFaroPreviewPath);
         foreach (var m in d.maps) EditorUtility.SetDirty(m);
         AssetDatabase.SaveAssets();
         return d;
@@ -909,6 +913,7 @@ public static class TestMapSetup
         var drinkSpots = new[] { new Vector2(16.5f, -12.5f), new Vector2(18.5f, 2.5f), new Vector2(-8, 11), new Vector2(-23, -12) };
         for (int i = 0; i < data.drinks.Length; i++) BuildDrinkMachine(shop, data.drinks[i], Ground(drinkSpots[i]));
         BuildPackAPunch(shop, Ground(new Vector2(-6, -8)));
+        BuildLijadora(shop, ClearSpot(new Vector2(11, 3)));   // +1 star, away from the Microondas
 
         // boat mission: light in the Jungla (the far end), petrol on the Playa, radio in the Cementerio, call from the
         // Campamento (next to the dock door)
@@ -1302,6 +1307,23 @@ public static class TestMapSetup
         var label = WorldLabel.Create(go.transform, new Vector3(0, 2.0f, 0), "", 0.25f, new Color(1f, 0.7f, 0.3f));
         var pap = go.AddComponent<PackAPunch>();
         Set(pap, "worldLabel", label);
+    }
+
+    // La Lijadora del Taller (+1 star): a workbench with a belt sander on it
+    internal static void BuildLijadora(Transform parent, Vector3 pos)
+    {
+        var go = Child(parent, "Lijadora_Taller", pos);
+        var wood = Mat("WorkbenchWood", new Color(0.55f, 0.38f, 0.22f));
+        var body = Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.45f, 0), new Vector3(1.4f, 0.9f, 0.8f), wood, true);
+        body.layer = NavAgents.PropLayer;   // a prop: old men climb onto it after a player who stands on it (ReachCheck)
+        Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.93f, 0), new Vector3(1.5f, 0.06f, 0.9f), Mat("WorkbenchTop", new Color(0.7f, 0.52f, 0.3f)));
+        var sander = Mat("Sander", new Color(0.95f, 0.55f, 0.1f), 0.3f);
+        Prim(PrimitiveType.Cube, go.transform, new Vector3(0.1f, 1.08f, 0), new Vector3(0.55f, 0.22f, 0.3f), sander);
+        Prim(PrimitiveType.Cube, go.transform, new Vector3(0.1f, 0.97f, 0), new Vector3(0.6f, 0.04f, 0.32f), Mat("SandBelt", new Color(0.35f, 0.28f, 0.2f)));
+        Prim(PrimitiveType.Cylinder, go.transform, new Vector3(-0.3f, 1.25f, 0), new Vector3(0.08f, 0.15f, 0.08f), Mat("SanderGrip", new Color(0.15f, 0.15f, 0.15f)));
+        var label = WorldLabel.Create(go.transform, new Vector3(0, 2.0f, 0), "", 0.25f, new Color(1f, 0.8f, 0.35f));
+        var l = go.AddComponent<Lijadora>();
+        Set(l, "worldLabel", label);
     }
 
     internal static void BuildKaraoke(Transform parent, Vector3 pos, Carryable discPrefab)

@@ -19,14 +19,14 @@ MonoBehaviour:
   damage: 40
   headshotMultiplier: 1.5
   pellets: 8
-  penetration: 1
+  penetration: 2
   range: 25
   falloffStart: 6
   minDamageFactor: 0.3
   fireInterval: 0.85
   automatic: 0
-  hipSpread: 6
-  aimSpread: 4
+  hipSpread: 5
+  aimSpread: 3
   aimFieldOfView: 50
   magazineSize: 6
   maxReserve: 48

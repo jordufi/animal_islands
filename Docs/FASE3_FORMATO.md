@@ -65,6 +65,9 @@ Reglas de las rampas:
 
 ### Cambios en `[zones]`
 - Bandera opcional **`circuito`**: el setup exige que la zona tenga un circuito (sección 5).
+- Bandera opcional **`ancha`** (feedback 1, 2026-11-18): la única zona ancha del mapa (la Piazza de Venecia). El setup
+  avisa de las líneas de tiro rectas de 40 m o más (`IslaZombieSetup.SightLines.cs`); las que quedan dentro de una zona
+  `ancha` no cuentan.
 
 ## 3. Qué genera el setup
 

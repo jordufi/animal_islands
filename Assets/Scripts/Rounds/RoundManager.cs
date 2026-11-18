@@ -53,6 +53,10 @@ public class RoundManager : MonoBehaviour
     public bool NextRoundNight => Net.IsClient ? netNextNight : IsNightRound(Round + 1);
     public GameObject EnemyPrefab => enemyPrefab;
     // Online: the host waits until everyone has loaded the map before the first countdown.
+    public static bool Hold;   // the tutorial: round 1 waits until it is done (UI/Tutorial.cs)
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetHold() => Hold = false;
+
     public bool WaitingForPlayers => Net.IsHost && (NetGame.Instance == null || !NetGame.Instance.Ready) || Net.IsClient && (NetGame.Instance == null || !NetGame.Instance.Ready);
     int netRemaining;
     bool netNextNight;
@@ -125,7 +129,7 @@ public class RoundManager : MonoBehaviour
 
         if (intermission)
         {
-            if (WaitingForPlayers) { intermissionEnd = Time.time + firstRoundDelay; return; }
+            if (WaitingForPlayers || Hold) { intermissionEnd = Time.time + firstRoundDelay; return; }
             if (!SpawningPaused && Time.time >= intermissionEnd) StartRound(Round + 1);
             return;
         }

@@ -9,4 +9,6 @@ public class MapData : ScriptableObject
     public string sceneName = "";
     [TextArea] public string description = "";
     public Texture2D preview;
+    [Tooltip("The guided tutorial (UI/Tutorial.cs) on this scene; solo only.")]
+    public bool tutorial;
 }

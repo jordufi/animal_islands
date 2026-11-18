@@ -188,6 +188,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d94767a0f1fd8084c9bdea3063a10224, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldLabel
+  readFrom: {x: 0, y: 0, z: 0}
 --- !u!1 &7813041787044147225
 GameObject:
   m_ObjectHideFlags: 0

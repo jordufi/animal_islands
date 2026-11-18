@@ -307,9 +307,10 @@ public static class VeneciaPlayTest
                 Check(rescuedWater == 1, "wading is not falling into the canal (no rescue)");
                 Shot("acqua_alta", Cell(11f, 42f, 3.5f), Cell(17f, 38f, 0.5f));
                 Check(tide.SwimActive && NavAgents.SwimOpen, "acqua alta: the canals can be swum (floor on, old men get the Canal area)");
-                // into the canal between Ferrovia and the (closed) Carnevale
+                // into the canal between Ferrovia and the Mercato (feedback 1: the Ferrovia side is facades now, the
+                // Mercato quay is open)
                 rescuedWater = 0;
-                Teleport(player, Cell(29f, 34f, 0.3f));
+                Teleport(player, Cell(8f, 32f, 0.3f));
                 step = 100; stepTime = Time.time; realTime = Time.realtimeSinceStartup;
                 break;
             }
@@ -321,9 +322,9 @@ public static class VeneciaPlayTest
                 Check(rescuedWater == 0 && rescue.InWater(player.transform.position) && player.transform.position.y > tide.SwimY - 0.3f,
                     $"swimming in the canal: no rescue, y {player.transform.position.y:F2}, speed x{pc.ExternalSpeedFactor:F2}");
                 Check(pc.ExternalSpeedFactor <= 0.55f, $"slower in the canal than wading (x{pc.ExternalSpeedFactor:F2})");
-                Shot("nadando", Cell(24f, 36f, 2.6f), Cell(29.5f, 33.5f, 0f));
-                swimmer = rm.SpawnEnemy(null, Cell(24f, 34f, 0f));
-                if (swimmer != null) { var ag = swimmer.GetComponent<NavMeshAgent>(); if (ag != null && ag.isOnNavMesh) ag.Warp(Cell(24f, 34f, 0f)); }
+                Shot("nadando", Cell(8f, 29f, 2.6f), Cell(8f, 32f, 0f));
+                swimmer = rm.SpawnEnemy(null, Cell(4f, 30f, 0f));
+                if (swimmer != null) { var ag = swimmer.GetComponent<NavMeshAgent>(); if (ag != null && ag.isOnNavMesh) ag.Warp(Cell(4f, 30f, 0f)); }
                 swimStartDist = swimmer != null ? Vector3.Distance(swimmer.transform.position, player.transform.position) : 0f;
                 Next();
                 break;
@@ -331,7 +332,7 @@ public static class VeneciaPlayTest
 
             case 101:
             {
-                if (swimmer == null) { Write("FAIL could not spawn an old man on the Ferrovia quay"); step = 103; break; }
+                if (swimmer == null) { Write("FAIL could not spawn an old man on the Mercato quay"); step = 103; break; }
                 var ag = swimmer.GetComponent<NavMeshAgent>();
                 float d = Vector3.Distance(swimmer.transform.position, player.transform.position);
                 if (d > 2.2f && rt < 14f) return;
@@ -340,16 +341,16 @@ public static class VeneciaPlayTest
                 break;
             }
 
-            case 102:   // swim out onto the Ferrovia quay without jumping
+            case 102:   // swim out onto the Mercato quay without jumping
             {
                 if (swimmer != null) { swimmer.GetComponent<EnemyHealth>().TakeDamage(999999f, false, true); swimmer = null; }
-                Teleport(player, Cell(29f, 34f, 0.3f));
+                Teleport(player, Cell(8f, 32f, 0.3f));
                 var cc = player.GetComponent<CharacterController>();
-                for (int i = 0; i < 60; i++) cc.Move(Vector3.left * 0.15f + Vector3.down * 0.2f);
+                for (int i = 0; i < 60; i++) cc.Move(Vector3.forward * 0.15f + Vector3.down * 0.2f);
                 Check(!rescue.InWater(player.transform.position) && player.transform.position.y > -0.05f && rescuedWater == 0,
                     $"walked out of the canal onto the quay (y {player.transform.position.y:F2}, cell {(rescue.ZoneAt(player.transform.position) != null ? rescue.ZoneAt(player.transform.position).displayName : "?")})");
                 // and towards the closed Carnevale: the fence keeps him in the water
-                Teleport(player, Cell(31f, 34f, 0.3f));
+                Teleport(player, Cell(31f, 43f, 0.3f));   // the Carnevale's open quay is the gondola stop (33, 43-44)
                 for (int i = 0; i < 60; i++) cc.Move(Vector3.right * 0.15f + Vector3.down * 0.2f);
                 Check(rescue.InWater(player.transform.position) && rescuedZone == 0, $"the Carnevale fence keeps him out of the closed barrio (x {player.transform.position.x:F1})");
                 Next();
@@ -430,6 +431,17 @@ public static class VeneciaPlayTest
                 Check(hullClips <= hullSamples / 20, $"gondola hull touched something in {hullClips}/{hullSamples} frames of the ride");
                 Check(Vector3.Distance(player.transform.position, before) < 2.5f && hp0 - gm.Points > 0,
                     $"gondola: paid {hp0 - gm.Points}, {rt:F1} s ride, landed {Vector3.Distance(player.transform.position, before):F1} m from the other stop ({rescue.ZoneAt(player.transform.position).displayName})");
+                {
+                    // feedback 1: one ride per round per player; only some stops have their gondola this round
+                    var inter = player.GetComponent<PlayerInteractor>();
+                    var all = Object.FindObjectsByType<GondolaStop>();
+                    var again = all.FirstOrDefault(s => s.CanRide);
+                    Check(again != null && !again.CanInteract(inter) && again.Prompt(inter).Contains("esta ronda"), $"a second ride in the same round is refused ('{(again != null ? again.Prompt(inter) : "no stop")}')");
+                    // (the two stops of the ride are left out: the destination hides its boat on its next Update)
+                    var others = all.Where(s => s != stop && Vector3.Distance(s.Landing, before) > 1f).ToList();
+                    int boats = all.Count(s => s.HasBoat), withBoat = others.Count(s => s.Boat != null && s.Boat.gameObject.activeSelf == s.HasBoat);
+                    Check(boats >= 1 && withBoat == others.Count, $"round {RoundManager.Instance.Round}: {boats} of {all.Length} stops have a gondola, {withBoat}/{others.Count} other stops show it right ({string.Join(" ", all.OrderBy(s => s.name).Select(s => s.name.Replace("Gondola_", "") + (s.HasBoat ? "+" : "-") + (s.Boat != null && s.Boat.gameObject.activeSelf ? "v" : "_")))})");
+                }
                 Next();
                 break;
 

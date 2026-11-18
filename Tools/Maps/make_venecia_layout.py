@@ -154,6 +154,63 @@ marks('o', (62, 25), (65, 22))
 marks('b', (63, 23)); marks('X', (67, 24))
 marks('s', (61, 22), (64, 25), (66, 22))
 
+# ---------------------------------------------------------------- feedback 1 (2026-11-18): no long straight lines
+# The friends: "too open, from the Carnevale you aim all the way to the Ferrovia". Venice has houses straight on the
+# water: the barrio edges that faced a canal are facades now (a quay only at the bridges and gondola stops), long
+# streets get a jog every ~20 m, the Ferrovia gets more buildings, and the drinks are only in the two narrow barrios
+# (Cannaregio, Mercato). The Piazza stays the one wide place. Check: python Tools/Maps/make_venecia_layout.py prints
+# the longest sight lines (setup report: IslaZombieSetup.SightLines).
+def unmark(ch, *cells):
+    for c, r in cells:
+        if M[r][c] in 'sD': M[r][c] = ch
+
+# Ferrovia: facades on the north quay (bridge 1 head at col 9 stays) and on the east bank, a kiosk, two more blocks
+fill(3, 33, 8, 33, '#'); fill(10, 33, 26, 33, '#'); fill(26, 34, 26, 36, '#')
+fill(17, 34, 18, 34, '#')                    # back street behind the facades: a jog
+fill(11, 37, 12, 37, '#'); put(17, 37, '#')
+fill(20, 38, 21, 40, '#')                    # the road to the big bridge turns round a block
+put(9, 38, 'o')                              # newspaper kiosk
+fill(26, 41, 26, 43, '#')
+marks('s', (19, 34), (25, 36), (22, 37), (25, 42))
+# Carnevale: facades on the north quay (bridge 6 head at col 46 stays), jogs
+fill(33, 33, 45, 33, '#'); fill(47, 33, 57, 33, '#')
+fill(42, 34, 43, 34, '#'); put(44, 36, '#'); put(46, 35, '#')
+marks('o', (49, 42))
+fill(33, 34, 33, 37, '#'); fill(33, 40, 33, 42, '#')   # the west bank: facades, the big bridge and the gondola stop stay open
+marks('s', (40, 34), (55, 34), (34, 35), (34, 42))
+# Mercato: facades on the north and east quays (bridge 2 head col 13, bridge 4 head row 23, gondola stop (20, 29))
+fill(3, 17, 12, 17, '#'); fill(14, 17, 20, 17, '#')
+fill(8, 18, 8, 19, '#')                      # its pocket only touched the side of the loggia ramp now
+fill(20, 18, 20, 22, '#'); fill(20, 24, 20, 28, '#'); put(20, 30, '#')
+fill(12, 30, 13, 30, '#')                    # the south quay turns
+marks('o', (11, 20), (16, 27))
+marks('s', (19, 20), (19, 27))
+unmark('r', (13, 27))
+# Cannaregio: the fondamenta alta and the two long streets get a block each; facades on the east bank and towards
+# the cemetery
+fill(14, 3, 15, 3, '#')
+put(10, 6, '#'); put(19, 6, '#')
+put(9, 14, '#'); fill(17, 14, 18, 14, '#'); fill(22, 14, 26, 14, '#')
+fill(26, 3, 26, 4, '#'); fill(26, 9, 26, 12, '#')
+marks('s', (25, 10))
+marks('D', (9, 6))                           # the drinks live in the narrow barrios (dead ends): two here, two in the Mercato
+# Arsenale: a tower on the rampart, the yard and the south quay are broken up
+put(46, 3, '#'); fill(44, 6, 44, 7, '#'); marks('o', (48, 8))
+fill(41, 14, 42, 14, '#'); marks('o', (52, 14))
+fill(34, 14, 40, 14, '#'); put(33, 14, '#'); fill(33, 3, 33, 4, '#')   # facades towards the cemetery and the Cannaregio bank
+marks('o', (39, 10))                         # crates across the darsena line
+marks('I', (51, 12))                         # La Lijadora del Taller (+1 star, user feedback 1), far from the Microondas
+# Piazza: still the wide one (36 x 26 m), but its north and west edges are palace fronts, not open quays
+fill(39, 17, 57, 17, '#'); put(48, 17, 'e')  # bridge 8 lands at (48, 17)
+fill(39, 18, 39, 22, '#'); fill(39, 25, 39, 30, '#')   # door 5 lands at (38/39, 23), gondola stop (39, 24)
+marks('s', (43, 18), (53, 18), (40, 20), (40, 28))
+unmark('e', (44, 20))
+# Carnevale's drink goes too
+unmark('n', (53, 42))
+marks('D', (19, 18), (3, 30))                # Mercato: two dead ends
+# the new dead ends must not be safe spots: old men come out of the walls there too
+marks('s', (13, 3), (16, 3), (45, 3), (47, 3), (55, 36), (55, 42), (4, 41), (5, 30))
+
 # ---------------------------------------------------------------- vaporetto task list (BoatMission.HasTasks)
 # S = the stall that sells the shovel (Mercato), F = Giuseppe's grave (Cimitero terrace), O = the golden gondolier
 # (dead end of the Carnevale). The bell is on top of the campanile (Piazza); discs J, karaoke K and key L as usual.
@@ -190,7 +247,7 @@ HEADER = """# La Serenisima - third map: Venice + the Monumental cemetery (Tools
 #   o  tall prop (well, stalls, tombs, gondolas on trestles, columns)   x  low cover (tables, low tombs)
 #   h  mausoleum (old men come out)   A  cypress
 #   1-9 bridges = paid doors; level-0 floor floods in the acqua alta rounds
-#   markers as in Isla del Faro: @ s B D P K J b X L G U M  N gondola stop  S shovel stall  F Giuseppe's grave  O golden gondolier (the bell is on the campanile)
+#   markers as in Isla del Faro: @ s B D P K J b X L G U M I  N gondola stop  S shovel stall  F Giuseppe's grave  O golden gondolier (the bell is on the campanile)
 
 [zones]
 a | Ferrovia   | Ferrovia            | 0 | B9AFA0 | start
@@ -198,7 +255,7 @@ r | Mercato    | Mercato di Rialto   | 1 | C9A98A | firstbox
 g | Cannaregio | Cannaregio          | 2 | A89F94
 n | Carnevale  | Campo del Carnevale | 3 | C4A0A0 | firstbox
 i | Cimitero   | Cimitero Monumentale| 4 | 9AA08C
-e | Piazza     | Piazza del Dux      | 5 | D2C8B4
+e | Piazza     | Piazza del Dux      | 5 | D2C8B4 | ancha
 u | Arsenale   | Arsenale            | 6 | A7998A
 d | Vaporetto  | Vaporetto           | 7 | 8C6642
 

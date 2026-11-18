@@ -122,6 +122,28 @@ public static class QuickChecks
             $"el del bombo is slow himself and speeds the others up a little (x{bombo.auraSpeedFactor} within {bombo.auraRadius} m)");
         if (petardos != null) Check(petardos.throwsChanclas && petardos.throwCloudRadius > 0f && petardos.throwCloudDps * petardos.throwCloudSeconds < 60f,
             $"la de los petardos: her patch denies a spot, it doesn't kill ({petardos.throwCloudDps * petardos.throwCloudSeconds:F0} damage if you stand in it)");
+
+        // ---- weapon stars (user feedback 1, phase 5): the .asset numbers are 1 star
+        bool climbs = true;
+        for (int s = 1; s <= EconomyData.MaxStars; s++)
+            climbs &= eco.StarDamage(s) > eco.StarDamage(s - 1) && eco.StarFireRate(s) > eco.StarFireRate(s - 1) && eco.StarReload(s) > eco.StarReload(s - 1) && eco.StarPierceKeep(s) > eco.StarPierceKeep(s - 1);
+        Check(climbs && Mathf.Approximately(eco.StarDamage(1), 1f), "every star raises damage, fire rate, reload speed and what a bullet keeps through an old man (1 star = the weapon's own numbers)");
+        Check(eco.StarPierceKeep(EconomyData.MaxStars) < 1f, $"going through an old man never adds damage (3 stars keep {eco.StarPierceKeep(3):P0} per old man)");
+        var allGuns = new[] { pistol, shotgun, sniper, smg, Load<WeaponData>("Weapons/LentosPeta.asset") }.Where(w => w != null).ToList();
+        Check(allGuns.All(w => w.upgradeDamageMultiplier > eco.StarDamage(3)) && eco.microwaveFireRate > eco.StarFireRate(3) && eco.microwaveReload > eco.StarReload(3) && eco.microwavePierceKeep >= eco.StarPierceKeep(3),
+            "the Microondas beats 3 stars in everything (damage, fire rate, reload, going through)");
+        float odds = eco.boxStarOdds.Sum();
+        Check(eco.boxStarOdds.Length == 3 && Mathf.Abs(odds - 1f) < 0.001f && eco.boxStarOdds[0] > eco.boxStarOdds[1] && eco.boxStarOdds[1] > eco.boxStarOdds[2],
+            $"box stars: 1 is the most likely, 3 the rarest ({string.Join(" / ", eco.boxStarOdds.Select(o => (o * 100f).ToString("0") + " %"))})");
+        Check(eco.lijadoraCost > 0 && eco.lijadoraCost < eco.packAPunchCost, $"La Lijadora (+1 star) {eco.lijadoraCost} costs less than the Microondas {eco.packAPunchCost}");
+        var lentos = Load<WeaponData>("Weapons/LentosPeta.asset");
+        if (lentos != null)
+        {
+            float lentosReload = lentos.reloadStartTime + lentos.shellLoadTime * lentos.magazineSize;
+            Check(lentos.damage > shotgun.damage && lentos.hipSpread > shotgun.hipSpread && lentos.magazineSize < shotgun.magazineSize
+                  && lentos.maxReserve < shotgun.maxReserve && lentosReload > shotgun.reloadTime,
+                $"Lentos-peta vs Chancla: hits harder ({lentos.damage} > {shotgun.damage}), wider ({lentos.hipSpread}° > {shotgun.hipSpread}°), fewer shells ({lentos.magazineSize}+{lentos.maxReserve} < {shotgun.magazineSize}+{shotgun.maxReserve}), slower reload ({lentosReload:F1} s > {shotgun.reloadTime} s)");
+        }
         Finish();
     }
 

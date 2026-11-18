@@ -30,3 +30,20 @@ Si no gusta en la primera partida, se puede excluir.
 Estado (2026-11-17, más tarde): el usuario paró la sesión principal y pidió hacerlo en esta. **Fases 1 y 2 hechas y
 probadas** (detalle en `FEEDBACK1_PLAN.md`); la fase 4 está en marcha; la release (fase 3) espera a que el usuario dé
 el visto bueno para publicar.
+
+## 2026-11-18 — Fase 5, armas con estrellas: respuestas del usuario
+
+| # | Pregunta | Respuesta del usuario | Qué se hace |
+|---|---|---|---|
+| 1 | ¿Qué sube cada estrella? | "Lo veo bien" (daño, cadencia, recarga). "Más daño al atravesar a un abuelo no significa que incremente" | Cada estrella sube daño, cadencia y velocidad de recarga, y hace que la bala **pierda menos** al atravesar; atravesar nunca suma daño |
+| 2 | Daño al atravesar | "Se reduce al atravesar a cada abuelo, no solo al primero" | El daño se multiplica por el factor de su nivel **en cada abuelo atravesado** (0★ ×0,25, 1★ ×0,4, 2★ ×0,6, 3★ ×0,8; Microondas ×1). Segundo abuelo ×f, tercero ×f², ... |
+| 3 | Reparto de la caja | "Muchas más posibilidades de 1 estrella que de 3: 60 % 1; 30 % 2; 10 % 3" | Caja: 1★ 60 %, 2★ 30 %, 3★ 10 % |
+| 4 | Máquina de +1 estrella | "Lo veo perfe" | "La Lijadora del Taller", 1000 conchas por estrella, una por mapa y lejos del Microondas; las armas de pared (0★) también se suben con ella; tope 3★ |
+| 5 | El Microondas | "Es una categoría aparte. Cualquier arma pasada por el Microondas queda mejor que una de 3 estrellas" | Un arma del Microondas tiene sus propias cifras (mejores que 3★ en todo) y ya no admite estrellas |
+| 6 | Chancla y Lentos-peta | "El Lentos-peta pega más fuerte y más abierto, pero tarda más en recargar y tiene menos balas" | Lentos-peta: más daño por perdigón, más dispersión, cartucho a cartucho más lento, menos cartuchos. La Chancla más cerrada y con más munición |
+
+**Daños (usuario, anotado para ajustar más tarde):** "de momento las mejoradas se van a quedar con el mismo daño y los
+daños actuales son las armas de 1 estrella. Ya ajustaremos los daños después." Así que:
+- Los números de los `.asset` de armas son los de **1★**. Las demás estrellas se calculan con factores de `Economy.asset`.
+- El arma del Microondas conserva el daño de ahora (`upgradeDamageMultiplier`, ×2; el Catalejo ×2,5).
+- **Pendiente: ajustar los daños** (por estrella y del Microondas) con partidas reales.

@@ -134,7 +134,7 @@ public static partial class IslaZombieSetup
         if (Has('b')) dst.bossSpawn = src.bossSpawn;
         if (Has('X')) dst.extraction = src.extraction;
         if (Has('@')) dst.firstBox = src.firstBox;
-        dst.drinks.AddRange(src.drinks); dst.paps.AddRange(src.paps); dst.karaokes.AddRange(src.karaokes);
+        dst.drinks.AddRange(src.drinks); dst.paps.AddRange(src.paps); dst.lijadoras.AddRange(src.lijadoras); dst.karaokes.AddRange(src.karaokes);
         dst.records.AddRange(src.records); dst.llaves.AddRange(src.llaves); dst.llaveZones.AddRange(src.llaveZones);
         dst.switches.AddRange(src.switches); dst.stations.AddRange(src.stations);
         dst.petrol.AddRange(src.petrol); dst.radios.AddRange(src.radios); dst.wallBuys.AddRange(src.wallBuys);

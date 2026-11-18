@@ -175,14 +175,38 @@ IslaZombie 13, Coop 39, Smoke Venecia 15, Smoke alturas 15, todo con 0 FAIL. Cap
   nuevas (`doorsPerRound`, números de la granada y de las gafas o el bastón).
 
 ### Para más adelante
-- **Fase 5 — armas con estrellas (ideas 6 y 8):** primero una sesión de diseño con el usuario (qué sube cada estrella, tope
-  3, modelo y lugar de la máquina de +1 estrella en los 5 mapas, daño al atravesar sin mejorar y mejorada). Toca la red
-  (el arma lleva sus estrellas).
-- **Fase 6 — repaso de Venecia (13, 14, 15, 10 cambiada).**
-- **Fase 7 — tutorial "Isla del Faro (tutorial)" (17/18 cambiada).** Pregunta abierta: ¿se quita el mapa Original del
-  selector?
-- **Fase 8 — presets gráficos (2 cambiada).**
+- **Fase 8 — presets gráficos (2 cambiada).** Pendiente.
 
+## Fases 5, 6 y 7 — HECHAS (2026-11-18)
+Respuestas de diseño de la fase 5 en `FEEDBACK_PROPUESTAS.md`.
+- **Fase 5, armas con estrellas (ideas 6 y 8):** `PlayerShooter.WeaponSlot.stars` (0-3; nombre "La Chancla ★★"),
+  factores en `Economy.asset` (`starDamage / starFireRate / starReload / starPierceKeep`, `boxStarOdds` 60/30/10,
+  `microwave*`, `lijadoraCost` 1000, `startingWeaponStars` 1). La bala pierde daño en **cada** abuelo que atraviesa
+  (×factor^n); para que se note, la pistola, la Thermomix, la Chancla y el Lentos-peta atraviesan 2 (antes 1). Armas de
+  pared 0★, caja 1-3★ (`MysteryBox.OfferedStars`). `Shop/Lijadora.cs` (+1★, marcador `I`; Isla y alturas en el
+  Parking, Venecia en el Arsenale, Villajubilada en el mirador de las Cuestas, Original junto a la gasolina; el hotel y
+  el crucero aún no). El Microondas: su daño de siempre y mejor que 3★ en todo, sin estrellas después. Lentos-peta 60 de
+  daño, 9°/6° de dispersión, 4+24 cartuchos, 0,9 s por cartucho. Online: estrellas en el loadout, en la oferta de la
+  caja y `NetGame.Fwd.Star`: **protocolo `animal-island-online-7`** (el hotel y el crucero tendrán que ir al 8).
+  **Pendiente (usuario): ajustar los daños con partidas.**
+- **Fase 6, Venecia (13, 14, 15, 10):** fachadas en los bordes con agua, quiebros, más edificios en Ferrovia, bebidas solo
+  en Cannaregio y el Mercato, 8 entradas de abuelos más (80). Línea de tiro más larga 40 m (antes 110). Nueva comprobación
+  del setup para todos los mapas: `IslaZombieSetup.SightLines.cs` (avisa desde 40 m; bandera de zona `ancha`). Góndola
+  (`GondolaStop`): parada abierta al azar, un viaje por ronda y jugador, góndola solo en ~60 % de las paradas cada ronda
+  (calculado con el número de ronda en cada máquina).
+- **Fase 7, tutorial (17/18):** mapa "Isla del Faro (tutorial)" (`Data/Maps/IslaDelFaroTutorial.asset`,
+  `MapData.tutorial`), `UI/Tutorial.cs` (12 pasos, `RoundManager.Hold`, modo dios hasta el final, luz gratis, la caja
+  aparece en una zona abierta: `MysteryBox.AppearIn`). Solo para un jugador; con pantalla dividida u online es la Isla
+  normal.
+- **Pruebas nuevas:** `StarsPlayTest` (15 OK), `TutorialPlayTest` (20 OK); `TestQueue` añade Stars, Tutorial,
+  OnlineVenecia, CoopVenecia.
+- **Verificado (2026-11-18), todo 0 FAIL:** QuickChecks 51; Online RunDirect 69 (cliente recompilado, protocolo 7);
+  Online Venecia 22; Stars 15; Tutorial 20; Smoke Isla / alturas / Venecia 16 cada una; Phase1 21; Base 28; Feedback 26;
+  IslaZombie 13; Coop 39; Coop Venecia 42; Venecia 58; Villajubilada 52; Climb 9; Climb Villajubilada 4; Feedback4 30 +
+  menú 7; MapSelector 4. Intermitentes vistos una vez en la regresión larga y bien al repetir: la Nevera del amanecer en
+  Online (ya conocido) y 3 props de Climb en la Isla.
+- **Sin probar:** humanos, Relay, el tutorial con mando real (la prueba usa un mando virtual y mata a los abuelos de
+  prácticas a mano), equilibrio de las estrellas.
 ## Preguntas abiertas (preguntar al usuario cuando toque)
 1. Las gradas: ¿el fallo era en el Faro normal, en el de alturas o en los dos? (El arreglo cubre los dos.)
 2. ¿La puerta del muelle o de la misión cuenta para "una puerta por ronda"?

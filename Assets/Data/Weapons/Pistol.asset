@@ -19,7 +19,7 @@ MonoBehaviour:
   damage: 50
   headshotMultiplier: 3
   pellets: 1
-  penetration: 1
+  penetration: 2
   range: 80
   falloffStart: 40
   minDamageFactor: 0.6

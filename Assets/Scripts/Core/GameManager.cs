@@ -104,6 +104,9 @@ public class GameManager : MonoBehaviour
         PointsChanged?.Invoke(Points);
         StateChanged?.Invoke(State);
         if (Net.Online) NetSession.Instance.NotifyLoaded();
+        // the tutorial map (MapData.tutorial): solo only, split-screen and online play the normal map
+        if (Tutorial.Requested && !Net.Online && Party.Count <= 1) gameObject.AddComponent<Tutorial>();
+        Tutorial.Requested = false;
     }
 
     void Update()

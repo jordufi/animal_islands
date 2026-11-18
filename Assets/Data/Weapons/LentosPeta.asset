@@ -16,24 +16,24 @@ MonoBehaviour:
   displayName: Lentos-peta
   upgradedName: "Lentos-peta Expr\xE9s"
   model: {fileID: 919132149155446097, guid: af4b76c832a887d4a8e021258539f926, type: 3}
-  damage: 45
+  damage: 60
   headshotMultiplier: 1.5
   pellets: 8
-  penetration: 1
+  penetration: 2
   range: 22
   falloffStart: 5
   minDamageFactor: 0.3
   fireInterval: 1.35
   automatic: 0
-  hipSpread: 7
-  aimSpread: 4.5
+  hipSpread: 9
+  aimSpread: 6
   aimFieldOfView: 52
-  magazineSize: 5
-  maxReserve: 30
+  magazineSize: 4
+  maxReserve: 24
   reloadTime: 4
   reloadOneByOne: 1
-  reloadStartTime: 0.5
-  shellLoadTime: 0.75
+  reloadStartTime: 0.6
+  shellLoadTime: 0.9
   boxWeight: 0
   wallCost: 500
   wallAmmoCost: 250

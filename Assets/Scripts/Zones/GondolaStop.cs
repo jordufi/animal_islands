@@ -1,11 +1,16 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 // Gondola stop (layout marker 'N', La Serenisima): pay a few conchas and the gondola takes you along the canals to
-// the next stop (going round the map) whose barrio is already open. An escape route: the old men stay behind, you
+// another stop whose barrio is already open. An escape route: the old men stay behind, you
 // can shoot from the boat. One passenger at a time per stop; it never lands in a closed barrio.
 // The setup bakes the canal paths. Every player rides on their own machine (online: a client
 // asks the host, who charges and tells that player's machine to do the ride).
+// User feedback 1 (2026-11-18): it goes to a RANDOM open stop (never a closed barrio), each player rides once per
+// round, and only some stops have a gondola each round (worked out from the round number on every machine, so
+// no network message; at least one open stop always has one).
 public class GondolaStop : Interactable
 {
     [SerializeField] Zone zone;
@@ -18,6 +23,46 @@ public class GondolaStop : Interactable
     [SerializeField] float maxRide = 10f;        // seconds: long routes go faster
 
     bool busy;
+    int planned = -1;                            // the random destination of the next ride (rolled once, kept until used)
+    const float boatChance = 0.6f;
+    public static bool TestAllBoats;             // tests: every stop has its gondola
+    static readonly Dictionary<PlayerHealth, int> lastRide = new Dictionary<PlayerHealth, int>();   // player -> round
+    static GondolaStop[] all;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { lastRide.Clear(); all = null; TestAllBoats = false; }
+
+    static int Round => RoundManager.Instance != null ? RoundManager.Instance.Round : 0;
+    static GondolaStop[] Stops()
+    {
+        if (all == null || all.Any(s => s == null)) all = FindObjectsByType<GondolaStop>().OrderBy(s => s.name).ToArray();
+        return all;
+    }
+    static float Roll(int round, int i) { uint h = (uint)(round * 73856093) ^ (uint)((i + 1) * 19349663); h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15; return (h % 10000) / 10000f; }
+
+    // this round's gondolas: ~60 % of the stops, and at least one open stop always has one
+    public bool HasBoat
+    {
+        get
+        {
+            if (TestAllBoats) return true;
+            var stops = Stops();
+            int me = System.Array.IndexOf(stops, this), round = Round;
+            if (Roll(round, me) < boatChance) return true;
+            GondolaStop best = null; float low = 2f;
+            for (int i = 0; i < stops.Length; i++)
+            {
+                var s = stops[i];
+                if (s.zone == null || !s.zone.IsOpen) continue;
+                float h = Roll(round, i);
+                if (h < boatChance) return false;
+                if (h < low) { low = h; best = s; }
+            }
+            return best == this;
+        }
+    }
+
+    public static bool RodeThisRound(PlayerHealth p) => p != null && lastRide.TryGetValue(p, out int r) && r == Round;
     float duck;                                  // how far the passenger ducks under a bridge
     const float passengerHeight = 1.7f;
     Vector3 boatHome;
@@ -36,15 +81,27 @@ public class GondolaStop : Interactable
 
     int Cost => Game != null && Game.Economy != null ? Game.Economy.gondolaCost : 250;
 
+    static bool Valid(GondolaStop s) => s != null && s.zone != null && s.zone.IsOpen && !s.busy;
+
+    // the random open stop of the next ride (only the host's roll matters: it sends the route to the rider)
     int Pick()
     {
         if (next == null) return -1;
-        for (int i = 0; i < next.Length; i++)
-            if (next[i] != null && next[i].zone != null && next[i].zone.IsOpen && !next[i].busy) return i;
-        return -1;
+        if (planned >= 0 && planned < next.Length && Valid(next[planned])) return planned;
+        var ok = new List<int>();
+        for (int i = 0; i < next.Length; i++) if (Valid(next[i])) ok.Add(i);
+        planned = ok.Count == 0 ? -1 : ok[Random.Range(0, ok.Count)];
+        return planned;
     }
 
-    public bool CanRide => !busy && zone != null && zone.IsOpen && Pick() >= 0;
+    public bool CanRide => !busy && zone != null && zone.IsOpen && HasBoat && Pick() >= 0;
+
+    void Update()
+    {
+        if (boat == null) return;
+        bool show = busy || HasBoat;
+        if (boat.gameObject.activeSelf != show) boat.gameObject.SetActive(show);
+    }
     public Vector3 Destination => Pick() >= 0 ? next[Pick()].landing : landing;
 
     public override Vector3 InteractPoint => landing;
@@ -52,19 +109,22 @@ public class GondolaStop : Interactable
     public override string Prompt(PlayerInteractor player)
     {
         if (busy) return "";
-        int i = Pick();
-        if (i < 0) return "Góndola: no hay otro embarcadero abierto";
-        return "□  Góndola a " + next[i].zone.displayName + " (" + CostText(Cost) + ")";
+        if (!HasBoat) return "Hoy no hay góndola en este embarcadero";
+        if (RodeThisRound(player.GetComponent<PlayerHealth>())) return "Ya has cogido la góndola esta ronda";
+        if (Pick() < 0) return "Góndola: no hay otro embarcadero abierto";
+        return "□  Góndola a un embarcadero al azar (" + CostText(Cost) + ")";
     }
 
-    public override bool CanInteract(PlayerInteractor player) => !busy && Pick() >= 0;
+    public override bool CanInteract(PlayerInteractor player) => CanRide && !RodeThisRound(player.GetComponent<PlayerHealth>());
 
     public override void Interact(PlayerInteractor player)
     {
         int i = Pick();
-        if (!Net.Authority || busy || i < 0) return;   // online client: PlayerInteractor asks the host
+        if (!Net.Authority || busy || i < 0 || !HasBoat) return;   // online client: PlayerInteractor asks the host
         var p = player.GetComponent<PlayerHealth>();
-        if (p == null || !Pay(Cost, player)) return;
+        if (p == null || RodeThisRound(p) || !Pay(Cost, player)) return;
+        lastRide[p] = Round;
+        planned = -1;
         // a remote player rides on their own machine (they move their own body): the host only charges
         if (PlayerSlot.IsProxy(player)) { if (NetGame.H != null) NetGame.H.Forward(player, NetGame.Fwd.Gondola, name, i); return; }
         StartCoroutine(Ride(p, i));
@@ -82,6 +142,7 @@ public class GondolaStop : Interactable
     public void StartRide(PlayerHealth p, int route)
     {
         if (p == null || busy || next == null || route < 0 || route >= next.Length) return;
+        lastRide[p] = Round;
         StartCoroutine(Ride(p, route));
     }
 

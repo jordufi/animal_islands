@@ -69,7 +69,7 @@ public static partial class IslaZombieSetup
     public static string LastReport = "";
 
     // ------------------------------------------------------------------ layout
-    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox, circuit, roofed; }
+    class ZoneDef { public char letter; public string id, name; public int group; public Color color; public bool start, firstBox, circuit, roofed, wide; }
     class DoorDef { public char digit; public string name; public int cost; public char[] zones; public bool key; }
 
     class Layout
@@ -170,7 +170,8 @@ public static partial class IslaZombieSetup
         L.floorY = y;
     }
 
-    const string Markers = "@sBDPKJbXLGUMEYTCNSFO%Q&:";   // floors (Docs/PLANTAS_FORMATO.md): ":" grappling hook of the cruise   // pueblo: % traca post, Q the Porton del encierro, & where the lighter may lie     // venecia: N gondola stop, S shovel stall, F Giuseppe's grave, O golden gondolier   // N = gondola stop (theme venecia)
+    const string Markers = "@sBDPKJbXLGUMEYTCNSFO%Q&:I";   // I = La Lijadora del Taller (+1 star, user feedback 1)
+      // floors (Docs/PLANTAS_FORMATO.md): ":" grappling hook of the cruise   // pueblo: % traca post, Q the Porton del encierro, & where the lighter may lie     // venecia: N gondola stop, S shovel stall, F Giuseppe's grave, O golden gondolier   // N = gondola stop (theme venecia)
     const string Roofed = "tq";   // temple and cave floors
 
     static Layout Load() => Load(File.ReadAllLines(LayoutPath));
@@ -228,7 +229,8 @@ public static partial class IslaZombieSetup
                     start = f.Skip(5).Any(x => x.Split(' ').Contains("start")),
                     firstBox = f.Skip(5).Any(x => x.Split(' ').Contains("firstbox")),
                     circuit = f.Skip(5).Any(x => x.Split(' ').Contains("circuito")),
-                    roofed = f.Skip(5).Any(x => x.Split(' ').Contains("techo"))
+                    roofed = f.Skip(5).Any(x => x.Split(' ').Contains("techo")),
+                    wide = f.Skip(5).Any(x => x.Split(' ').Contains("ancha"))   // the one wide place: sight lines inside it don't count
                 });
             else if (section == "doors")
                 doors.Add(new DoorDef
@@ -395,6 +397,7 @@ public static partial class IslaZombieSetup
         if (L.Multi) BuildFloors(root, data, L, report);   // real floors: IslaZombieSetup.Floors.cs
         else BuildOneFloor(root, data, L, report);
         report.AddRange(ReachCheck.Run());   // feedback 1: no spot a player jumps to where no old man can hit him
+        report.AddRange(CheckSightLines(L));  // feedback 1: no long straight lines (Venice)
         if (missing.Count > 0) report.Add("WARNING missing assets (flat fallbacks used): " + string.Join(", ", missing.Distinct()));
 
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) report.Add("ERROR: could not save " + ScenePath);
@@ -1264,7 +1267,7 @@ public static partial class IslaZombieSetup
     class Points
     {
         public Vector3 playerSpawn, bossSpawn, extraction, firstBox;
-        public List<Vector3> drinks = new List<Vector3>(), paps = new List<Vector3>(), karaokes = new List<Vector3>(), records = new List<Vector3>(), llaves = new List<Vector3>();
+        public List<Vector3> drinks = new List<Vector3>(), paps = new List<Vector3>(), lijadoras = new List<Vector3>(), karaokes = new List<Vector3>(), records = new List<Vector3>(), llaves = new List<Vector3>();
         public List<char> llaveZones = new List<char>();
         // boat mission: E power switch, Y petrol, T radio, C call station (posts lean on something solid beside them)
         public List<(Vector3 p, Vector3 toWall)> switches = new List<(Vector3, Vector3)>(), stations = new List<(Vector3, Vector3)>();
@@ -1297,6 +1300,7 @@ public static partial class IslaZombieSetup
                     case 'X': pts.extraction = p; break;
                     case 'D': pts.drinks.Add(p); break;
                     case 'P': pts.paps.Add(p); break;
+                    case 'I': pts.lijadoras.Add(p); break;
                     case 'K': pts.karaokes.Add(p); break;
                     case 'J': pts.records.Add(p); break;
                     case 'L': pts.llaves.Add(p); pts.llaveZones.Add(z); break;
@@ -1347,6 +1351,7 @@ public static partial class IslaZombieSetup
         }
         for (int i = 0; i < pts.drinks.Count && data.drinks.Length > 0; i++) TestMapSetup.BuildDrinkMachine(shop, data.drinks[i % data.drinks.Length], pts.drinks[i]);
         foreach (var p in pts.paps) TestMapSetup.BuildPackAPunch(shop, p);
+        foreach (var p in pts.lijadoras) TestMapSetup.BuildLijadora(shop, p);
 
         var egg = Child(root, "EasterEgg", Vector3.zero).transform;
         var vinyl = TestMapSetup.Mat("Vinyl", new Color(0.05f, 0.05f, 0.05f));

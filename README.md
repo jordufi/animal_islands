@@ -24,6 +24,10 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   pendiente al azar.
 - Armas en la **Máquina de Granizados** (una vez por zona), **Pack-a-Punch** en el Microondas del Chiringuito,
   bebidas con efectos secundarios, ukelele cuerpo a cuerpo.
+- **Armas con estrellas (0-3):** la caja da 1★ (60 %), 2★ (30 %) o 3★ (10 %); las de pared son 0★. Cada estrella sube
+  daño, cadencia y recarga, y la bala pierde menos al atravesar abuelos. **La Lijadora del Taller** (1000) añade una
+  estrella; el **Microondas** es aparte y deja cualquier arma mejor que una de 3★.
+- **Tutorial:** "Isla del Faro (tutorial)" en el selector: cinco minutos guiados antes de la primera ronda (un jugador).
 - 5 animales con pasiva y habilidad activa. Rondas nocturnas cada 5 rondas.
 - Modos: **Clásico** y **Anselmo cagón** (la mitad de los abuelos usan atajos por las entradas).
 - Mapas: **Fiestas de Villajubilada** (nuevo, en pruebas: un pueblo en fiestas en dos actos; en la ronda 5 sueltan los toros, se abre el portón, anochece y hay que correr calle arriba sin vuelta atrás; después se enciende el pueblo zona a zona, hay encierro cada 5 rondas, tracas que se compran como trampa y abuelas que tiran macetas), **La Serenísima** (nuevo, en pruebas: Venecia con puentes de pago, canales, góndolas que dan la vuelta al mapa pasando bajo los
@@ -58,7 +62,7 @@ en pantalla dividida (2-4) u online (2-4 por código de sala).
   **Setup Prueba de alturas** hacen lo mismo con la copia con alturas y con el mapa de prueba (formato en `Docs/FASE3_FORMATO.md`).
 - **Setup Test Map**: regenera datos, prefabs y la escena Original.
 - **Quick Checks** (reglas de diseño sobre los números de `Assets/Data`, al instante) y **Play Test Smoke** (partida entera por el camino corto, ~10 s): para entre cambio y cambio.
-- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Climb, Feedback 4, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit (`TestQueue.Run(...)` las encadena).
+- **Play Test ...** (Base, Isla Zombie, Feedback, Coop, Original, Phase 1, Climb, Feedback 4, Estrellas, Tutorial, Online): pruebas automáticas jugando; la regresión completa solo antes de un commit (`TestQueue.Run(...)` las encadena).
 - **Build Windows (.zip)**: exporta el juego a `Builds/` (también `Tools\Build-Game.ps1` con Unity cerrado).
 
 ## Control de versiones

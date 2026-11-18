@@ -126,7 +126,7 @@ public class NetPlayer : MonoBehaviour
         for (int i = 0; i < 2; i++)
         {
             var s = shooter.Slots[i];
-            b.Str(s.data != null ? s.data.name : "").Bool(s.upgraded).UShort(s.magazine).UShort(s.reserve);
+            b.Str(s.data != null ? s.data.name : "").Bool(s.upgraded).Byte((byte)s.stars).UShort(s.magazine).UShort(s.reserve);
         }
         b.Byte((byte)drinks.Owned.Count);
         foreach (var d in drinks.Owned) b.Str(d.name);
@@ -205,12 +205,13 @@ public class NetPlayer : MonoBehaviour
         int current = r.Byte();
         var names = new string[2];
         var up = new bool[2];
+        var stars = new int[2];
         var mag = new int[2];
         var res = new int[2];
-        for (int i = 0; i < 2; i++) { names[i] = r.Str(); up[i] = r.Bool(); mag[i] = r.UShort(); res[i] = r.UShort(); }
+        for (int i = 0; i < 2; i++) { names[i] = r.Str(); up[i] = r.Bool(); stars[i] = r.Byte(); mag[i] = r.UShort(); res[i] = r.UShort(); }
         var weapons = new WeaponData[2];
         for (int i = 0; i < 2; i++) weapons[i] = NetGame.FindAsset<WeaponData>(names[i]);
-        shooter.NetMirror(weapons, up, mag, res, current);
+        shooter.NetMirror(weapons, up, stars, mag, res, current);
         int n = r.Byte();
         var list = new List<DrinkData>();
         for (int i = 0; i < n; i++) { var d = NetGame.FindAsset<DrinkData>(r.Str()); if (d != null) list.Add(d); }

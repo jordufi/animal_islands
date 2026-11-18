@@ -45,7 +45,7 @@ public class WallWeapon : Interactable
         if (shooter.SlotOf(weapon) == null)
         {
             if (!Pay(Cost, player)) return;
-            shooter.GiveWeapon(weapon);
+            shooter.GiveWeapon(weapon, 0);   // wall weapons: 0 stars (La Lijadora del Taller sands them up)
             Game.ShowMessage(weapon.reloadOneByOne ? "¡" + weapon.displayName + "! Lenta pero contundente. Mete los cartuchos de uno en uno."
                                                    : "¡" + weapon.displayName + "! Recién descolgada de la pared.");
         }

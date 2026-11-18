@@ -32,10 +32,23 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
   Portón del encierro se abre solo y no cuenta). Número en `Economy.asset` (`doorsPerRound`).
 - **Caja de armas** (Máquina de Granizados; tómbola en Villajubilada): un uso por zona abierta; después reaparece en
   otra zona abierta. Las primeras zonas donde puede salir van marcadas (`firstbox`).
+- **Armas con estrellas** (feedback 1, fase 5, decidido 2026-11-18): de 0 a 3 estrellas, se ven junto al nombre
+  ("La Chancla ★★").
+  - Pistola del principio 1★; armas de pared 0★; la caja da 1★ (60 %), 2★ (30 %) o 3★ (10 %).
+  - Cada estrella sube el daño, la cadencia y la recarga, y la bala pierde menos al atravesar: el daño se multiplica en
+    **cada** abuelo atravesado (0★ ×0,25, 1★ ×0,4, 2★ ×0,6, 3★ ×0,8). Atravesar nunca suma daño.
+  - **La Lijadora del Taller** (marcador `I`, 1000 conchas): +1 estrella al arma en la mano, hasta 3, también a las de
+    pared. Una por mapa, lejos del Microondas: Parking (Isla y alturas), Arsenale (Venecia), mirador de las Cuestas
+    (Villajubilada), cerca de la gasolina (Original).
+  - **El Microondas es una categoría aparte:** cualquier arma pasada por él queda mejor que una de 3★ en todo y ya no
+    admite estrellas.
+  - Los daños de los `.asset` son los de 1★; el Microondas conserva su daño de antes. **Pendiente: ajustar los daños con
+    partidas reales** (usuario).
 - **Bebidas** (necesitan luz): Carajillo del Abuelo, Mojito Turbo, Piña Colapso, Tinto de Verano Eterno.
 - **El Microondas** (Pack-a-Punch, 5000), siempre lejos del inicio y en un sitio incómodo.
 - **Armas:** La Jubilada (la pistola del principio), La Chancla (escopeta), El Catalejo (francotirador) y La
-  Thermomix (subfusil) salen de la caja.
+  Thermomix (subfusil) salen de la caja. El Lentos-peta pega más fuerte y más abierto que la Chancla, pero recarga
+  más lento y lleva menos cartuchos (4 + 24 contra 6 + 48).
   - En la pared: Lentos-peta 500 y, en algunos mapas, La Chancla 1500 y La Thermomix 2500.
   - Todos llevan el ukelele para el cuerpo a cuerpo.
 - **Power-ups:** Nevera de munición, Siesta fulminante, 2x1 en conchas, Paella para todos.
@@ -48,6 +61,10 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
 - **Dentadura postiza** (R1 / G, la granada): muerde en 3,5 m, quita 400 y aturde 2,5 s. Dos por jugador; la Nevera
   las devuelve.
 - **Brújula de mierdecillas** (opción): flecha arriba que apunta a una tarea pendiente al azar.
+- **Tutorial** (feedback 1, fase 7): "Isla del Faro (tutorial)" en el selector, solo para un jugador. Unos 5 minutos
+  guiados antes de la ronda 1 (moverse, mirar, saltar, disparar, recargar, ukelele, dentadura, habilidad, puerta +
+  carta, bebida con la luz ya dada y la caja); luego sigue la partida normal. Con pantalla dividida u online es la Isla
+  normal.
 - **Llave Maestra:** está en un callejón sin salida al azar y sustituye una pieza de la misión. Si quien la lleva cae,
   se queda en el suelo.
 - **Reglas de diseño (todos los mapas, decididas):**
@@ -59,6 +76,8 @@ paso: `Docs/GUIA_NUEVO_MAPA.md`. Las ideas de mapas sin empezar están en el `RE
   - Nada de sitios seguros.
   - Que no se vea venir a los abuelos de lejos.
   - En cada mapa, una zona ancha y una estrecha.
+  - **Sin líneas rectas largas** (feedback 1): el setup avisa de las líneas de tiro de 40 m o más
+    (`IslaZombieSetup.SightLines.cs`); la zona ancha va marcada `ancha` y no cuenta.
   - Las entradas de abuelos se ven, son predecibles y van todas en el mismo verde.
   - Tiene que ser difícil.
   - Todo el texto, en castellano y con humor.
@@ -186,12 +205,14 @@ sustituye una de las dos piezas.
 
 ### Zonas y puertas (las puertas son puentes de pago)
 Ocho barrios:
-- **Ferrovia:** el inicio.
+- **Ferrovia:** el inicio. Desde el feedback 1, con más edificios: fachadas sobre el agua, un quiosco y una manzana
+  que obliga a rodear para llegar al gran puente.
 - **Mercato di Rialto:** puede salir la caja la primera vez.
 - **Cannaregio:** la zona estrecha. Solo callejones de una casilla que giran y acaban sin salida.
 - **Campo del Carnevale:** un escenario. También puede salir la caja la primera vez.
 - **Cimitero Monumentale:** una isla con un anillo, una terraza y una torre en espiral con el Microondas arriba.
-- **Piazza del Dux:** la zona ancha. Una plaza abierta de 38 × 28 m con el campanile.
+- **Piazza del Dux:** la zona ancha. Una plaza abierta de 36 × 26 m con el campanile; sus lados norte y oeste son
+  fachadas de palacio (feedback 1).
 - **Arsenale:** una dársena interior y una muralla.
 - **Vaporetto:** el muelle del jefe y la salida.
 
@@ -209,6 +230,16 @@ Ocho barrios:
 
 Hay dos lazos que pasan por la isla del cementerio y forman un ocho.
 
+**Repaso del feedback 1 (2026-11-18): sin líneas rectas largas.** Los amigos: "desde el Carnevale apuntas hasta la
+Ferrovia". Antes había líneas de tiro de 110 m a lo largo de los canales. Ahora:
+- Los bordes de los barrios que daban a un canal son fachadas (como en Venecia, las casas dan al agua). Solo quedan
+  muelles en las cabezas de los puentes y en las paradas de góndola.
+- Las calles largas tienen un quiebro cada ~20 m.
+- La línea más larga que queda es de 40 m (sin contar la Piazza ni mirar a lo largo de un canal desde un puente); en
+  las Fiestas, el mapa favorito, es de 60 m.
+- Hay 80 entradas de abuelos (antes 75) para que los nuevos fondos de saco no sean sitios seguros.
+- **Bebidas solo en Cannaregio y el Mercato** (dos máquinas en cada uno, en callejones sin salida).
+
 ### Mecánicas propias
 - **Acqua alta cada 5 rondas** (en lugar de la noche):
   - El mar sube 0,45 m. En la calle vas a ×0,6 con el agua por los tobillos.
@@ -220,7 +251,10 @@ Hay dos lazos que pasan por la isla del cementerio y forman un ocho.
 - **Verjas de 3,2 m** en los bordes con agua de los barrios cerrados. Desaparecen al abrirlos.
 - **Góndolas:**
   - 7 paradas, 250 conchas.
-  - Te llevan a la siguiente parada abierta y son una sola red de canales, que pasa bajo los dos puentes de arco.
+  - Te llevan a **una parada abierta al azar** (nunca a un barrio cerrado). Son una sola red de canales, que pasa bajo
+    los dos puentes de arco.
+  - **Un viaje por ronda y por jugador**, y cada ronda solo hay góndola en algunas paradas (~60 %, al menos una
+    abierta). Cada máquina lo calcula con el número de ronda: no hace falta mensaje de red (feedback 1).
   - Te agachas al pasar bajo un puente bajo.
   - Los abuelos no las usan (excepción aceptada).
 - **El campanile:**
@@ -272,6 +306,7 @@ golpes) → vaporetto.
 
 ### Propuestas para mejorarlo
 - Los puentes pequeños siguen siendo macizos: no se puede pasar nadando por debajo.
+- Las fachadas nuevas son las mismas casas de siempre: quizá pidan algún detalle (balcones, toldos) al verlas jugando.
 - Ajustar las probabilidades de las máscaras, la marea y el precio de la góndola, que son una primera estimación.
 - La góndola roza una esquina en un cruce estrecho (21, 31).
 - Audio: campanas, agua, el carnaval.

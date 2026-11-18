@@ -16,13 +16,37 @@ public class PlayerShooter : MonoBehaviour
     {
         public WeaponData data;
         public bool upgraded;
+        public int stars = 1;      // 0 wall weapon, 1-3 box / Lijadora; ignored once upgraded (the Microondas is its own class)
         public int magazine;
         public int reserve;
         public GameObject model;
         public Transform muzzle;
 
-        public string Name => data == null ? "" : upgraded ? data.upgradedName : data.displayName;
+        public string Name => data == null ? "" : upgraded ? data.upgradedName : data.displayName + StarText(stars);
+        public string BaseName => data == null ? "" : upgraded ? data.upgradedName : data.displayName;
     }
+
+    // " ★★" (nothing for 0 stars)
+    public static string StarText(int stars) => stars <= 0 ? "" : " " + new string('★', Mathf.Min(stars, EconomyData.MaxStars));
+
+    static EconomyData fallbackEconomy;
+    public static EconomyData Eco
+    {
+        get
+        {
+            var gm = GameManager.Instance;
+            if (gm != null && gm.Economy != null) return gm.Economy;
+            if (fallbackEconomy == null) fallbackEconomy = ScriptableObject.CreateInstance<EconomyData>();
+            return fallbackEconomy;
+        }
+    }
+
+    // the numbers a slot shoots with: stars, or the Microondas class
+    public static float DamageFactor(WeaponSlot s) => s.upgraded ? s.data.upgradeDamageMultiplier : Eco.StarDamage(s.stars);
+    public static float FireRateFactor(WeaponSlot s) => s.upgraded ? Eco.microwaveFireRate : Eco.StarFireRate(s.stars);
+    public static float ReloadFactor(WeaponSlot s) => s.upgraded ? Eco.microwaveReload : Eco.StarReload(s.stars);
+    public static float PierceKeep(WeaponSlot s) => s.upgraded ? Eco.microwavePierceKeep : Eco.StarPierceKeep(s.stars);
+    float FireInterval(WeaponSlot s) => s.data.fireInterval / Mathf.Max(0.1f, GetStat(Stat.FireRate) * FireRateFactor(s));
 
     [SerializeField] InputActionAsset actions;
     [SerializeField] ThirdPersonCamera cameraRig;
@@ -139,7 +163,7 @@ public class PlayerShooter : MonoBehaviour
     {
         if (cameraRig == null) cameraRig = PlayerSlot.RigOf(this);
         cam = cameraRig != null ? cameraRig.GetComponent<Camera>() : isProxy ? null : Camera.main;
-        if (startingWeapon != null && Current.data == null) Give(startingWeapon);
+        if (startingWeapon != null && Current.data == null) Give(startingWeapon, Eco.startingWeaponStars);
     }
 
     void OnEnable()
@@ -162,14 +186,30 @@ public class PlayerShooter : MonoBehaviour
     // ---------------------------------------------------------------- weapons
     public bool HasWeapon(WeaponData data) => slots[0].data == data || slots[1].data == data;
 
-    public void GiveWeapon(WeaponData data)
+    // stars: 0 wall weapon, 1-3 from the box; -1 = the default (the starting pistol's stars, 1 for anything else)
+    public void GiveWeapon(WeaponData data, int stars = -1)
     {
         if (data == null) return;
-        Give(data);
-        if (isProxy && NetGame.H != null) NetGame.H.Forward(this, NetGame.Fwd.GiveWeapon, data.name);   // the owner gets it too
+        if (stars < 0) stars = data == startingWeapon ? Eco.startingWeaponStars : 1;
+        Give(data, stars);
+        if (isProxy && NetGame.H != null) NetGame.H.Forward(this, NetGame.Fwd.GiveWeapon, data.name, stars);   // the owner gets it too
     }
 
-    void Give(WeaponData data)
+    // La Lijadora del Taller: +1 star to the weapon in hand (not a Microondas weapon, max 3)
+    public bool CanAddStar(WeaponSlot s) => s != null && s.data != null && !s.upgraded && s.stars < EconomyData.MaxStars;
+
+    public bool AddStarCurrent()
+    {
+        var slot = Current;
+        if (!CanAddStar(slot)) return false;
+        slot.stars++;
+        WeaponsChanged?.Invoke();
+        AmmoChanged?.Invoke();
+        if (isProxy && NetGame.H != null) NetGame.H.Forward(this, NetGame.Fwd.Star);
+        return true;
+    }
+
+    void Give(WeaponData data, int stars)
     {
         int target;
         if (slots[0].data == data) target = 0;
@@ -179,7 +219,9 @@ public class PlayerShooter : MonoBehaviour
         else target = current;   // both full: replace the weapon in hand
 
         var slot = slots[target];
-        if (slot.data != data) slot.upgraded = false;
+        if (slot.data != data) { slot.upgraded = false; slot.stars = stars; }
+        else slot.stars = Mathf.Max(slot.stars, stars);   // the same weapon again: keep the better one
+        slot.stars = Mathf.Clamp(slot.stars, 0, EconomyData.MaxStars);
         slot.data = data;
         slot.magazine = MagazineSize(slot);
         slot.reserve = MaxReserve(slot);
@@ -204,17 +246,18 @@ public class PlayerShooter : MonoBehaviour
     }
 
     // Online proxy: the owner's weapons (models follow the weapon in hand).
-    public void NetMirror(WeaponData[] weapons, bool[] upgraded, int[] magazines, int[] reserves, int currentIndex)
+    public void NetMirror(WeaponData[] weapons, bool[] upgraded, int[] stars, int[] magazines, int[] reserves, int currentIndex)
     {
         if (!isProxy) return;
         bool rebuild = currentIndex != current;
         for (int i = 0; i < 2; i++)
         {
             var s = slots[i];
-            if (s.data != weapons[i] || s.upgraded != upgraded[i]) rebuild = true;
+            if (s.data != weapons[i] || s.upgraded != upgraded[i] || s.stars != stars[i]) rebuild = true;
             if (s.data != weapons[i] && s.model != null) { Destroy(s.model); s.model = null; s.muzzle = null; }
             s.data = weapons[i];
             s.upgraded = upgraded[i];
+            s.stars = stars[i];
             s.magazine = magazines[i];
             s.reserve = reserves[i];
         }
@@ -387,7 +430,7 @@ public class PlayerShooter : MonoBehaviour
     {
         var s = Current;
         if (s.data == null || s.magazine <= 0 || IsReloading || Time.time < nextFireTime) return false;
-        nextFireTime = Time.time + s.data.fireInterval;
+        nextFireTime = Time.time + FireInterval(s);
         Shoot();
         return true;
     }
@@ -402,7 +445,7 @@ public class PlayerShooter : MonoBehaviour
     // seconds until the reload (or, one-by-one, the next shell) is done
     float ReloadStepTime(WeaponSlot s, bool first)
     {
-        float speed = Mathf.Max(0.1f, GetStat(Stat.ReloadSpeed));
+        float speed = Mathf.Max(0.1f, GetStat(Stat.ReloadSpeed) * ReloadFactor(s));
         if (!s.data.reloadOneByOne) return s.data.reloadTime / speed;
         return ((first ? s.data.reloadStartTime : 0f) + s.data.shellLoadTime) / speed;
     }
@@ -488,7 +531,7 @@ public class PlayerShooter : MonoBehaviour
                 {
                     if (Current.magazine > 0)
                     {
-                        nextFireTime = Time.time + data.fireInterval / Mathf.Max(0.1f, GetStat(Stat.FireRate));
+                        nextFireTime = Time.time + FireInterval(Current);
                         Shoot();
                     }
                     else Reload();
@@ -576,7 +619,8 @@ public class PlayerShooter : MonoBehaviour
 
         Ray center = CrosshairRay();
         float spread = IsAiming ? data.aimSpread : data.hipSpread;
-        float damage = data.damage * (slot.upgraded ? data.upgradeDamageMultiplier : 1f) * GetStat(Stat.PlayerDamage);
+        float damage = data.damage * DamageFactor(slot) * GetStat(Stat.PlayerDamage);
+        float keep = PierceKeep(slot);   // each old man the bullet goes through leaves it weaker (never stronger)
         float headMult = data.headshotMultiplier * GetStat(Stat.HeadshotDamage);
         Vector3 from = slot.muzzle != null ? slot.muzzle.position : transform.position + Vector3.up;
 
@@ -606,7 +650,8 @@ public class PlayerShooter : MonoBehaviour
                     Mathf.Lerp(1f, data.minDamageFactor, Mathf.InverseLerp(data.falloffStart, data.range, h.distance));
                 // points: kill / headshot, or the hit once per enemy per shot (online client: the host pays)
                 bool pay = !paidThisShot.Contains(enemy);
-                var info = EnemyHits.Apply(enemy, damage * falloff * (head ? headMult : 1f), head, HitKind.Gun, this, pay);
+                float pierce = pierced == 0 ? 1f : Mathf.Pow(Mathf.Clamp01(keep), pierced);
+                var info = EnemyHits.Apply(enemy, damage * falloff * pierce * (head ? headMult : 1f), head, HitKind.Gun, this, pay);
                 if (!info.killed && pay) paidThisShot.Add(enemy);
                 anyHit = true;
                 if (info.killed) anyKill = true;

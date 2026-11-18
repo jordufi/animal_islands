@@ -17,7 +17,7 @@ public class NetGame : MonoBehaviour
     const float EnemySnapInterval = 0.05f;
     const float TickInterval = 0.25f;
 
-    public enum Fwd : byte { GiveWeapon = 1, Upgrade, RefillAmmo, RefillAll, AddDrink, CardBusy, CardFree, Revive, Gondola }
+    public enum Fwd : byte { GiveWeapon = 1, Upgrade, RefillAmmo, RefillAll, AddDrink, CardBusy, CardFree, Revive, Gondola, Star }
 
     public static NetGame Instance { get; private set; }
     public static NetGame H => Net.IsHost ? Instance : null;     // host-side hooks: NetGame.H?.Something()
@@ -230,7 +230,8 @@ public class NetGame : MonoBehaviour
         var shooter = p.GetComponent<PlayerShooter>();
         switch (op)
         {
-            case Fwd.GiveWeapon: shooter.GiveWeapon(FindAsset<WeaponData>(arg)); break;
+            case Fwd.GiveWeapon: shooter.GiveWeapon(FindAsset<WeaponData>(arg), Mathf.RoundToInt(value)); break;
+            case Fwd.Star: shooter.AddStarCurrent(); break;
             case Fwd.Upgrade: shooter.UpgradeCurrent(); break;
             case Fwd.RefillAmmo: shooter.RefillAmmo(FindAsset<WeaponData>(arg)); break;
             case Fwd.RefillAll: shooter.RefillAllAmmo(); break;

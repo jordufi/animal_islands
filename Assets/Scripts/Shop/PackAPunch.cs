@@ -2,6 +2,7 @@ using UnityEngine;
 
 // "El Microondas del Chiringuito" (Pack-a-Punch): upgrades the weapon in hand once
 // (more damage, bigger magazine, full ammo, new name and colour).
+// A class of its own (user feedback 1): better than 3 stars in everything, whatever the stars were; no stars after it.
 public class PackAPunch : Interactable
 {
     int cost => Game != null && Game.Economy != null ? Game.Economy.packAPunchCost : 5000;   // Data/Economy.asset

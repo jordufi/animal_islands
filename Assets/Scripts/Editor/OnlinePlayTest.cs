@@ -498,7 +498,9 @@ public static class OnlinePlayTest
         yield return Wait(22f);   // the campanile throws him off after 20 s
 
         // gondola: the client pays at the Ferrovia stop, rides on its own machine, lands at another stop
-        var from = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia"));
+        // feedback 1: only some stops have a gondola each round (the same ones on both machines), to a random open stop
+        var from = Object.FindObjectsByType<GondolaStop>().OrderByDescending(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia")).FirstOrDefault(g => g.CanRide);
+        if (from == null) Write("FAIL no gondola stop to ride from");
         if (from != null)
         {
             Vector3 dest = from.Destination;

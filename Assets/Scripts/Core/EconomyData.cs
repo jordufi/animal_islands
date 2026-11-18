@@ -32,6 +32,48 @@ public class EconomyData : ScriptableObject
     public float dentaduraStun = 2.5f;
     public float dentaduraFuse = 1.5f;      // bites when it lands, or after this long
     public float dentaduraThrowSpeed = 13f;
+    [Header("Weapon stars 0-3 (user feedback 1, phase 5). The weapon .asset numbers are 1 star")]
+    [Tooltip("Damage x by stars 0..3 (the Microondas keeps WeaponData.upgradeDamageMultiplier). To be tuned with real games.")]
+    public float[] starDamage = { 0.83f, 1f, 1.2f, 1.44f };
+    [Tooltip("Fire rate x by stars 0..3.")]
+    public float[] starFireRate = { 0.91f, 1f, 1.1f, 1.21f };
+    [Tooltip("Reload speed x by stars 0..3.")]
+    public float[] starReload = { 0.87f, 1f, 1.15f, 1.32f };
+    [Tooltip("Share of the damage a bullet keeps for EACH old man it goes through, by stars 0..3 (2nd old man x f, 3rd x f^2...).")]
+    public float[] starPierceKeep = { 0.25f, 0.4f, 0.6f, 0.8f };
+    [Tooltip("Mystery box: chance of 1, 2 and 3 stars.")]
+    public float[] boxStarOdds = { 0.6f, 0.3f, 0.1f };
+    [Tooltip("Stars of the starting pistol (it is neither a wall nor a box weapon).")]
+    public int startingWeaponStars = 1;
+    [Tooltip("El Microondas: a category of its own, better than 3 stars in everything.")]
+    public float microwaveFireRate = 1.25f;
+    public float microwaveReload = 1.4f;
+    public float microwavePierceKeep = 1f;
+    [Tooltip("La Lijadora del Taller: +1 star to the weapon in hand (not Microondas weapons, max 3).")]
+    public int lijadoraCost = 1000;
+
+    public const int MaxStars = 3;
+    static float At(float[] a, int i, float fallback) => a != null && a.Length > 0 ? a[Mathf.Clamp(i, 0, a.Length - 1)] : fallback;
+    public float StarDamage(int s) => At(starDamage, s, 1f);
+    public float StarFireRate(int s) => At(starFireRate, s, 1f);
+    public float StarReload(int s) => At(starReload, s, 1f);
+    public float StarPierceKeep(int s) => At(starPierceKeep, s, 0.4f);
+
+    // 1..3 with boxStarOdds
+    public int RollBoxStars(float r01)
+    {
+        float total = 0f;
+        for (int i = 0; i < 3; i++) total += boxStarOdds != null && i < boxStarOdds.Length ? Mathf.Max(0f, boxStarOdds[i]) : 0f;
+        if (total <= 0f) return 1;
+        float r = r01 * total;
+        for (int i = 0; i < 3; i++)
+        {
+            r -= boxStarOdds != null && i < boxStarOdds.Length ? Mathf.Max(0f, boxStarOdds[i]) : 0f;
+            if (r < 0f) return i + 1;
+        }
+        return 3;
+    }
+
     [Header("Boss")]
     [Tooltip("Boss health = this x the health of a normal old man of the round he appears in...")]
     public float bossHealthInEnemies = 45f;

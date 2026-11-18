@@ -226,8 +226,9 @@ public static class CoopPlayTest
             var cmv = CardManager.Instance;
             if (cmv != null && cmv.CurrentOffer != null) { yield return Press(cmv.Chooser != null ? PlayerSlot.Of(cmv.Chooser).Index : 0, GamepadButton.South); yield return WaitGame(0.5f); }
             gm.AddPoints(1000, PointSource.Debug);
-            var stop = Object.FindObjectsByType<GondolaStop>().FirstOrDefault(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia"));
-            if (stop == null) Write("FAIL no Ferrovia gondola stop");
+            // feedback 1: only some stops have a gondola each round, to a random open stop
+            var stop = Object.FindObjectsByType<GondolaStop>().OrderByDescending(g => g.Zone != null && g.Zone.displayName.StartsWith("Ferrovia")).FirstOrDefault(g => g.CanRide);
+            if (stop == null) Write("FAIL no gondola stop to ride from");
             else
             {
                 Vector3 dest = stop.Destination;

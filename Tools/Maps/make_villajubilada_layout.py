@@ -83,6 +83,7 @@ fill(7, 18, 8, 18, 'u'); fill(8, 18, 8, 22, 'u')            # dead end (record)
 fill(4, 12, 5, 14, 'u')                      # the little square on top (mirador)
 level(4, 9, 9, 26, 1)                        # the upper half of the barrio
 ramp([(10, 10), (9, 10)], '<'); ramp([(10, 16), (9, 16)], '<'); ramp([(10, 25), (9, 25)], '<')
+marks('I', (5, 14))                          # La Lijadora del Taller (+1 star), far from the Microondas
 marks('D', (14, 13)); marks('J', (8, 22)); marks('L', (4, 12)); marks('B', (16, 25)); marks('U', (11, 19)); marks('%', (11, 11)); marks('E', (16, 10))
 marks('s', (16, 18), (11, 23), (6, 20), (13, 16), (6, 11), (19, 17), (20, 13), (12, 25), (4, 14), (14, 21))
 
@@ -250,7 +251,7 @@ HEADER = """# Fiestas de Villajubilada - fourth map: an inland village during it
 #   o  tall prop (columns, stalls, attractions, straw bales)   x  low cover (tables): always jumpable, never in a 1-cell lane
 #   V  the cattle lorry (the encierro starts here)   Q  the Porton del encierro   %  traca post (buyable trap)
 #   1-9 barricades of the penas = paid doors
-#   markers as in Isla del Faro: @ s B D P K J b X L G U M   E fuse box of its zone (lights + machines of that zone)
+#   markers as in Isla del Faro: @ s B D P K J b X L G U M I   E fuse box of its zone (lights + machines of that zone)
 #   S firecracker stall (sells the lighter if you left without it)   & where the lighter may lie (the second zone you open)
 #   F the town hall balcony (light the chupinazo)   O the golden cabezudo (the host picks one)
 # route = the encierro, in cell corners; ring = index of the corner where the ring starts
