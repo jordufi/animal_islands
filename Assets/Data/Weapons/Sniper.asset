@@ -20,6 +20,7 @@ MonoBehaviour:
   headshotMultiplier: 4
   pellets: 1
   penetration: 4
+  pierceMultiplier: 2
   range: 200
   falloffStart: 200
   minDamageFactor: 1

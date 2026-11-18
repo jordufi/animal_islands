@@ -46,6 +46,8 @@ public class PlayerShooter : MonoBehaviour
     public static float FireRateFactor(WeaponSlot s) => s.upgraded ? Eco.microwaveFireRate : Eco.StarFireRate(s.stars);
     public static float ReloadFactor(WeaponSlot s) => s.upgraded ? Eco.microwaveReload : Eco.StarReload(s.stars);
     public static float PierceKeep(WeaponSlot s) => s.upgraded ? Eco.microwavePierceKeep : Eco.StarPierceKeep(s.stars);
+    // old men a bullet goes through after the first one: 0-3 by stars, 4 with the Microondas (every weapon)
+    public static int PierceCount(WeaponSlot s) => (s.upgraded ? Eco.microwavePierceCount : Eco.StarPierceCount(s.stars)) * Mathf.Max(1, s.data.pierceMultiplier);
     float FireInterval(WeaponSlot s) => s.data.fireInterval / Mathf.Max(0.1f, GetStat(Stat.FireRate) * FireRateFactor(s));
 
     [SerializeField] InputActionAsset actions;
@@ -621,6 +623,7 @@ public class PlayerShooter : MonoBehaviour
         float spread = IsAiming ? data.aimSpread : data.hipSpread;
         float damage = data.damage * DamageFactor(slot) * GetStat(Stat.PlayerDamage);
         float keep = PierceKeep(slot);   // each old man the bullet goes through leaves it weaker (never stronger)
+        int through = PierceCount(slot);
         float headMult = data.headshotMultiplier * GetStat(Stat.HeadshotDamage);
         Vector3 from = slot.muzzle != null ? slot.muzzle.position : transform.position + Vector3.up;
 
@@ -656,7 +659,7 @@ public class PlayerShooter : MonoBehaviour
                 anyHit = true;
                 if (info.killed) anyKill = true;
                 end = h.point;
-                if (++pierced >= data.penetration) break;
+                if (++pierced > through) break;
             }
 
             if (p < tracers.Count)

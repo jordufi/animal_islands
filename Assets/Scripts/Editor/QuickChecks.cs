@@ -128,6 +128,10 @@ public static class QuickChecks
         for (int s = 1; s <= EconomyData.MaxStars; s++)
             climbs &= eco.StarDamage(s) > eco.StarDamage(s - 1) && eco.StarFireRate(s) > eco.StarFireRate(s - 1) && eco.StarReload(s) > eco.StarReload(s - 1) && eco.StarPierceKeep(s) > eco.StarPierceKeep(s - 1);
         Check(climbs && Mathf.Approximately(eco.StarDamage(1), 1f), "every star raises damage, fire rate, reload speed and what a bullet keeps through an old man (1 star = the weapon's own numbers)");
+        Check(Enumerable.Range(0, EconomyData.MaxStars + 1).All(s => eco.StarPierceCount(s) == s) && eco.microwavePierceCount == 4,
+            $"a bullet goes through 0 / 1 / 2 / 3 old men by stars, 4 with the Microondas (now {string.Join(" / ", Enumerable.Range(0, 4).Select(eco.StarPierceCount))} / {eco.microwavePierceCount})");
+        var cat = Load<WeaponData>("Weapons/Sniper.asset");
+        if (cat != null) Check(cat.pierceMultiplier == 2, $"El Catalejo goes through twice as many old men (x{cat.pierceMultiplier}: 0 / 2 / 4 / 6, Microondas 8)");
         Check(eco.StarPierceKeep(EconomyData.MaxStars) < 1f, $"going through an old man never adds damage (3 stars keep {eco.StarPierceKeep(3):P0} per old man)");
         var allGuns = new[] { pistol, shotgun, sniper, smg, Load<WeaponData>("Weapons/LentosPeta.asset") }.Where(w => w != null).ToList();
         Check(allGuns.All(w => w.upgradeDamageMultiplier > eco.StarDamage(3)) && eco.microwaveFireRate > eco.StarFireRate(3) && eco.microwaveReload > eco.StarReload(3) && eco.microwavePierceKeep >= eco.StarPierceKeep(3),

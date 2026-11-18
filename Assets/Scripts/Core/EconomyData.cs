@@ -41,6 +41,8 @@ public class EconomyData : ScriptableObject
     public float[] starReload = { 0.87f, 1f, 1.15f, 1.32f };
     [Tooltip("Share of the damage a bullet keeps for EACH old man it goes through, by stars 0..3 (2nd old man x f, 3rd x f^2...).")]
     public float[] starPierceKeep = { 0.25f, 0.4f, 0.6f, 0.8f };
+    [Tooltip("Old men a bullet goes through after the first one, by stars 0..3 (user: 0, 1, 2, 3; the Microondas 4). Every weapon, WeaponData.penetration is no longer used.")]
+    public int[] starPierceCount = { 0, 1, 2, 3 };
     [Tooltip("Mystery box: chance of 1, 2 and 3 stars.")]
     public float[] boxStarOdds = { 0.6f, 0.3f, 0.1f };
     [Tooltip("Stars of the starting pistol (it is neither a wall nor a box weapon).")]
@@ -49,6 +51,7 @@ public class EconomyData : ScriptableObject
     public float microwaveFireRate = 1.25f;
     public float microwaveReload = 1.4f;
     public float microwavePierceKeep = 1f;
+    public int microwavePierceCount = 4;
     [Tooltip("La Lijadora del Taller: +1 star to the weapon in hand (not Microondas weapons, max 3).")]
     public int lijadoraCost = 1000;
 
@@ -58,6 +61,7 @@ public class EconomyData : ScriptableObject
     public float StarFireRate(int s) => At(starFireRate, s, 1f);
     public float StarReload(int s) => At(starReload, s, 1f);
     public float StarPierceKeep(int s) => At(starPierceKeep, s, 0.4f);
+    public int StarPierceCount(int s) => starPierceCount != null && starPierceCount.Length > 0 ? starPierceCount[Mathf.Clamp(s, 0, starPierceCount.Length - 1)] : s;
 
     // 1..3 with boxStarOdds
     public int RollBoxStars(float r01)

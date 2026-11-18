@@ -70,9 +70,10 @@ public static class StarsPlayTest
         while (Time.time < end) yield return null;
     }
 
+    static int Hit(List<float> got) => got.Count(x => x > 0f);
     static bool Near(float a, float b) => Mathf.Abs(a - b) <= Mathf.Max(0.5f, 0.02f * Mathf.Abs(b));
 
-    // two frozen old men on the crosshair line; one pistol shot; the damage each one took
+    // six frozen old men in a row on the crosshair line; one pistol shot; the damage each one took
     static IEnumerator PierceShot(PlayerShooter shooter, List<float> got)
     {
         got.Clear();
@@ -81,7 +82,7 @@ public static class StarsPlayTest
         float skip = Vector3.Dot(shooter.transform.position + Vector3.up * 0.8f - ray.origin, ray.direction);
         if (skip > 0f) ray.origin += ray.direction * skip;
         var hits = new List<EnemyHealth>();
-        foreach (float d in new[] { 2.5f, 4f })
+        foreach (float d in new[] { 2f, 2.5f, 3f, 3.5f, 4f, 4.5f })
         {
             var p = ray.origin + ray.direction * d;
             var ai = RoundManager.Instance.SpawnEnemy(null, p);
@@ -104,6 +105,7 @@ public static class StarsPlayTest
         while (!shooter.TestFire()) yield return null;
         yield return null;
         got.AddRange(dmg);
+        Write("     damage per old man: " + string.Join(" / ", dmg.Select(x => x.ToString("0"))) + $" ({hits.Count} placed)");
         foreach (var h in hits) if (h != null) Object.Destroy(h.gameObject);
         yield return null;
     }
@@ -133,9 +135,10 @@ public static class StarsPlayTest
         yield return null;
         yield return PierceShot(shooter, got);
         float baseDmg = pistol.data.damage * eco.StarDamage(1);
-        Check(got.Count == 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.StarPierceKeep(1)),
+        Check(Hit(got) == 2, $"1 star: the bullet goes through {Hit(got) - 1} old man (want {eco.StarPierceCount(1)})");
+        Check(got.Count >= 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.StarPierceKeep(1)),
             $"1 star: first old man {(got.Count > 0 ? got[0] : -1):0}, the one behind {(got.Count > 1 ? got[1] : -1):0} (want {baseDmg:0} / {baseDmg * eco.StarPierceKeep(1):0})");
-        Check(got.Count == 2 && got[1] < got[0], "going through an old man never adds damage");
+        Check(got.Count >= 2 && got[1] < got[0], "going through an old man never adds damage");
 
         // 3. La Lijadora: +1 star for 1000, twice, then refused at 3
         var lij = Object.FindAnyObjectByType<Lijadora>();
@@ -154,7 +157,8 @@ public static class StarsPlayTest
 
         yield return PierceShot(shooter, got);
         baseDmg = pistol.data.damage * eco.StarDamage(3);
-        Check(got.Count == 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.StarPierceKeep(3)),
+        Check(Hit(got) == 4, $"3 stars: the bullet goes through {Hit(got) - 1} old men (want {eco.StarPierceCount(3)})");
+        Check(got.Count >= 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.StarPierceKeep(3)),
             $"3 stars: {(got.Count > 0 ? got[0] : -1):0} / {(got.Count > 1 ? got[1] : -1):0} (want {baseDmg:0} / {baseDmg * eco.StarPierceKeep(3):0})");
 
         // 4. the Microondas: its own class, better than 3 stars, and no more stars after it
@@ -165,7 +169,8 @@ public static class StarsPlayTest
         Check(!lij.CanInteract(inter), $"the lijadora does nothing to a Microondas weapon ('{lij.Prompt(inter)}')");
         yield return PierceShot(shooter, got);
         baseDmg = pistol.data.damage * pistol.data.upgradeDamageMultiplier;
-        Check(got.Count == 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.microwavePierceKeep) && got[0] > pistol.data.damage * eco.StarDamage(3),
+        Check(Hit(got) == 5, $"Microondas: the bullet goes through {Hit(got) - 1} old men (want {eco.microwavePierceCount})");
+        Check(got.Count >= 2 && Near(got[0], baseDmg) && Near(got[1], baseDmg * eco.microwavePierceKeep) && got[0] > pistol.data.damage * eco.StarDamage(3),
             $"Microondas: {(got.Count > 0 ? got[0] : -1):0} / {(got.Count > 1 ? got[1] : -1):0} (more than 3 stars, keeps {eco.microwavePierceKeep:P0} through)");
 
         // 5. a wall weapon is 0 stars; the lijadora sands it up

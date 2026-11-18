@@ -563,7 +563,8 @@ per round"; the gondola goes only to open zones; Original stays in the selector;
   `FEEDBACK_PROPUESTAS.md`, don't re-ask):
   - **Weapon stars 0-3** (`PlayerShooter.WeaponSlot.stars`, shown as "★★" after the name): the `.asset` numbers are
     1 star; factors in `Economy.asset` (`starDamage/FireRate/Reload/PierceKeep`, `boxStarOdds` 60/30/10, `microwave*`).
-    A bullet loses damage on EACH old man it goes through (x keep^n, never more). Wall weapons 0, box 1-3, starting
+    A bullet loses damage on EACH old man it goes through (x keep^n, never more); how many it goes through is the stars
+    (0/1/2/3, Microondas 4: `starPierceCount`; x `WeaponData.pierceMultiplier`, El Catalejo 2; `penetration` is unused). Wall weapons 0, box 1-3, starting
     pistol 1. **La Lijadora del Taller** (`Shop/Lijadora.cs`, layout marker `I`, 1000): +1 star, max 3, not after the
     Microondas (a class of its own, better than 3 stars). Damages to be tuned later (user). **Online protocol
     `animal-island-online-7`** (stars in loadout / box / `Fwd.Star`): hotel and cruise must go to 8.

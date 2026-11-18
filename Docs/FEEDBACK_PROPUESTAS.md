@@ -47,3 +47,5 @@ daños actuales son las armas de 1 estrella. Ya ajustaremos los daños después.
 - Los números de los `.asset` de armas son los de **1★**. Las demás estrellas se calculan con factores de `Economy.asset`.
 - El arma del Microondas conserva el daño de ahora (`upgradeDamageMultiplier`, ×2; el Catalejo ×2,5).
 - **Pendiente: ajustar los daños** (por estrella y del Microondas) con partidas reales.
+- **Abuelos que atraviesa una bala (usuario, 2026-11-18):** 0★ ninguno, 1★ uno, 2★ dos, 3★ tres, Microondas cuatro. En todas las
+  armas, salvo el **Catalejo, que atraviesa el doble**: 0, 2, 4, 6 y 8 con el Microondas (antes 4 siempre).

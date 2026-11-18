@@ -182,7 +182,8 @@ Respuestas de diseño de la fase 5 en `FEEDBACK_PROPUESTAS.md`.
 - **Fase 5, armas con estrellas (ideas 6 y 8):** `PlayerShooter.WeaponSlot.stars` (0-3; nombre "La Chancla ★★"),
   factores en `Economy.asset` (`starDamage / starFireRate / starReload / starPierceKeep`, `boxStarOdds` 60/30/10,
   `microwave*`, `lijadoraCost` 1000, `startingWeaponStars` 1). La bala pierde daño en **cada** abuelo que atraviesa
-  (×factor^n); para que se note, la pistola, la Thermomix, la Chancla y el Lentos-peta atraviesan 2 (antes 1). Armas de
+  (×factor^n). **Cuántos atraviesa lo deciden las estrellas (usuario, 2026-11-18), en todas las armas:** 0★ ninguno, 1★ uno,
+  2★ dos, 3★ tres, Microondas cuatro; el Catalejo el doble (0/2/4/6/8, `WeaponData.pierceMultiplier` 2) (`starPierceCount`, `microwavePierceCount`; `WeaponData.penetration` ya no se usa). Armas de
   pared 0★, caja 1-3★ (`MysteryBox.OfferedStars`). `Shop/Lijadora.cs` (+1★, marcador `I`; Isla y alturas en el
   Parking, Venecia en el Arsenale, Villajubilada en el mirador de las Cuestas, Original junto a la gasolina; el hotel y
   el crucero aún no). El Microondas: su daño de siempre y mejor que 3★ en todo, sin estrellas después. Lentos-peta 60 de

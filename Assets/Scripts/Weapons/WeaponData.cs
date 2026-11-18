@@ -13,8 +13,10 @@ public class WeaponData : ScriptableObject
     public float damage = 50f;
     public float headshotMultiplier = 3f;
     public int pellets = 1;
-    [Tooltip("Enemies a single bullet can go through.")]
+    [Tooltip("Not used since user feedback 1: the stars decide how many old men a bullet goes through (EconomyData.starPierceCount).")]
     public int penetration = 1;
+    [Tooltip("x the old men a bullet goes through by stars / Microondas (El Catalejo 2: user, 2026-11-18).")]
+    public int pierceMultiplier = 1;
     public float range = 80f;
     [Tooltip("Damage drops linearly to minDamageFactor between this distance and range.")]
     public float falloffStart = 60f;
