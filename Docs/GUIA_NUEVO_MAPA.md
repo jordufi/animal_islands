@@ -27,6 +27,11 @@ usuario antes de tocar un archivo y apúntalas en `CLAUDE.md` como "decidido, no
 | Misión | ¿Qué hay que hacer para que venga el rescate? | luz, gasolina, radio, emisora | lista de 5 tareas | lista de 5 tareas |
 | Salida | ¿En qué te vas y contra quién? | barco, Don Anselmo | vaporetto, el Dux | tractor, el pregonero |
 
+**El modelo a seguir es Villajubilada** (feedback de los amigos, 2026-11-17: "es el mapa más divertido; me gustaría que
+el resto fueran un poco de este estilo"). Lo que la hace distinta: dos actos, calles estrechas que giran, una plaza
+ancha rodeada de un anillo, premios en los fondos de saco, cada zona con su luz y su momento (el encierro). Venecia se
+repasó con esa idea (fachadas sobre el agua, quiebros) porque los amigos la encontraron demasiado abierta.
+
 **Lo que mejor ha funcionado: que el evento cambie la estructura de la partida y no solo el ambiente.** En
 Villajubilada el primer encierro cierra la zona inicial para siempre y abre el pueblo: la partida tiene dos actos.
 Fue idea del usuario y vale más que cualquier modelo bonito. Busca ese momento en cada mapa: algo que pase una vez,
@@ -38,7 +43,10 @@ que se vea venir y que cambie lo que el jugador tiene que hacer.
 - **Nada de sitios seguros.** Un rincón al que solo se llega por un lado es un sitio donde acampar. El setup lo mide
   (cobertura de spawns).
 - **Que no se vea venir a los abuelos de lejos.** Calles de 2 a 4 m, giros, cosas que tapan. Si una zona se ve muy
-  abierta en la captura, añade obstáculos antes de tocar otra cosa.
+  abierta en la captura, añade obstáculos antes de tocar otra cosa. El setup avisa de las líneas de tiro de 40 m o más
+  (`IslaZombieSetup.SightLines.cs`); marca tu zona ancha con la bandera `ancha` para que no cuente.
+- **Donde subes tú, sube el abuelo.** Si el jugador se sube a un prop, los abuelos trepan detrás (malla Saltador). El
+  setup avisa de cualquier sitio al que solo llega el jugador (`ReachCheck`).
 - **Un contraste claro: una zona ancha y una estrecha.** Piazza / Cannaregio, Plaza Mayor / Barrio de las Cuestas.
 - **Las entradas de abuelos se ven y son predecibles**, todas del mismo color, y nunca se confunden con una puerta de pago.
 - **Tiene que ser difícil.** Si dudas entre dos números, elige el que aprieta más. Se ajustará con partidas reales.

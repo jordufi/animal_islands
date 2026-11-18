@@ -4,9 +4,9 @@ Fuente: `Docs/Feedback_Usuarios1.md` (fallos + 18 ideas). Plan hecho el 2026-11-
 El usuario ha pedido ejecutar **las fases 1, 3, 2 y 4, en ese orden**, informando del progreso por el chat.
 Las fases 5 a 8 quedan para más adelante.
 
-> **Estado al 2026-11-17 (más tarde, sesión de feedback):** las fases 1 y 2 están hechas y probadas (detalle abajo).
-> El usuario respondió las 4 preguntas abiertas (ver `Docs/FEEDBACK_PROPUESTAS.md`) y pidió seguir aquí: fase 4 en
-> marcha; la release (fase 3) espera a que el usuario confirme la publicación.
+> **Estado al 2026-11-18:** fases 1, 2, 4, 5, 6 y 7 hechas y probadas (commits `4f51784`, `8d48a14`, `bef3b10`).
+> La release v0.1 (fase 3) la publica el usuario a mano. Queda la fase 8 (presets gráficos) y ajustar los daños de las
+> estrellas con partidas reales.
 
 ---
 
@@ -207,8 +207,5 @@ Respuestas de diseño de la fase 5 en `FEEDBACK_PROPUESTAS.md`.
   Online (ya conocido) y 3 props de Climb en la Isla.
 - **Sin probar:** humanos, Relay, el tutorial con mando real (la prueba usa un mando virtual y mata a los abuelos de
   prácticas a mano), equilibrio de las estrellas.
-## Preguntas abiertas (preguntar al usuario cuando toque)
-1. Las gradas: ¿el fallo era en el Faro normal, en el de alturas o en los dos? (El arreglo cubre los dos.)
-2. ¿La puerta del muelle o de la misión cuenta para "una puerta por ronda"?
-3. ¿Vale la góndola solo a zonas abiertas?
-4. Tutorial: ¿solo en el Faro? ¿Se quita el Original del selector?
+## Preguntas abiertas
+Todas respondidas: ver `FEEDBACK_PROPUESTAS.md` (2026-11-17 y 2026-11-18).
